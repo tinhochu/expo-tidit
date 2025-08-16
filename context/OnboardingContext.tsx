@@ -9,6 +9,7 @@ interface OnboardingContextType {
   isLoading: boolean
   completeOnboarding: (preferences: UserPreferences) => Promise<void>
   userPreferences: UserPreferences | null
+  hasSummoner: boolean
 }
 
 interface UserPreferences {
@@ -17,6 +18,12 @@ interface UserPreferences {
   gamingTime: 'casual' | 'moderate' | 'dedicated'
   notifications: boolean
   theme: 'light' | 'dark' | 'auto'
+  summoner?: {
+    puuid: string
+    summonerName: string
+    region: string
+    lastUpdated: string
+  }
 }
 
 const OnboardingContext = createContext<OnboardingContextType>({
@@ -24,6 +31,7 @@ const OnboardingContext = createContext<OnboardingContextType>({
   isLoading: true,
   completeOnboarding: async () => {},
   userPreferences: null,
+  hasSummoner: false,
 })
 
 export const OnboardingProvider = ({ children }: { children: React.ReactNode }) => {
@@ -148,6 +156,7 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
     isLoading,
     completeOnboarding,
     userPreferences,
+    hasSummoner: !!userPreferences?.summoner?.puuid,
   }
 
   return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>
