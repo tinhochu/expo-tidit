@@ -3,7 +3,7 @@ import { Image } from '@/components/ui/image'
 import { VStack } from '@/components/ui/vstack'
 import { account } from '@/lib/appwriteConfig'
 import * as SecureStore from 'expo-secure-store'
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 const AuthContext = createContext<{
   session: any
@@ -46,15 +46,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     page: string
   } | null>(null)
 
-  useEffect(() => {
-    init()
-  }, [])
-
-  const init = async () => {
-    checkAuth()
-  }
-
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     try {
       const response = await account.get()
       setUser(response as any)
@@ -64,9 +56,13 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Don't set error for auth check failures as they're expected for unauthenticated users
     }
     setLoading(false)
-  }
+  }, [])
 
-  const signup = async ({ email, password, name }: { email: string; password: string; name: string }) => {
+  useEffect(() => {
+    checkAuth()
+  }, [checkAuth])
+
+  const signup = useCallback(async ({ email, password, name }: { email: string; password: string; name: string }) => {
     setLoading(true)
     setError(null)
     try {
@@ -116,9 +112,9 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       return null
     }
-  }
+  }, [])
 
-  const signin = async ({ email, password }: { email: string; password: string }) => {
+  const signin = useCallback(async ({ email, password }: { email: string; password: string }) => {
     setLoading(true)
     setError(null)
     try {
@@ -135,9 +131,9 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       })
     }
     setLoading(false)
-  }
+  }, [])
 
-  const signout = async () => {
+  const signout = useCallback(async () => {
     setLoading(true)
     try {
       await account.deleteSession('current')
@@ -155,33 +151,53 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       })
     }
     setLoading(false)
-  }
+  }, [])
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     setError(null)
-  }
+  }, [])
 
-  const clearFormData = async () => {
+  const clearFormData = useCallback(async () => {
     try {
       await SecureStore.deleteItemAsync('signupFormData')
     } catch (error) {
       console.log('Error clearing form data:', error)
     }
-  }
+  }, [])
 
-  const contextData = {
-    session,
-    user,
-    error,
-    loading,
-    redirectPage,
-    signin,
-    signup,
-    signout,
-    clearError,
-    clearFormData,
-    setRedirectPage,
-  }
+  const setRedirectPageHandler = useCallback((page: '/signin' | '/signup' | null) => {
+    setRedirectPage(page)
+  }, [])
+
+  const contextData = useMemo(
+    () => ({
+      session,
+      user,
+      error,
+      loading,
+      redirectPage,
+      signin,
+      signup,
+      signout,
+      clearError,
+      clearFormData,
+      setRedirectPage: setRedirectPageHandler,
+    }),
+    [
+      session,
+      user,
+      error,
+      loading,
+      redirectPage,
+      signin,
+      signup,
+      signout,
+      clearError,
+      clearFormData,
+      setRedirectPageHandler,
+    ]
+  )
+
   return (
     <AuthContext.Provider value={contextData}>
       {loading ? (
