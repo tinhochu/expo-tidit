@@ -116,7 +116,7 @@ const signin = () => {
                   <Input className="bg-white" size="xl">
                     <InputField
                       placeholder="Enter your email..."
-                      value={email}
+                      value={email.toLowerCase()}
                       onChangeText={(text) => setEmail(text)}
                     />
                   </Input>

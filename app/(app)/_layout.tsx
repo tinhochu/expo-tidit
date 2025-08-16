@@ -2,6 +2,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useOnboarding } from '@/context/OnboardingContext'
 import { Redirect, Slot } from 'expo-router'
 import { useMemo } from 'react'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 type RedirectTarget = '/signin' | '/signup' | 'app' | null
 
@@ -43,5 +44,9 @@ export default function AppLayout() {
   }
 
   // User is authenticated, show the app
-  return <Slot />
+  return (
+    <SafeAreaView className="min-h-screen bg-orange-100 px-5">
+      <Slot />
+    </SafeAreaView>
+  )
 }
