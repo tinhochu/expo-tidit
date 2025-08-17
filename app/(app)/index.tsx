@@ -50,7 +50,7 @@ export default function Index() {
   // Redirect to search-summoner if no summoner is connected
   useEffect(() => {
     if (userPreferences && !userPreferences.summoner?.puuid) {
-      router.replace('/search-summoner')
+      // router.replace('/search-summoner')
     }
   }, [userPreferences])
 

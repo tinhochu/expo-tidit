@@ -3,13 +3,15 @@ import { Button, ButtonText } from '@/components/ui/button'
 import { Grid, GridItem } from '@/components/ui/grid'
 import { Heading } from '@/components/ui/heading'
 import { HStack } from '@/components/ui/hstack'
-import { Icon, InfoIcon } from '@/components/ui/icon'
+import { ChevronLeftIcon, Icon, InfoIcon } from '@/components/ui/icon'
 import { Image } from '@/components/ui/image'
 import { Input, InputField } from '@/components/ui/input'
 import { Popover, PopoverBackdrop, PopoverBody, PopoverContent } from '@/components/ui/popover'
 import { Text } from '@/components/ui/text'
 import { VStack } from '@/components/ui/vstack'
+import { router } from 'expo-router'
 import { useState } from 'react'
+import { Pressable } from 'react-native'
 
 export default function SearchSummoner() {
   const [summonerName, setSummonerName] = useState('')
@@ -51,6 +53,9 @@ export default function SearchSummoner() {
   return (
     <VStack space="lg">
       <HStack className="items-center justify-between">
+        <Pressable onPress={() => router.push('/')}>
+          <Icon as={ChevronLeftIcon} size="xl" />
+        </Pressable>
         <Heading size="xl" className="gap-2 text-black">
           Link Your Riot Account
         </Heading>

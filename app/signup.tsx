@@ -18,12 +18,11 @@ import { Text } from '@/components/ui/text'
 import { VStack } from '@/components/ui/vstack'
 import { useAuth } from '@/context/AuthContext'
 import { Link, router } from 'expo-router'
-import * as SecureStore from 'expo-secure-store'
 import { useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 export default function Signup() {
-  const { signup, loading, error, clearError, clearFormData } = useAuth()
+  const { signup, loading, error, clearError } = useAuth()
 
   // Individual state for each input field
   const [firstName, setFirstName] = useState('')
@@ -49,18 +48,6 @@ export default function Signup() {
         console.log('📝 No meaningful data to save, skipping')
         return
       }
-
-      // Try SecureStore first
-      await SecureStore.setItemAsync('signupFormData', JSON.stringify(data))
-      console.log('✅ Form data saved successfully to SecureStore')
-
-      // Verify the save worked
-      const verifyData = await SecureStore.getItemAsync('signupFormData')
-      if (verifyData) {
-        console.log('✅ Data verification successful')
-      } else {
-        console.log('⚠️ Data verification failed - data not persisted')
-      }
     } catch (error) {
       console.log('❌ Error saving form data to SecureStore:', error)
       console.log('🔄 SecureStore might not be available on this platform')
@@ -84,19 +71,8 @@ export default function Signup() {
     }
   }, [firstName, lastName, email, password, confirmPassword])
 
-  // Clear form data when component unmounts (after successful signup)
-  useEffect(() => {
-    return () => {
-      // Clear the SecureStore data when component unmounts
-      SecureStore.deleteItemAsync('signupFormData').catch((error) => {
-        console.log('Error clearing saved form data on unmount:', error)
-      })
-    }
-  }, [])
-
   // Clear form data when user navigates away manually
   const handleBackNavigation = async () => {
-    await clearFormData()
     router.push('/signin')
   }
 
@@ -218,10 +194,6 @@ export default function Signup() {
     setEmailError('')
     setPasswordError('')
     setConfirmPasswordError('')
-    // Clear SecureStore data as well
-    SecureStore.deleteItemAsync('signupFormData').catch((error) => {
-      console.log('Error clearing saved form data:', error)
-    })
     clearError()
   }
 
@@ -250,7 +222,7 @@ export default function Signup() {
 
         // If signup is successful, clear the form data
         if (result) {
-          await clearFormData()
+          await clearForm()
         }
       } catch (error) {
         console.log('Signup failed:', error)

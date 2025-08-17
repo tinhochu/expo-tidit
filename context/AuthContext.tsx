@@ -2,7 +2,6 @@ import { Box } from '@/components/ui/box'
 import { Image } from '@/components/ui/image'
 import { VStack } from '@/components/ui/vstack'
 import { account } from '@/lib/appwriteConfig'
-import * as SecureStore from 'expo-secure-store'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 const AuthContext = createContext<{
@@ -19,7 +18,6 @@ const AuthContext = createContext<{
   signup: ({ email, password, name }: { email: string; password: string; name: string }) => Promise<any | null>
   signout: () => Promise<void>
   clearError: () => void
-  clearFormData: () => Promise<void>
   setRedirectPage: (page: '/signin' | '/signup' | null) => void
 }>({
   session: null,
@@ -31,7 +29,6 @@ const AuthContext = createContext<{
   signup: async () => null,
   signout: async () => {},
   clearError: () => {},
-  clearFormData: async () => {},
   setRedirectPage: () => {},
 })
 
@@ -157,14 +154,6 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setError(null)
   }, [])
 
-  const clearFormData = useCallback(async () => {
-    try {
-      await SecureStore.deleteItemAsync('signupFormData')
-    } catch (error) {
-      console.log('Error clearing form data:', error)
-    }
-  }, [])
-
   const setRedirectPageHandler = useCallback((page: '/signin' | '/signup' | null) => {
     setRedirectPage(page)
   }, [])
@@ -180,22 +169,9 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       signup,
       signout,
       clearError,
-      clearFormData,
       setRedirectPage: setRedirectPageHandler,
     }),
-    [
-      session,
-      user,
-      error,
-      loading,
-      redirectPage,
-      signin,
-      signup,
-      signout,
-      clearError,
-      clearFormData,
-      setRedirectPageHandler,
-    ]
+    [session, user, error, loading, redirectPage, signin, signup, signout, clearError, setRedirectPageHandler]
   )
 
   return (
