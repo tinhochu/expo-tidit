@@ -18,7 +18,7 @@ export default function Index() {
   const preferencesDisplay = useMemo(() => {
     if (!userPreferences) return null
 
-    const hasSummoner = userPreferences.summoner?.puuid
+    const hasSummoner = userPreferences?.summonerId
 
     return (
       <Box className="rounded-lg border border-gray-200 bg-white p-4">
@@ -30,9 +30,7 @@ export default function Index() {
         {hasSummoner ? (
           <Box className="mt-3 rounded-md bg-green-50 p-3">
             <Text className="font-medium text-green-800">✅ Connected to League of Legends</Text>
-            <Text className="text-sm text-green-600">
-              Summoner: {userPreferences.summoner?.summonerName} ({userPreferences.summoner?.region})
-            </Text>
+            <Text className="text-sm text-green-600">Summoner: {userPreferences.summonerId}</Text>
           </Box>
         ) : (
           <Box className="mt-3 rounded-md bg-blue-50 p-3">
@@ -49,7 +47,7 @@ export default function Index() {
 
   // Redirect to search-summoner if no summoner is connected
   useEffect(() => {
-    if (userPreferences && !userPreferences.summoner?.puuid) {
+    if (userPreferences && !userPreferences?.summonerId) {
       // router.replace('/search-summoner')
     }
   }, [userPreferences])
