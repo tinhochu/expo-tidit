@@ -1,8 +1,7 @@
 import { useAuth } from '@/context/AuthContext'
 import { useOnboarding } from '@/context/OnboardingContext'
-import { Redirect, Slot } from 'expo-router'
+import { Redirect, Stack } from 'expo-router'
 import { useMemo } from 'react'
-import { SafeAreaView } from 'react-native-safe-area-context'
 
 type RedirectTarget = '/signin' | '/signup' | 'app' | null
 
@@ -13,7 +12,7 @@ export default function AppLayout() {
   const redirectTarget = useMemo((): RedirectTarget => {
     // If not authenticated, redirect to auth
     if (!session) {
-      return redirectPage || (error?.page === 'signin' ? '/signin' : '/signup')
+      return redirectPage || (error?.page === 'signup' ? '/signup' : '/signin')
     }
 
     // If still loading onboarding status, show loading
@@ -45,8 +44,8 @@ export default function AppLayout() {
 
   // User is authenticated, show the app
   return (
-    <SafeAreaView className="min-h-screen bg-orange-100 px-5">
-      <Slot />
-    </SafeAreaView>
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" />
+    </Stack>
   )
 }

@@ -16,18 +16,7 @@ export default function RootLayout() {
     <GluestackUIProvider mode="light">
       <AuthProvider>
         <OnboardingProvider>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined} // iOS needs 'padding'
-            keyboardVerticalOffset={Platform.select({ ios: 64, android: 0 })} // tweak if you have a header
-          >
-            <ScrollView ref={scrollRef} contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-              <SafeAreaView>
-                <VStack className="min-h-screen flex-1 px-3">
-                  <Slot />
-                </VStack>
-              </SafeAreaView>
-            </ScrollView>
-          </KeyboardAvoidingView>
+          <Slot />
         </OnboardingProvider>
       </AuthProvider>
     </GluestackUIProvider>

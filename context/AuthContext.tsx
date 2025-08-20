@@ -48,9 +48,14 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const response = await account.get()
       setUser(response as any)
       setSession(response as any)
+      // Only clear errors if authentication is successful
+      if (response) {
+        setError(null)
+      }
     } catch (error: any) {
       console.log(error)
       // Don't set error for auth check failures as they're expected for unauthenticated users
+      // Also don't clear existing errors here
     }
     setLoading(false)
   }, [])
@@ -113,12 +118,14 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signin = useCallback(async ({ email, password }: { email: string; password: string }) => {
     setLoading(true)
-    setError(null)
+    // Don't clear error immediately - let the error display until we know the result
     try {
       const responseSession = await account.createEmailPasswordSession(email, password)
       setSession(responseSession as any)
       const responseUser = await account.get()
       setUser(responseUser as any)
+      // Only clear error on successful signin
+      setError(null)
     } catch (error: any) {
       console.log(`AuthContext:Error: ${error?.message}`)
       setError({
@@ -177,7 +184,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <AuthContext.Provider value={contextData}>
       {loading ? (
-        <Box className="min-h-screen justify-center bg-orange-100">
+        <Box className="min-h-screen justify-center">
           <VStack space="lg">
             <Image source={require('@/assets/images/icon.png')} alt="Tidit" size="2xl" className="self-center" />
           </VStack>

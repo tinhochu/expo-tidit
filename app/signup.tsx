@@ -237,8 +237,8 @@ export default function Signup() {
   }, [error])
 
   return (
-    <SafeAreaView className="flex-1 bg-orange-100">
-      <Box className="min-h-screen justify-start bg-orange-100 px-5">
+    <SafeAreaView>
+      <Box className="min-h-screen justify-start px-5">
         <VStack space="lg">
           <HStack className="items-center justify-between">
             <Button onPress={handleBackNavigation} variant="link">
@@ -249,7 +249,7 @@ export default function Signup() {
 
             <Text size="lg" className="text-black">
               Already have an account?{' '}
-              <Link href="/signin" className="font-bold text-green-500 underline">
+              <Link href="/signin" className="font-bold underline">
                 Log In
               </Link>
             </Text>
@@ -322,7 +322,7 @@ export default function Signup() {
                 <InputField
                   type="text"
                   placeholder="Email Address"
-                  value={email}
+                  value={email.trim().toLowerCase()}
                   className="bg-white"
                   onChangeText={handleEmailChange}
                 />
@@ -379,11 +379,11 @@ export default function Signup() {
 
             <Text>
               By Continuing, you agree to our{' '}
-              <Link href="/terms" className="font-semibold text-green-500 underline">
+              <Link href="/terms" className="font-semibold underline">
                 Terms of Service
               </Link>{' '}
               and{' '}
-              <Link href="/privacy-policy" className="font-semibold text-green-500 underline">
+              <Link href="/privacy-policy" className="font-semibold underline">
                 Privacy Policy
               </Link>
               .
@@ -398,7 +398,7 @@ export default function Signup() {
               </Box>
             )}
 
-            <Button onPress={handleSubmit} className="bg-green-500" size="xl" isDisabled={loading}>
+            <Button onPress={handleSubmit} size="xl" isDisabled={loading}>
               <ButtonText>{loading ? 'Creating Account...' : 'Continue'}</ButtonText>
             </Button>
             <Image source={require('@/assets/images/icon.png')} alt="Tidit" size="xl" className="self-center" />

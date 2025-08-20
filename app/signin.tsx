@@ -8,12 +8,12 @@ import { VStack } from '@/components/ui/vstack'
 import { useAuth } from '@/context/AuthContext'
 import { Redirect, router } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
-import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
+import { KeyboardAvoidingView, Platform, SafeAreaView, ScrollView } from 'react-native'
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 
 const signin = () => {
   const scrollRef = useRef<ScrollView>(null)
-  const { session, signin, error, loading } = useAuth()
+  const { session, signin, error, loading, clearError } = useAuth()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -28,11 +28,33 @@ const signin = () => {
       await signin({ email, password })
     } catch (err) {
       console.log('Signin error:', err)
+      // Keep inputs visible when error occurs
+      setShowInputs(true)
+    }
+  }
+
+  const handleEmailChange = (text: string) => {
+    setEmail(text)
+    // Clear error when user starts typing
+    if (error && error.page === 'signin') {
+      clearError()
+    }
+  }
+
+  const handlePasswordChange = (text: string) => {
+    setPassword(text)
+    // Clear error when user starts typing
+    if (error && error.page === 'signin') {
+      clearError()
     }
   }
 
   const handleLoginClick = () => {
     setShowInputs(true)
+    // Clear any existing errors when opening inputs
+    if (error && error.page === 'signin') {
+      clearError()
+    }
     // Trigger animation
     slideUpValue.value = withTiming(1, {
       duration: 500,
@@ -46,6 +68,10 @@ const signin = () => {
 
   const handleBackClick = () => {
     setShowInputs(false)
+    // Clear errors when going back
+    if (error && error.page === 'signin') {
+      clearError()
+    }
     // Reset animation
     slideUpValue.value = withTiming(0, {
       duration: 300,
@@ -69,12 +95,23 @@ const signin = () => {
     }
   })
 
-  // Log error changes for debugging
+  // Ensure inputs stay visible when error occurs
   useEffect(() => {
     if (error && error.page === 'signin') {
       console.log(`Signin:Error: ${error.message}`)
+      // Keep inputs visible when error occurs
+      setShowInputs(true)
+      // Ensure animations are active
+      slideUpValue.value = withTiming(1, {
+        duration: 300,
+        easing: Easing.out(Easing.quad),
+      })
+      opacityValue.value = withTiming(1, {
+        duration: 200,
+        easing: Easing.out(Easing.quad),
+      })
     }
-  }, [error])
+  }, [error, slideUpValue, opacityValue])
 
   if (session) return <Redirect href="/" />
 
@@ -83,86 +120,79 @@ const signin = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined} // iOS needs 'padding'
       keyboardVerticalOffset={Platform.select({ ios: 64, android: 0 })} // tweak if you have a header
     >
-      <ScrollView
-        ref={scrollRef}
-        className="bg-orange-100"
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Box className="min-h-screen justify-end bg-orange-100">
-          <VStack space="lg">
-            <Image
-              source={require('@/assets/images/icon.png')}
-              alt="Tidit"
-              size="2xl"
-              className="self-center shadow-lg"
-            />
+      <ScrollView ref={scrollRef} contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+        <SafeAreaView>
+          <Box className="min-h-screen justify-end pb-10">
+            <VStack space="lg">
+              <Image
+                source={require('@/assets/images/icon.png')}
+                alt="Tidit"
+                size="2xl"
+                className="self-center shadow-lg"
+              />
 
-            <Box className="rounded-t-3xl bg-orange-200 pb-20 pt-10 shadow-xl">
-              <VStack space="md" className="mb-10">
-                <Heading size="3xl" className="text-center text-black">
-                  Welcome to Tidit
-                </Heading>
+              <Box className="rounded-t-3xl bg-white pb-20 pt-10 shadow-xl">
+                <VStack space="md" className="mb-10">
+                  <Heading size="3xl" className="text-center text-black">
+                    Create. Post. Done.
+                  </Heading>
+                </VStack>
 
-                <Text size="lg" className="text-center text-black">
-                  Esports Wellness Tracker
-                </Text>
-              </VStack>
-
-              <VStack space="md" className="mx-auto w-3/4">
-                {!showInputs && (
-                  <>
-                    <Button size="lg" onPress={() => router.push('/signup')}>
-                      <ButtonText>Create Account</ButtonText>
-                    </Button>
-                    <Button size="lg" variant="outline" onPress={handleLoginClick}>
-                      <ButtonText>Login</ButtonText>
-                    </Button>
-                  </>
-                )}
-
-                {showInputs && (
-                  <Animated.View style={animatedStyle}>
-                    <VStack space="md">
-                      <Text size="lg">Email:</Text>
-                      <Input className="bg-white" size="xl">
-                        <InputField
-                          placeholder="Enter your email..."
-                          value={email.toLowerCase()}
-                          onChangeText={(text) => setEmail(text)}
-                        />
-                      </Input>
-
-                      <Text size="lg">Password:</Text>
-                      <Input className="bg-white" size="xl">
-                        <InputField
-                          placeholder="Password"
-                          value={password}
-                          onChangeText={(text) => setPassword(text)}
-                          secureTextEntry
-                        />
-                      </Input>
-
-                      {/* Display error message */}
-                      {error && error.page === 'signin' && (
-                        <Text size="md" className="text-center text-red-600">
-                          {error.message}
-                        </Text>
-                      )}
-
-                      <Button size="xl" onPress={handleSubmit} disabled={loading}>
-                        <ButtonText>{loading ? 'Signing in...' : 'Login'}</ButtonText>
+                <VStack space="md" className="mx-auto w-3/4">
+                  {!showInputs && (
+                    <>
+                      <Button size="lg" onPress={() => router.push('/signup')}>
+                        <ButtonText>Create Account</ButtonText>
                       </Button>
-                      <Button size="lg" variant="outline" onPress={handleBackClick}>
-                        <ButtonText>Back</ButtonText>
+                      <Button size="lg" variant="outline" onPress={handleLoginClick}>
+                        <ButtonText>Login</ButtonText>
                       </Button>
-                    </VStack>
-                  </Animated.View>
-                )}
-              </VStack>
-            </Box>
-          </VStack>
-        </Box>
+                    </>
+                  )}
+
+                  {showInputs && (
+                    <Animated.View style={animatedStyle}>
+                      <VStack space="md">
+                        <Text size="lg">Email:</Text>
+                        <Input className="bg-white" size="xl">
+                          <InputField
+                            placeholder="Enter your email..."
+                            value={email.toLowerCase()}
+                            onChangeText={handleEmailChange}
+                          />
+                        </Input>
+
+                        <Text size="lg">Password:</Text>
+                        <Input className="bg-white" size="xl">
+                          <InputField
+                            placeholder="Password"
+                            value={password}
+                            onChangeText={handlePasswordChange}
+                            secureTextEntry
+                          />
+                        </Input>
+
+                        {/* Display error message */}
+                        {error && error.page === 'signin' && (
+                          <Text size="md" className="text-center font-medium text-red-600">
+                            {error.message}
+                          </Text>
+                        )}
+
+                        <Button size="xl" onPress={handleSubmit} disabled={loading}>
+                          <ButtonText>{loading ? 'Signing in...' : 'Login'}</ButtonText>
+                        </Button>
+                        <Button size="lg" variant="outline" onPress={handleBackClick}>
+                          <ButtonText>Back</ButtonText>
+                        </Button>
+                      </VStack>
+                    </Animated.View>
+                  )}
+                </VStack>
+              </Box>
+            </VStack>
+          </Box>
+        </SafeAreaView>
       </ScrollView>
     </KeyboardAvoidingView>
   )
