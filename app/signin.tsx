@@ -93,7 +93,7 @@ const signin = () => {
           <VStack space="lg">
             <Image
               source={require('@/assets/images/icon.png')}
-              alt="ZenGamer"
+              alt="Tidit"
               size="2xl"
               className="self-center shadow-lg"
             />
@@ -101,7 +101,7 @@ const signin = () => {
             <Box className="rounded-t-3xl bg-orange-200 pb-20 pt-10 shadow-xl">
               <VStack space="md" className="mb-10">
                 <Heading size="3xl" className="text-center text-black">
-                  Welcome to ZenGamer
+                  Welcome to Tidit
                 </Heading>
 
                 <Text size="lg" className="text-center text-black">

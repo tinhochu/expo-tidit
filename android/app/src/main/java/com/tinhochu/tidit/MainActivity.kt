@@ -1,4 +1,4 @@
-package com.tinhochu.zengamer
+package com.tinhochu.tidit
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

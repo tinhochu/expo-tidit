@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "ZenGamer",
-    "slug": "zengamer",
+    "name": "Tidit",
+    "slug": "tidit",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "zengamer",
+    "scheme": "tidit",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -15,13 +15,13 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.tinhochu.zengamer",
+      "bundleIdentifier": "com.tinhochu.tidit",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
       "icon": {
         "light": "./assets/images/ios-light.png",
-        "dark": "./assets/images/ios -dark.png"
+        "dark": "./assets/images/ios-dark.png"
       }
     },
     "android": {
@@ -30,7 +30,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.tinhochu.zengamer"
+      "package": "com.tinhochu.tidit"
     },
     "web": {
       "bundler": "metro",
@@ -51,9 +51,7 @@
       [
         "expo-font",
         {
-          "fonts": [
-            "node_modules/@expo-google-fonts/poppins/300Light/Poppins_300Light.ttf"
-          ]
+          "fonts": ["node_modules/@expo-google-fonts/poppins/300Light/Poppins_300Light.ttf"]
         }
       ],
       "expo-secure-store"

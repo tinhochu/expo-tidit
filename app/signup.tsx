@@ -257,7 +257,7 @@ export default function Signup() {
 
           <VStack className="mt-5" space="lg">
             <Heading size="xl" className="text-black">
-              Welcome to ZenGamer
+              Welcome to Tidit
             </Heading>
             <Text size="lg">Create a account to access personalized wellness insights and track your progress.</Text>
 
@@ -401,7 +401,7 @@ export default function Signup() {
             <Button onPress={handleSubmit} className="bg-green-500" size="xl" isDisabled={loading}>
               <ButtonText>{loading ? 'Creating Account...' : 'Continue'}</ButtonText>
             </Button>
-            <Image source={require('@/assets/images/icon.png')} alt="ZenGamer" size="xl" className="self-center" />
+                          <Image source={require('@/assets/images/icon.png')} alt="Tidit" size="xl" className="self-center" />
           </VStack>
         </VStack>
       </Box>

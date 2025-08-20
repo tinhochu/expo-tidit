@@ -179,7 +179,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       {loading ? (
         <Box className="min-h-screen justify-center bg-orange-100">
           <VStack space="lg">
-            <Image source={require('@/assets/images/icon.png')} alt="ZenGamer" size="2xl" className="self-center" />
+            <Image source={require('@/assets/images/icon.png')} alt="Tidit" size="2xl" className="self-center" />
           </VStack>
         </Box>
       ) : (
