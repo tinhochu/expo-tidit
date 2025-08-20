@@ -10,8 +10,7 @@ import { VStack } from '@/components/ui/vstack'
 import { useAuth } from '@/context/AuthContext'
 import { useOnboarding } from '@/context/OnboardingContext'
 import { router } from 'expo-router'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
+import { useEffect, useMemo, useState } from 'react'
 
 interface Preferences {
   summonerId?: string
@@ -19,7 +18,6 @@ interface Preferences {
 }
 
 export default function Index() {
-  const scrollRef = useRef<ScrollView>(null)
   const { user, signout } = useAuth()
   const { userPreferences } = useOnboarding()
   const [preferences, setPreferences] = useState<Preferences | null>(null)
@@ -100,63 +98,51 @@ export default function Index() {
   if (!user) return null
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined} // iOS needs 'padding'
-      keyboardVerticalOffset={Platform.select({ ios: 64, android: 0 })} // tweak if you have a header
-    >
-      <ScrollView
-        ref={scrollRef}
-        className="bg-orange-100"
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <VStack className="justify-between" space="xl">
-          <HStack className="items-center justify-between">
-            <Heading size="2xl" className="text-black">
-              Hello, {user.name || 'User'}!
-            </Heading>
+    <VStack className="justify-between" space="xl">
+      <HStack className="items-center justify-between">
+        <Heading size="2xl" className="text-black">
+          Hello, {user.name || 'User'}!
+        </Heading>
 
-            <Pressable onPress={() => router.push('/settings')}>
-              <Icon as={SettingsIcon} size="xl" />
+        <Pressable onPress={() => router.push('/settings')}>
+          <Icon as={SettingsIcon} size="xl" />
+        </Pressable>
+      </HStack>
+
+      <VStack space="xl">
+        <HStack className="items-center justify-between">
+          <Heading size="2xl">Dashboard</Heading>
+          <Pressable onPress={() => router.push('/settings')}>
+            <Icon as={SettingsIcon} size="xl" />
+          </Pressable>
+        </HStack>
+
+        {error && (
+          <Box className="rounded-lg border border-red-200 bg-red-50 p-4">
+            <Text className="text-red-600">Error: {error}</Text>
+          </Box>
+        )}
+
+        {loading && (
+          <Box className="rounded-lg border border-gray-200 bg-white p-4">
+            <Text>Loading preferences...</Text>
+          </Box>
+        )}
+
+        {preferences?.summonerId ? (
+          <MatchesList puuid={preferences?.summonerId ?? null} />
+        ) : (
+          <Box className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <Text className="mb-2 font-medium text-blue-800">No League of Legends Account Connected</Text>
+            <Text className="mb-3 text-sm text-blue-600">
+              Connect your Riot account to view your match history and statistics.
+            </Text>
+            <Pressable onPress={() => router.push('/search-summoner')} className="rounded-lg bg-blue-500 px-4 py-2">
+              <Text className="font-medium text-white">Connect Account</Text>
             </Pressable>
-          </HStack>
-
-          <VStack space="xl">
-            <HStack className="items-center justify-between">
-              <Heading size="2xl">Dashboard</Heading>
-              <Pressable onPress={() => router.push('/settings')}>
-                <Icon as={SettingsIcon} size="xl" />
-              </Pressable>
-            </HStack>
-
-            {error && (
-              <Box className="rounded-lg border border-red-200 bg-red-50 p-4">
-                <Text className="text-red-600">Error: {error}</Text>
-              </Box>
-            )}
-
-            {loading && (
-              <Box className="rounded-lg border border-gray-200 bg-white p-4">
-                <Text>Loading preferences...</Text>
-              </Box>
-            )}
-
-            {preferences?.summonerId ? (
-              <MatchesList puuid={preferences?.summonerId ?? null} />
-            ) : (
-              <Box className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                <Text className="mb-2 font-medium text-blue-800">No League of Legends Account Connected</Text>
-                <Text className="mb-3 text-sm text-blue-600">
-                  Connect your Riot account to view your match history and statistics.
-                </Text>
-                <Pressable onPress={() => router.push('/search-summoner')} className="rounded-lg bg-blue-500 px-4 py-2">
-                  <Text className="font-medium text-white">Connect Account</Text>
-                </Pressable>
-              </Box>
-            )}
-          </VStack>
-        </VStack>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          </Box>
+        )}
+      </VStack>
+    </VStack>
   )
 }

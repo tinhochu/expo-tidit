@@ -51,7 +51,9 @@
       [
         "expo-font",
         {
-          "fonts": ["node_modules/@expo-google-fonts/poppins/300Light/Poppins_300Light.ttf"]
+          "fonts": [
+            "node_modules/@expo-google-fonts/poppins/300Light/Poppins_300Light.ttf"
+          ]
         }
       ],
       "expo-secure-store"
@@ -62,8 +64,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "4451169a-835c-4285-ba13-dd1cdfff0cd8"
+        "projectId": "389d336c-bec2-47b7-8c96-cd76300205fb"
       }
-    }
+    },
+    "owner": "tinhochu"
   }
 }

@@ -401,7 +401,7 @@ export default function Signup() {
             <Button onPress={handleSubmit} className="bg-green-500" size="xl" isDisabled={loading}>
               <ButtonText>{loading ? 'Creating Account...' : 'Continue'}</ButtonText>
             </Button>
-                          <Image source={require('@/assets/images/icon.png')} alt="Tidit" size="xl" className="self-center" />
+            <Image source={require('@/assets/images/icon.png')} alt="Tidit" size="xl" className="self-center" />
           </VStack>
         </VStack>
       </Box>
