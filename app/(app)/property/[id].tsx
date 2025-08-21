@@ -1,4 +1,4 @@
-import TplParagraph from '@/components/template-parts/paragraph'
+import { TemplateRenderer, getTemplates } from '@/components/template-renderer'
 import { Box } from '@/components/ui/box'
 import { FormControl, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control'
 import { Heading } from '@/components/ui/heading'
@@ -15,7 +15,6 @@ import {
   SelectTrigger,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Text } from '@/components/ui/text'
 import { VStack } from '@/components/ui/vstack'
 import { deletePost, getPostById } from '@/lib/postService'
 import { saveSkiaImageToPhotos } from '@/lib/saveSkiaImage'
@@ -24,6 +23,7 @@ import {
   Canvas,
   Group,
   ImageSVG,
+  Rect,
   Image as SkImage,
   fitbox,
   rect,
@@ -53,7 +53,7 @@ export default function PropertyDetails() {
   const [data, setData] = useState<any>(null)
   const [imageUrl, setImageUrl] = useState<string>('')
   const [status, requestPermission] = MediaLibrary.usePermissions()
-  const svg = useSVG(require('@/assets/images/just-listed.svg'))
+  const [template, setTemplate] = useState<string>('1')
 
   useEffect(() => {
     if (!status?.granted) {
@@ -146,27 +146,30 @@ export default function PropertyDetails() {
 
         <ScrollView>
           {!img ? (
-            <Box style={{ width: screenWidth, height: screenWidth }}>
-              <Skeleton className="h-full w-full" />
+            <Box className="relative" style={{ width: screenWidth, height: screenWidth }}>
+              <Skeleton className="absolute inset-0 h-20 w-20" />
+              <AntDesign
+                name="camera"
+                size={50}
+                color="white"
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+              />
             </Box>
           ) : (
-            <Canvas ref={ref} style={{ width: screenWidth, height: screenWidth, flex: 1 }}>
+            <Canvas
+              ref={ref}
+              style={{
+                width: screenWidth,
+                height: screenWidth,
+                flex: 1,
+              }}
+            >
               {img && <SkImage image={img} x={0} y={0} width={screenWidth} height={screenWidth} fit="cover" />}
-
-              {/* Center the SVG and scale it appropriately */}
-              <Group
-                transform={fitbox(
-                  'contain',
-                  rect(0, 0, svg?.width() || 945, svg?.height() || 113), // Source rect using actual SVG dimensions
-                  rect(screenWidth * 0.1, screenWidth * 0.4, screenWidth * 0.8, screenWidth * 0.2) // Destination rect: centered with 10% margin on sides, 40% from top, 80% width, 20% height
-                )}
-              >
-                <ImageSVG svg={svg} x={0} y={0} />
-              </Group>
+              <TemplateRenderer postType="JUST_SOLD" template={template} data={data} />
             </Canvas>
           )}
 
-          <VStack className="p-5">
+          <VStack className="p-5" space="md">
             <FormControl>
               <FormControlLabel>
                 <FormControlLabelText>Template</FormControlLabelText>
@@ -182,10 +185,9 @@ export default function PropertyDetails() {
                     <SelectDragIndicatorWrapper>
                       <SelectDragIndicator />
                     </SelectDragIndicatorWrapper>
-                    <SelectItem label="Template 1" value="TEMPLATE_1" />
-                    <SelectItem label="Template 2" value="TEMPLATE_2" />
-                    <SelectItem label="Template 3" value="TEMPLATE_3" />
-                    <SelectItem label="Template 4" value="TEMPLATE_4" />
+                    {getTemplates(data?.postType || 'JUST_SOLD')?.map((template) => (
+                      <SelectItem key={template.value} label={template.label} value={template.value} />
+                    ))}
                   </SelectContent>
                 </SelectPortal>
               </Select>
