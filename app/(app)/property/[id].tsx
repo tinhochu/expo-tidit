@@ -1,8 +1,21 @@
 import TplParagraph from '@/components/template-parts/paragraph'
 import { Box } from '@/components/ui/box'
+import { FormControl, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control'
 import { Heading } from '@/components/ui/heading'
 import { HStack } from '@/components/ui/hstack'
+import {
+  Select,
+  SelectBackdrop,
+  SelectContent,
+  SelectDragIndicator,
+  SelectDragIndicatorWrapper,
+  SelectInput,
+  SelectItem,
+  SelectPortal,
+  SelectTrigger,
+} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Text } from '@/components/ui/text'
 import { VStack } from '@/components/ui/vstack'
 import { deletePost, getPostById } from '@/lib/postService'
 import { saveSkiaImageToPhotos } from '@/lib/saveSkiaImage'
@@ -152,6 +165,32 @@ export default function PropertyDetails() {
               </Group>
             </Canvas>
           )}
+
+          <VStack className="p-5">
+            <FormControl>
+              <FormControlLabel>
+                <FormControlLabelText>Template</FormControlLabelText>
+              </FormControlLabel>
+              <Select className="bg-white" onValueChange={(value) => console.log(value)}>
+                <SelectTrigger>
+                  <SelectInput placeholder="Select option" className="flex-1" />
+                  <AntDesign name="down" size={15} className="mr-3" />
+                </SelectTrigger>
+                <SelectPortal>
+                  <SelectBackdrop />
+                  <SelectContent className="pb-10">
+                    <SelectDragIndicatorWrapper>
+                      <SelectDragIndicator />
+                    </SelectDragIndicatorWrapper>
+                    <SelectItem label="Template 1" value="TEMPLATE_1" />
+                    <SelectItem label="Template 2" value="TEMPLATE_2" />
+                    <SelectItem label="Template 3" value="TEMPLATE_3" />
+                    <SelectItem label="Template 4" value="TEMPLATE_4" />
+                  </SelectContent>
+                </SelectPortal>
+              </Select>
+            </FormControl>
+          </VStack>
         </ScrollView>
       </VStack>
     </KeyboardAvoidingView>

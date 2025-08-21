@@ -1,4 +1,4 @@
-import { DATABASE_ID, USER_PREFERENCES_COLLECTION_ID, databases } from '@/lib/appwriteConfig'
+import { account } from '@/lib/appwriteConfig'
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { ID } from 'react-native-appwrite'
 
@@ -9,13 +9,16 @@ interface OnboardingContextType {
   isLoading: boolean
   completeOnboarding: (preferences: UserPreferences) => Promise<void>
   userPreferences: UserPreferences | null
-  hasSummoner: boolean
+  refetchUserPreferences: () => Promise<void>
 }
 
 interface UserPreferences {
-  summonerId?: string
-  summonerLinkDate?: string
-  profileIconId?: string
+  firstName?: string
+  lastName?: string
+  email?: string
+  phone?: string
+  brokerageLogo?: string
+  realtorPicture?: string
 }
 
 const OnboardingContext = createContext<OnboardingContextType>({
@@ -23,7 +26,7 @@ const OnboardingContext = createContext<OnboardingContextType>({
   isLoading: true,
   completeOnboarding: async () => {},
   userPreferences: null,
-  hasSummoner: false,
+  refetchUserPreferences: async () => {},
 })
 
 export const OnboardingProvider = ({ children }: { children: React.ReactNode }) => {
@@ -101,36 +104,8 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
         throw new Error('User not authenticated')
       }
 
-      // Save preferences to Appwrite
-      const documentData = {
-        userId: user.$id,
-        isOnboarded: true,
-        preferences: preferences,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-
-      try {
-        // Try to create a new document
-        await databases.createDocument(
-          DATABASE_ID,
-          USER_PREFERENCES_COLLECTION_ID,
-          user.$id, // Use user ID as document ID for easy lookup
-          documentData
-        )
-      } catch (error: any) {
-        if (error.code === 409) {
-          // Document already exists, update it instead
-          await databases.updateDocument(DATABASE_ID, USER_PREFERENCES_COLLECTION_ID, user.$id, {
-            ...documentData,
-            updatedAt: new Date().toISOString(),
-          })
-        } else {
-          throw error
-        }
-      }
-
-      // Update local state
+      // Since preferences are stored in user.prefs, we just update local state
+      // The actual update happens through the userService.updateUserPrefs
       setUserPreferences(preferences)
       setIsOnboarded(true)
 
@@ -143,12 +118,37 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
     }
   }
 
+  const refetchUserPreferences = useCallback(async () => {
+    if (!user?.$id) {
+      throw new Error('User not authenticated')
+    }
+    try {
+      setIsLoading(true)
+      // Since user preferences are stored in user.prefs, we need to refresh the user session
+      // or get the updated user object from Appwrite
+      const updatedUser = await account.get()
+
+      if (updatedUser.prefs) {
+        setUserPreferences(updatedUser.prefs as UserPreferences)
+      } else {
+        setUserPreferences(null)
+      }
+
+      console.log('User preferences refetched successfully')
+    } catch (error: any) {
+      console.error('Error refetching user preferences:', error)
+      setUserPreferences(null)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [user?.$id])
+
   const value = {
     isOnboarded,
     isLoading,
     completeOnboarding,
     userPreferences,
-    hasSummoner: !!userPreferences?.summonerId,
+    refetchUserPreferences,
   }
 
   return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>

@@ -52,7 +52,7 @@ export default function Home() {
     <VStack className="min-h-screen">
       <Box className="border-b border-gray-200 bg-white p-2 px-5 pt-[72px]">
         <HStack className="items-center justify-between">
-          <Heading size="xl">!Hello, {user?.name}</Heading>
+          <Heading size="xl">My Posts</Heading>
           <Pressable onPress={() => router.push('/create-post')}>
             <AntDesign size={28} name="pluscircleo" color="black" />
           </Pressable>

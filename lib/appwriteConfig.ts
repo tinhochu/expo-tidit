@@ -1,5 +1,5 @@
 import { Platform } from 'react-native'
-import { Account, Client, Databases } from 'react-native-appwrite'
+import { Account, Client, Databases, Storage } from 'react-native-appwrite'
 
 const client = new Client()
   .setEndpoint(process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT!)
@@ -13,8 +13,10 @@ switch (Platform.OS) {
 
 const account = new Account(client)
 const databases = new Databases(client)
+const storage = new Storage(client)
 
 const DATABASE_ID = '68a5ed72002d6a1772b0'
 const POSTS_COLLECTION_ID = '68a5ed870018f4007514'
+const BUCKET_ID = '68a74595003669be5401'
 
-export { account, databases, DATABASE_ID, POSTS_COLLECTION_ID }
+export { account, databases, DATABASE_ID, POSTS_COLLECTION_ID, BUCKET_ID, storage }
