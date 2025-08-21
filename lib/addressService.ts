@@ -58,7 +58,10 @@ export const getPropertyDetails = async (addressId: string): Promise<any | null>
   try {
     const backendUrl = process.env.EXPO_PUBLIC_TIDIT_API_URL!
 
-    const response = await fetch(`${backendUrl}/api/properties/${addressId}`, {
+    // remove the addr: prefix
+    const trimmedAddressId = addressId.replace('addr:', '')
+
+    const response = await fetch(`${backendUrl}/api/properties/${trimmedAddressId}`, {
       method: 'GET',
       headers: {
         'x-api-key': process.env.EXPO_PUBLIC_TIDIT_API_KEY!,
