@@ -54,14 +54,6 @@
           "fonts": ["node_modules/@expo-google-fonts/poppins/300Light/Poppins_300Light.ttf"]
         }
       ],
-      [
-        "expo-media-library",
-        {
-          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
-          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
-          "isAccessMediaLocationEnabled": true
-        }
-      ],
       "expo-secure-store"
     ],
     "experiments": {
