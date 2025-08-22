@@ -1,5 +1,5 @@
+import { bathIcon, bedIcon, sqftIcon } from '@/components/template-icons'
 import TemplateHeading from '@/components/template-parts/heading'
-import { bathIcon, bedIcon, sqftIcon } from '@/components/template-renderer'
 import { hexToRgba } from '@/helpers/colorUtils'
 import {
   Circle,
@@ -49,12 +49,25 @@ interface Props {
   template: string
   canvas: Canvas
   userPrefs: UserPrefs
+  showBrokerage: boolean
+  showRealtor: boolean
 }
 
-export default function JustSoldTemplateOne({ data, postType, template, canvas, userPrefs }: Props) {
+export default function JustSoldTemplateOne({
+  data,
+  postType,
+  template,
+  canvas,
+  userPrefs,
+  showBrokerage,
+  showRealtor,
+}: Props) {
   const { width: screenWidth } = useWindowDimensions()
-  const brokerageLogo = userPrefs?.brokerageLogo ? useImage(userPrefs.brokerageLogo) : null
-  const realtorPicture = userPrefs?.realtorPicture ? useImage(userPrefs.realtorPicture) : null
+  // Always call useImage with valid URLs to prevent CoreUI errors and follow React hooks rules
+  const brokerageLogo = useImage(userPrefs?.brokerageLogo || 'https://via.placeholder.com/1x1/00000000/00000000?text=')
+  const realtorPicture = useImage(
+    userPrefs?.realtorPicture || 'https://via.placeholder.com/1x1/00000000/00000000?text='
+  )
   const customFontMgr = useFonts({
     PlayfairDisplay: [require('@/assets/fonts/PlayfairDisplay-Regular.ttf')],
   })
@@ -131,7 +144,7 @@ export default function JustSoldTemplateOne({ data, postType, template, canvas, 
       <Circle cx={screenWidth * 0.01} cy={screenWidth * 1.15} r={screenWidth * 0.3} color={primaryColor} />
       <Rect x={0} y={screenWidth * 1.05} width={screenWidth} height={screenWidth * 0.2} color={primaryColor} />
 
-      {brokerageLogo && (
+      {userPrefs?.brokerageLogo && userPrefs.brokerageLogo.trim() !== '' && showBrokerage && (
         <Image
           image={brokerageLogo}
           fit="contain"
@@ -141,7 +154,7 @@ export default function JustSoldTemplateOne({ data, postType, template, canvas, 
           height={screenWidth * 0.27}
         />
       )}
-      {realtorPicture && (
+      {userPrefs?.realtorPicture && userPrefs.realtorPicture.trim() !== '' && showRealtor && (
         <Image
           image={realtorPicture}
           fit="contain"

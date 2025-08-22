@@ -10,11 +10,15 @@ export default function JustListedTemplateOne({
   postType,
   template,
   canvas,
+  showBrokerage,
+  showRealtor,
 }: {
   data: any
   postType: string
   template: string
   canvas: any
+  showBrokerage: boolean
+  showRealtor: boolean
 }) {
   const { width: screenWidth } = useWindowDimensions()
   const customFontMgr = useFonts({

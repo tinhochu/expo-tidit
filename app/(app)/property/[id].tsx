@@ -1,6 +1,7 @@
 import { TemplateRenderer, getTemplates } from '@/components/template-renderer'
 import { Box } from '@/components/ui/box'
 import { FormControl, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control'
+import { Grid, GridItem } from '@/components/ui/grid'
 import { Heading } from '@/components/ui/heading'
 import { HStack } from '@/components/ui/hstack'
 import {
@@ -15,6 +16,8 @@ import {
   SelectTrigger,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
+import { Text } from '@/components/ui/text'
 import { VStack } from '@/components/ui/vstack'
 import { useAuth } from '@/context/AuthContext'
 import { deletePost, getPostById, updatePost } from '@/lib/postService'
@@ -50,16 +53,42 @@ export default function PropertyDetails() {
   const [postType, setPostType] = useState<
     'JUST_SOLD' | 'JUST_LISTED' | 'JUST_RENTED' | 'OPEN_HOUSE' | 'UNDER_CONTRACT' | 'BACK_ON_MARKET' | 'LOADING'
   >('LOADING')
-  const [canvas, setCanvas] = useState<{ primaryColor?: string; template?: string } | null>(null)
+
+  // Helper function to check if postType is in a valid state
+  const isValidPostType = (
+    type: string
+  ): type is 'JUST_SOLD' | 'JUST_LISTED' | 'JUST_RENTED' | 'OPEN_HOUSE' | 'UNDER_CONTRACT' | 'BACK_ON_MARKET' => {
+    return type !== 'LOADING'
+  }
+
+  // Simplified post type options for the dropdown
+  const postTypeOptions = [
+    { value: 'JUST_SOLD', label: 'Just Sold' },
+    { value: 'JUST_LISTED', label: 'Just Listed' },
+    { value: 'JUST_RENTED', label: 'Just Rented' },
+    { value: 'OPEN_HOUSE', label: 'Open House' },
+    { value: 'UNDER_CONTRACT', label: 'Under Contract' },
+    { value: 'BACK_ON_MARKET', label: 'Back on Market' },
+  ]
+  const [canvas, setCanvas] = useState<{
+    primaryColor?: string
+    template?: string
+    showBrokerage?: boolean
+    showRealtor?: boolean
+  } | null>(null)
   const [userPrefs, setUserPrefs] = useState<any>(null)
-  // Use the useImage hook with the actual image URL
-  const img = useImage(imageUrl)
+  const [showBrokerage, setShowBrokerage] = useState<boolean>(true) // Default to true (enabled)
+  const [showRealtor, setShowRealtor] = useState<boolean>(true) // Default to true (enabled)
+  // Use the useImage hook with the actual image URL - provide fallback to prevent conditional hook calls
+  const img = useImage(imageUrl || 'https://via.placeholder.com/400x300?text=Loading...')
 
   useEffect(() => {
     if (!status?.granted) {
       requestPermission()
     }
   }, [status])
+
+  // Removed the useEffect that was causing circular updates
 
   useEffect(() => {
     const fetchPropertyDetails = async () => {
@@ -70,12 +99,18 @@ export default function PropertyDetails() {
       }
       setData(parsedData)
 
+      let parsedCanvas = null
       if (propertyDetails?.canvas) {
-        const parsedCanvas = JSON.parse(propertyDetails?.canvas)
+        parsedCanvas = JSON.parse(propertyDetails?.canvas)
         setCanvas(parsedCanvas)
+        // Load showBrokerage from canvas if it exists, otherwise default to true
+        setShowBrokerage(parsedCanvas.showBrokerage !== undefined ? parsedCanvas.showBrokerage : true)
+        setShowRealtor(parsedCanvas.showRealtor !== undefined ? parsedCanvas.showRealtor : true)
       } else {
         // Set default canvas state if none exists
-        setCanvas({ primaryColor: '#000000' })
+        setCanvas({ primaryColor: '#000000', showBrokerage: true, showRealtor: true })
+        setShowBrokerage(true)
+        setShowRealtor(true)
       }
 
       const newPostType = propertyDetails.postType as
@@ -91,7 +126,15 @@ export default function PropertyDetails() {
       // Reset templateStyle to a valid template for the new post type
       const availableTemplates = getTemplates(newPostType)
       if (availableTemplates.length > 0) {
-        setTemplateStyle(availableTemplates[0].value)
+        // Check if there's a saved template in the canvas
+        const savedTemplate = parsedCanvas?.template
+        const isValidSavedTemplate = availableTemplates.some((t) => t.value === savedTemplate)
+
+        if (isValidSavedTemplate && savedTemplate) {
+          setTemplateStyle(savedTemplate)
+        } else {
+          setTemplateStyle(availableTemplates[0].value)
+        }
       }
 
       // Set the image URL for the useImage hook
@@ -111,6 +154,24 @@ export default function PropertyDetails() {
 
     fetchUserPrefs()
   }, [user?.$id])
+
+  // Update templateStyle when postType changes to ensure we have a valid template
+  useEffect(() => {
+    if (isValidPostType(postType)) {
+      const availableTemplates = getTemplates(postType)
+      console.log('Post type changed to:', postType, 'Available templates:', availableTemplates)
+
+      if (availableTemplates.length > 0) {
+        // Only update if current templateStyle is not valid for the new postType
+        const isValidTemplate = availableTemplates.some((t) => t.value === templateStyle)
+        console.log('Current templateStyle:', templateStyle, 'Is valid?', isValidTemplate)
+        if (!isValidTemplate) {
+          console.log('Updating template from', templateStyle, 'to', availableTemplates[0].value)
+          setTemplateStyle(availableTemplates[0].value)
+        }
+      }
+    }
+  }, [postType, templateStyle])
 
   const handleDelete = () => {
     Alert.alert('Delete Post', 'Are you sure you want to delete this post? This action cannot be undone.', [
@@ -146,24 +207,26 @@ export default function PropertyDetails() {
     }
   }
 
-  const handleCanvasChange = async (key: string, value: string) => {
+  const handleCanvasChange = async (key: string, value: string | boolean) => {
     const updatedCanvas = {
       ...canvas,
       [key]: value,
     }
 
-    // Save the updated post first
+    // Save the updated canvas
     try {
       await updatePost(id as string, { canvas: JSON.stringify(updatedCanvas) })
       // Only update local state after successful save
       setCanvas(updatedCanvas)
     } catch (error) {
-      console.error('Error updating post:', error)
+      console.error('Error updating canvas:', error)
     }
   }
 
   // Get the label for the currently selected template
   const getSelectedTemplateLabel = () => {
+    if (!isValidPostType(postType)) return 'Select a template'
+
     const templates = getTemplates(postType)
     const selectedTemplate = templates.find((t) => t.value === templateStyle)
     return selectedTemplate?.label || 'Select a template'
@@ -174,7 +237,7 @@ export default function PropertyDetails() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.select({ ios: 64, android: 0 })}
     >
-      <VStack className="min-h-screen">
+      <VStack>
         <Box className="border-b border-gray-200 bg-white p-2 px-5 pt-[72px]">
           <HStack className="items-center justify-between gap-5">
             <Pressable onPress={() => router.back()}>
@@ -182,7 +245,7 @@ export default function PropertyDetails() {
             </Pressable>
             <Heading size="sm">{data?.title ? data.title.slice(0, 25) + '...' : 'Fetching...'}</Heading>
             {img ? (
-              <HStack className="gap-3">
+              <HStack className="gap-6">
                 <Pressable onPress={handleSaveCanvas}>
                   <AntDesign size={24} name="download" color="blue" />
                 </Pressable>
@@ -199,7 +262,7 @@ export default function PropertyDetails() {
         </Box>
 
         <ScrollView>
-          {!img && postType === 'LOADING' ? (
+          {!img && !isValidPostType(postType) ? (
             <Box className="relative" style={{ width: screenWidth, height: screenWidth * 1.25 }}>
               <Skeleton className="absolute inset-0 h-full w-full" />
 
@@ -221,57 +284,293 @@ export default function PropertyDetails() {
             >
               {img && <SkImage image={img} x={0} y={0} width={screenWidth} height={screenWidth * 1.25} fit="cover" />}
               <TemplateRenderer
+                key={`${postType}-${templateStyle}`}
                 postType={postType}
                 template={templateStyle}
                 data={data}
                 canvas={canvas}
                 userPrefs={userPrefs}
+                showBrokerage={showBrokerage}
+                showRealtor={showRealtor}
               />
             </Canvas>
           )}
 
-          <VStack className="p-5" space="2xl">
-            {canvas && postType !== 'LOADING' && (
+          <VStack className="px-5 pb-8 pt-5" space="2xl">
+            {canvas && isValidPostType(postType) && (
               <>
-                {getTemplates(postType).length > 0 && (
-                  <FormControl>
-                    <FormControlLabel>
-                      <FormControlLabelText className="font-bold">Select a template</FormControlLabelText>
-                    </FormControlLabel>
-                    <Select
-                      className="bg-white"
-                      onValueChange={(value) => {
-                        setTemplateStyle(value)
-                        handleCanvasChange('template', value)
-                      }}
-                      defaultValue={templateStyle}
-                    >
-                      <SelectTrigger>
-                        <SelectInput value={getSelectedTemplateLabel()} className="flex-1" />
-                        <AntDesign name="down" size={15} className="mr-3" />
-                      </SelectTrigger>
-                      <SelectPortal>
-                        <SelectBackdrop />
-                        <SelectContent className="pb-10">
-                          <SelectDragIndicatorWrapper>
-                            <SelectDragIndicator />
-                          </SelectDragIndicatorWrapper>
-                          {getTemplates(postType)?.map((template) => (
-                            <SelectItem key={template.value} label={template.label} value={template.value} />
-                          ))}
-                        </SelectContent>
-                      </SelectPortal>
-                    </Select>
-                  </FormControl>
-                )}
+                <Grid _extra={{ className: 'grid-cols-2' }}>
+                  <GridItem _extra={{ className: 'col-span-1' }}>
+                    <FormControl className="pr-2">
+                      <FormControlLabel>
+                        <FormControlLabelText className="font-bold">Choose a Post Type</FormControlLabelText>
+                      </FormControlLabel>
+                      <Select
+                        className="bg-white"
+                        onValueChange={async (value) => {
+                          const newPostType = value as
+                            | 'JUST_SOLD'
+                            | 'JUST_LISTED'
+                            | 'JUST_RENTED'
+                            | 'OPEN_HOUSE'
+                            | 'UNDER_CONTRACT'
+                            | 'BACK_ON_MARKET'
+
+                          setPostType(newPostType)
+
+                          // Update templateStyle to match the first available template for the new post type
+                          const availableTemplates = getTemplates(newPostType)
+
+                          if (availableTemplates.length > 0) {
+                            const newTemplateStyle = availableTemplates[0].value
+                            console.log('Setting new template style:', newTemplateStyle, 'for post type:', newPostType)
+
+                            setTemplateStyle(newTemplateStyle)
+
+                            // Update the post type and template in the database
+                            try {
+                              await updatePost(id as string, {
+                                postType: newPostType,
+                                canvas: JSON.stringify({
+                                  ...canvas,
+                                  template: newTemplateStyle,
+                                }),
+                              })
+                            } catch (error) {
+                              console.error('Error updating post type and template:', error)
+                            }
+                          } else {
+                            // Update just the post type in the database
+                            try {
+                              await updatePost(id as string, {
+                                postType: newPostType,
+                              })
+                            } catch (error) {
+                              console.error('Error updating post type:', error)
+                            }
+                          }
+                        }}
+                        defaultValue={postType}
+                      >
+                        <SelectTrigger>
+                          <SelectInput
+                            value={postTypeOptions.find((opt) => opt.value === postType)?.label || 'Select post type'}
+                            className="flex-1"
+                          />
+                          <AntDesign name="down" size={15} className="mr-3" />
+                        </SelectTrigger>
+                        <SelectPortal>
+                          <SelectBackdrop />
+                          <SelectContent className="pb-10">
+                            <SelectDragIndicatorWrapper>
+                              <SelectDragIndicator />
+                            </SelectDragIndicatorWrapper>
+                            {postTypeOptions.map((option) => (
+                              <SelectItem key={option.value} label={option.label} value={option.value} />
+                            ))}
+                          </SelectContent>
+                        </SelectPortal>
+                      </Select>
+                    </FormControl>
+                  </GridItem>
+                  <GridItem _extra={{ className: 'col-span-1' }}>
+                    {isValidPostType(postType) && (
+                      <FormControl className="pl-2">
+                        <FormControlLabel>
+                          <FormControlLabelText className="font-bold">Select a Template</FormControlLabelText>
+                        </FormControlLabel>
+                        <Select
+                          key={`template-select-${postType}`}
+                          className="bg-white"
+                          onValueChange={(value) => {
+                            setTemplateStyle(value)
+                            handleCanvasChange('template', value)
+                          }}
+                          defaultValue={templateStyle}
+                        >
+                          <SelectTrigger>
+                            <SelectInput value={getSelectedTemplateLabel()} className="flex-1" />
+                            <AntDesign name="down" size={15} className="mr-3" />
+                          </SelectTrigger>
+                          <SelectPortal>
+                            <SelectBackdrop />
+                            <SelectContent className="pb-10">
+                              <SelectDragIndicatorWrapper>
+                                <SelectDragIndicator />
+                              </SelectDragIndicatorWrapper>
+                              {getTemplates(postType)?.map((template) => (
+                                <SelectItem key={template.value} label={template.label} value={template.value} />
+                              ))}
+                            </SelectContent>
+                          </SelectPortal>
+                        </Select>
+                      </FormControl>
+                    )}
+                  </GridItem>
+                </Grid>
+
+                {/* <Grid _extra={{ className: 'grid-cols-2' }}>
+                  <GridItem _extra={{ className: 'col-span-1' }}>
+                    <FormControl className="pr-2">
+                      <FormControlLabel>
+                        <FormControlLabelText className="font-bold">Choose a Post Type</FormControlLabelText>
+                      </FormControlLabel>
+                      <Select
+                        className="bg-white"
+                        onValueChange={async (value) => {
+                          const newPostType = value as
+                            | 'JUST_SOLD'
+                            | 'JUST_LISTED'
+                            | 'JUST_RENTED'
+                            | 'OPEN_HOUSE'
+                            | 'UNDER_CONTRACT'
+                            | 'BACK_ON_MARKET'
+
+                          setPostType(newPostType)
+
+                          // Update templateStyle to match the first available template for the new post type
+                          const availableTemplates = getTemplates(newPostType)
+
+                          if (availableTemplates.length > 0) {
+                            const newTemplateStyle = availableTemplates[0].value
+                            console.log('Setting new template style:', newTemplateStyle, 'for post type:', newPostType)
+
+                            setTemplateStyle(newTemplateStyle)
+
+                            // Update the post type and template in the database
+                            try {
+                              await updatePost(id as string, {
+                                postType: newPostType,
+                                canvas: JSON.stringify({
+                                  ...canvas,
+                                  template: newTemplateStyle,
+                                }),
+                              })
+                            } catch (error) {
+                              console.error('Error updating post type and template:', error)
+                            }
+                          } else {
+                            // Update just the post type in the database
+                            try {
+                              await updatePost(id as string, {
+                                postType: newPostType,
+                              })
+                            } catch (error) {
+                              console.error('Error updating post type:', error)
+                            }
+                          }
+                        }}
+                        defaultValue={postType}
+                      >
+                        <SelectTrigger>
+                          <SelectInput
+                            value={postTypeOptions.find((opt) => opt.value === postType)?.label || 'Select post type'}
+                            className="flex-1"
+                          />
+                          <AntDesign name="down" size={15} className="mr-3" />
+                        </SelectTrigger>
+                        <SelectPortal>
+                          <SelectBackdrop />
+                          <SelectContent className="pb-10">
+                            <SelectDragIndicatorWrapper>
+                              <SelectDragIndicator />
+                            </SelectDragIndicatorWrapper>
+                            {postTypeOptions.map((option) => (
+                              <SelectItem key={option.value} label={option.label} value={option.value} />
+                            ))}
+                          </SelectContent>
+                        </SelectPortal>
+                      </Select>
+                    </FormControl>
+                  </GridItem>
+                  <GridItem _extra={{ className: 'col-span-1' }}>
+                    {isValidPostType(postType) && (
+                      <FormControl className="pl-2">
+                        <FormControlLabel>
+                          <FormControlLabelText className="font-bold">Select a Template</FormControlLabelText>
+                        </FormControlLabel>
+                        <Select
+                          key={`template-select-${postType}`}
+                          className="bg-white"
+                          onValueChange={(value) => {
+                            setTemplateStyle(value)
+                            handleCanvasChange('template', value)
+                          }}
+                          defaultValue={templateStyle}
+                        >
+                          <SelectTrigger>
+                            <SelectInput value={getSelectedTemplateLabel()} className="flex-1" />
+                            <AntDesign name="down" size={15} className="mr-3" />
+                          </SelectTrigger>
+                          <SelectPortal>
+                            <SelectBackdrop />
+                            <SelectContent className="pb-10">
+                              <SelectDragIndicatorWrapper>
+                                <SelectDragIndicator />
+                              </SelectDragIndicatorWrapper>
+                              {getTemplates(postType)?.map((template) => (
+                                <SelectItem key={template.value} label={template.label} value={template.value} />
+                              ))}
+                            </SelectContent>
+                          </SelectPortal>
+                        </Select>
+                      </FormControl>
+                    )}
+                  </GridItem>
+                </Grid> */}
+
                 <HStack className="flex items-center justify-between">
-                  <Heading size="sm">Select a primary color</Heading>
+                  <Heading size="sm">Select a Primary Color</Heading>
                   <ColorPicker
                     selection={canvas.primaryColor || '#fafafa'}
                     onValueChanged={(color) => handleCanvasChange('primaryColor', color)}
                     supportsOpacity={false}
                   />
                 </HStack>
+
+                <Grid _extra={{ className: 'grid-cols-2 mb-2' }}>
+                  <GridItem _extra={{ className: 'col-span-1' }}>
+                    <HStack space="md" className="items-center">
+                      <Switch
+                        size="md"
+                        isDisabled={false}
+                        trackColor={{ false: '#d4d4d4', true: '#525252' }}
+                        thumbColor="#fafafa"
+                        ios_backgroundColor="#d4d4d4"
+                        onValueChange={(value) => {
+                          setShowBrokerage(value)
+                          handleCanvasChange('showBrokerage', value)
+                        }}
+                        value={showBrokerage}
+                      />
+                      <Text>Show Brokerage</Text>
+                    </HStack>
+                  </GridItem>
+                  <GridItem _extra={{ className: 'col-span-1' }}>
+                    <HStack space="md" className="items-center">
+                      <Switch
+                        size="md"
+                        isDisabled={false}
+                        trackColor={{ false: '#d4d4d4', true: '#525252' }}
+                        thumbColor="#fafafa"
+                        ios_backgroundColor="#d4d4d4"
+                        onValueChange={(value) => {
+                          setShowRealtor(value)
+                          handleCanvasChange('showRealtor', value)
+                        }}
+                        value={showRealtor}
+                      />
+                      <Text>Show Realtor</Text>
+                    </HStack>
+                  </GridItem>
+                </Grid>
+
+                {/* TODO: End of the form, don't remove this */}
+                <Grid _extra={{ className: 'grid-cols-1 gap-5' }}>
+                  <GridItem _extra={{ className: 'col-span-1' }}>
+                    <Box className="aspect-square w-full"></Box>
+                  </GridItem>
+                </Grid>
               </>
             )}
           </VStack>
