@@ -1,5 +1,6 @@
 import { TemplateRenderer, getTemplates } from '@/components/template-renderer'
 import { Box } from '@/components/ui/box'
+import { Button, ButtonText } from '@/components/ui/button'
 import { FormControl, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control'
 import { Grid, GridItem } from '@/components/ui/grid'
 import { Heading } from '@/components/ui/heading'
@@ -26,6 +27,7 @@ import { getUserPrefs } from '@/lib/userService'
 import { ColorPicker } from '@expo/ui/swift-ui'
 import AntDesign from '@expo/vector-icons/AntDesign'
 import { Canvas, Image as SkImage, useCanvasRef, useImage } from '@shopify/react-native-skia'
+import * as ImagePicker from 'expo-image-picker'
 import * as MediaLibrary from 'expo-media-library'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useState } from 'react'
@@ -61,6 +63,67 @@ export default function PropertyDetails() {
     return type !== 'LOADING'
   }
 
+  // Image picker function for custom photos
+  const pickImage = async () => {
+    try {
+      // Request permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant permission to access your photo library.')
+        return
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 5], // 4:5 aspect ratio to match canvas
+        quality: 0.8,
+      })
+
+      if (!result.canceled && result.assets[0]) {
+        const imageUri = result.assets[0].uri
+        setCustomImage(imageUri)
+
+        // Save custom image to canvas in database
+        try {
+          const updatedCanvas = {
+            ...canvas,
+            customImage: imageUri,
+          }
+          await updatePost(id as string, {
+            canvas: JSON.stringify(updatedCanvas),
+          })
+          setCanvas(updatedCanvas)
+        } catch (error) {
+          console.error('Error saving custom image:', error)
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error)
+      Alert.alert('Error', 'Failed to pick image. Please try again.')
+    }
+  }
+
+  // Function to remove custom image
+  const removeCustomImage = async () => {
+    setCustomImage(null)
+
+    // Remove custom image from canvas in database
+    try {
+      const updatedCanvas = {
+        ...canvas,
+        customImage: null,
+      }
+      await updatePost(id as string, {
+        canvas: JSON.stringify(updatedCanvas),
+      })
+      setCanvas(updatedCanvas)
+    } catch (error) {
+      console.error('Error removing custom image:', error)
+    }
+  }
+
   // Simplified post type options for the dropdown
   const postTypeOptions = [
     { value: 'JUST_SOLD', label: 'Just Sold' },
@@ -75,12 +138,15 @@ export default function PropertyDetails() {
     template?: string
     showBrokerage?: boolean
     showRealtor?: boolean
+    customImage?: string | null
   } | null>(null)
   const [userPrefs, setUserPrefs] = useState<any>(null)
   const [showBrokerage, setShowBrokerage] = useState<boolean>(true) // Default to true (enabled)
   const [showRealtor, setShowRealtor] = useState<boolean>(true) // Default to true (enabled)
+  const [customImage, setCustomImage] = useState<string | null>(null)
   // Use the useImage hook with the actual image URL - provide fallback to prevent conditional hook calls
   const img = useImage(imageUrl || 'https://via.placeholder.com/400x300?text=Loading...')
+  const customImg = useImage(customImage || '')
 
   useEffect(() => {
     if (!status?.granted) {
@@ -106,6 +172,10 @@ export default function PropertyDetails() {
         // Load showBrokerage from canvas if it exists, otherwise default to true
         setShowBrokerage(parsedCanvas.showBrokerage !== undefined ? parsedCanvas.showBrokerage : true)
         setShowRealtor(parsedCanvas.showRealtor !== undefined ? parsedCanvas.showRealtor : true)
+        // Load custom image from canvas if it exists
+        if (parsedCanvas.customImage) {
+          setCustomImage(parsedCanvas.customImage)
+        }
       } else {
         // Set default canvas state if none exists
         setCanvas({ primaryColor: '#000000', showBrokerage: true, showRealtor: true })
@@ -282,7 +352,15 @@ export default function PropertyDetails() {
                 flex: 1,
               }}
             >
-              {img && <SkImage image={img} x={0} y={0} width={screenWidth} height={screenWidth * 1.25} fit="cover" />}
+              {/* Use custom image if available, otherwise use property image */}
+              {customImage && customImg ? (
+                <SkImage image={customImg} x={0} y={0} width={screenWidth} height={screenWidth * 1.25} fit="cover" />
+              ) : img ? (
+                <SkImage image={img} x={0} y={0} width={screenWidth} height={screenWidth * 1.25} fit="cover" />
+              ) : (
+                // Show loading skeleton when no image is available
+                <Box className="absolute inset-0 bg-gray-200" />
+              )}
               <TemplateRenderer
                 key={`${postType}-${templateStyle}`}
                 postType={postType}
@@ -564,6 +642,26 @@ export default function PropertyDetails() {
                     </HStack>
                   </GridItem>
                 </Grid>
+
+                {/* Custom Image Upload Section */}
+                <VStack className="pt-5">
+                  <Heading size="sm">Custom Photo</Heading>
+                  <Text className="text-gray-600">
+                    {customImage ? 'Custom photo selected' : 'Use your own photo instead of the property photo'}
+                  </Text>
+
+                  <Box className="mt-3 rounded-md border border-2 border-dashed border-gray-600 p-5 py-6">
+                    {customImage ? (
+                      <Button size="lg" onPress={removeCustomImage} className="border-red-500">
+                        <ButtonText className="text-red-500">Remove</ButtonText>
+                      </Button>
+                    ) : (
+                      <Button size="lg" onPress={pickImage}>
+                        <ButtonText>Upload Photo</ButtonText>
+                      </Button>
+                    )}
+                  </Box>
+                </VStack>
 
                 {/* TODO: End of the form, don't remove this */}
                 <Grid _extra={{ className: 'grid-cols-1 gap-5' }}>
