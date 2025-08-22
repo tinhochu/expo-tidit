@@ -5,7 +5,7 @@ import { Grid, GridItem } from '@/components/ui/grid'
 import { Heading } from '@/components/ui/heading'
 import { HStack } from '@/components/ui/hstack'
 import { Pressable } from '@/components/ui/pressable'
-import { Skeleton, SkeletonText } from '@/components/ui/skeleton'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
 import { VStack } from '@/components/ui/vstack'
 import { useAuth } from '@/context/AuthContext'
@@ -14,7 +14,7 @@ import AntDesign from '@expo/vector-icons/AntDesign'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
-import { RefreshControl, ScrollView, View } from 'react-native'
+import { RefreshControl, ScrollView } from 'react-native'
 
 export default function Home() {
   const { user } = useAuth()
@@ -49,7 +49,7 @@ export default function Home() {
   )
 
   return (
-    <VStack className="min-h-screen">
+    <VStack>
       <Box className="border-b border-gray-200 bg-white p-2 px-5 pt-[72px]">
         <HStack className="items-center justify-between">
           <Heading size="xl">My Posts</Heading>
@@ -59,11 +59,11 @@ export default function Home() {
         </HStack>
       </Box>
       <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-        <VStack className="px-5 pt-5">
+        <VStack className="px-5 pb-32 pt-5">
           {loading ? (
             <VStack className="items-center justify-center" space="xl">
               {Array.from({ length: 4 }).map((_, index) => (
-                <Skeleton key={index} variant="sharp" className="h-44 w-full" />
+                <Skeleton key={index} variant="sharp" className="h-44 w-full rounded-xl" />
               ))}
             </VStack>
           ) : posts.length > 0 ? (
@@ -72,7 +72,7 @@ export default function Home() {
 
               return (
                 <Pressable key={post.id} onPress={() => router.push(`/property/${post.id}`)}>
-                  <Box className="mb-5 overflow-hidden rounded rounded-xl border border-gray-300 bg-white">
+                  <Box className="mb-5 overflow-hidden rounded-xl border border-gray-300 bg-white">
                     <Grid _extra={{ className: 'grid-cols-5 items-start' }}>
                       <GridItem _extra={{ className: 'col-span-2' }} className="p-0">
                         {propInfo.photos === null ? (

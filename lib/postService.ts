@@ -10,6 +10,7 @@ export interface Post {
   createdAt?: string
   updatedAt?: string
   postType: string
+  canvas?: string
 }
 
 export const createPost = async (post: Omit<Post, 'id' | 'createdAt' | 'updatedAt'>): Promise<Post> => {
@@ -78,5 +79,29 @@ export const deletePost = async (postId: string): Promise<void> => {
   } catch (error) {
     console.error('Error deleting post:', error)
     throw new Error('Failed to delete post')
+  }
+}
+
+export const updatePost = async (postId: string, updates: Partial<Post>): Promise<Post> => {
+  try {
+    const now = new Date().toISOString()
+
+    const response = await databases.updateDocument(DATABASE_ID, POSTS_COLLECTION_ID, postId, {
+      ...updates,
+      updatedAt: now,
+    })
+
+    return {
+      id: response.$id,
+      title: response.title,
+      propInformation: response.propInformation,
+      userId: response.userId,
+      createdAt: response.createdAt,
+      updatedAt: response.updatedAt,
+      postType: response.postType,
+    }
+  } catch (error) {
+    console.error('Error updating post:', error)
+    throw new Error('Failed to update post')
   }
 }

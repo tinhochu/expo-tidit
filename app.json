@@ -68,6 +68,29 @@
           "photosPermission": "The app accesses your photos to let you share them with your friends."
         }
       ],
+      [
+        "expo-font",
+        {
+          "fonts": ["./assets/fonts/PlayfairDisplay-Regular.ttf"],
+          "android": {
+            "fonts": [
+              {
+                "fontFamily": "PlayfairDisplay",
+                "fontDefinitions": [
+                  {
+                    "path": "./assets/fonts/PlayfairDisplay-Regular.ttf",
+                    "weight": 400,
+                    "style": "normal"
+                  }
+                ]
+              }
+            ]
+          },
+          "ios": {
+            "fonts": ["./assets/fonts/PlayfairDisplay-Regular.ttf"]
+          }
+        }
+      ],
       "expo-secure-store"
     ],
     "experiments": {

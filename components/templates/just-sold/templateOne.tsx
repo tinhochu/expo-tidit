@@ -1,58 +1,173 @@
-import Image from '@/components/template-parts/image'
-import { Canvas, Circle, Paragraph, Rect, Skia, TextAlign, useSVG } from '@shopify/react-native-skia'
+import TemplateHeading from '@/components/template-parts/heading'
+import { bathIcon, bedIcon, sqftIcon } from '@/components/template-renderer'
+import { hexToRgba } from '@/helpers/colorUtils'
+import {
+  Circle,
+  Group,
+  Image,
+  ImageSVG,
+  Paragraph,
+  Rect,
+  Skia,
+  TextAlign,
+  useFonts,
+  useImage,
+} from '@shopify/react-native-skia'
 import { LinearGradient, vec } from '@shopify/react-native-skia'
 import { useMemo } from 'react'
 import { useWindowDimensions } from 'react-native'
 
-export default function JustSoldTemplateOne({ data }: { data: any }) {
+// Define types for better type safety
+interface PropertyDescription {
+  sqft: string | number
+  beds: string | number
+  baths: string | number
+}
+
+interface PropertyInformation {
+  line: string
+  city: string
+  state: string
+  postalCode: string
+  description: PropertyDescription
+}
+
+interface UserPrefs {
+  brokerageLogo?: string
+  realtorPicture?: string
+}
+
+interface Canvas {
+  primaryColor?: string
+}
+
+interface Props {
+  data: {
+    propInformation: PropertyInformation
+  }
+  postType: string
+  template: string
+  canvas: Canvas
+  userPrefs: UserPrefs
+}
+
+export default function JustSoldTemplateOne({ data, postType, template, canvas, userPrefs }: Props) {
   const { width: screenWidth } = useWindowDimensions()
+  const brokerageLogo = userPrefs?.brokerageLogo ? useImage(userPrefs.brokerageLogo) : null
+  const realtorPicture = userPrefs?.realtorPicture ? useImage(userPrefs.realtorPicture) : null
+  const customFontMgr = useFonts({
+    PlayfairDisplay: [require('@/assets/fonts/PlayfairDisplay-Regular.ttf')],
+  })
 
-  const paragraph = useMemo(() => {
-    const para = Skia.ParagraphBuilder.Make({
+  // Consolidated paragraph creation function
+  const createParagraph = useMemo(() => {
+    if (!customFontMgr) return null
+
+    const baseParagraphStyle = {
       textAlign: TextAlign.Right,
-    })
-      .pushStyle({
-        heightMultiplier: 1.2,
-      })
-      .addText(`${data.propInformation.line}`)
-      .addText(`\n${data.propInformation.city}, ${data.propInformation.state}`)
-      .addText(`\n${data.propInformation.postalCode}`)
-      .build()
+    }
 
-    return para
-  }, [])
+    const createTextParagraph = (text: string, fontSize: number = 14) => {
+      const textStyle = {
+        color: Skia.Color('white'),
+        fontFamilies: ['PlayfairDisplay'],
+        fontSize,
+      }
 
-  const svgString = `
-        <svg width="952" height="116" viewBox="0 0 952 116" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M21.45 116C17.65 116 14.15 115.05 10.95 113.15C7.85 111.25 5.35 108.75 3.45 105.65C1.55 102.45 0.6 98.95 0.6 95.15V82.85H20.4V94.25C20.4 94.75 20.55 95.2 20.85 95.6C21.25 95.9 21.7 96.05 22.2 96.05H86.7C87.2 96.05 87.65 95.9 88.05 95.6C88.45 95.2 88.65 94.75 88.65 94.25V8H108.6V95.15C108.6 98.95 107.65 102.45 105.75 105.65C103.85 108.75 101.3 111.25 98.1 113.15C95 115.05 91.55 116 87.75 116H21.45ZM145.691 116C141.891 116 138.391 115.05 135.191 113.15C132.091 111.25 129.591 108.75 127.691 105.65C125.891 102.55 124.991 99.1 124.991 95.3V29H144.641V94.55C144.641 95.05 144.791 95.5 145.091 95.9C145.491 96.2 145.941 96.35 146.441 96.35H191.891C192.391 96.35 192.791 96.2 193.091 95.9C193.491 95.5 193.691 95.05 193.691 94.55V29H213.341V95.3C213.341 99.1 212.391 102.55 210.491 105.65C208.691 108.75 206.241 111.25 203.141 113.15C200.041 115.05 196.541 116 192.641 116H145.691ZM246.162 116C242.362 116 238.912 115.05 235.812 113.15C232.712 111.25 230.212 108.75 228.312 105.65C226.412 102.55 225.462 99.1 225.462 95.3V92H245.112V94.55C245.112 95.05 245.262 95.5 245.562 95.9C245.962 96.2 246.412 96.35 246.912 96.35H292.362C292.862 96.35 293.262 96.2 293.562 95.9C293.962 96.5 294.162 95.05 294.162 94.55V84.2C294.162 83.7 293.962 83.3 293.562 83C293.262 82.6 292.862 82.4 292.362 82.4H246.162C242.362 82.4 238.912 81.45 235.812 79.55C232.712 77.65 230.212 75.15 228.312 72.05C226.412 68.95 225.462 65.5 225.462 61.7V49.7C225.462 45.9 226.412 42.45 228.312 39.35C230.212 36.25 232.712 33.75 235.812 31.85C238.912 29.95 242.362 29 246.162 29H293.112C297.012 29 300.512 29.95 303.612 31.85C306.712 33.75 309.212 36.25 311.112 39.35C313.012 42.45 313.962 45.9 313.962 49.7V53H294.162V50.45C294.162 49.95 293.962 49.55 293.562 49.25C293.262 48.85 292.862 48.65 292.362 48.65H246.912C246.412 48.65 245.962 48.85 245.562 49.25C245.262 49.55 245.112 49.95 245.112 50.45V60.8C245.112 61.3 245.262 61.75 245.562 62.15C245.962 62.45 246.412 62.6 246.912 62.6H293.112C297.012 62.6 300.512 63.55 303.612 65.45C306.712 67.35 309.212 69.85 311.112 72.95C313.012 76.05 313.962 79.5 313.962 83.3V95.3C313.962 99.1 313.012 102.55 311.112 105.65C309.212 108.75 306.712 111.25 303.612 113.15C300.512 115.05 297.012 116 293.112 116H246.162ZM349.744 116C345.944 116 342.494 115.05 339.394 113.15C336.294 111.25 333.794 108.75 331.894 105.65C329.994 102.55 329.044 99.1 329.044 95.3V2.3H348.694V29H382.594V48.65H348.694V94.55C348.694 95.05 348.844 95.5 349.144 95.9C349.544 96.2 349.994 96.35 350.494 96.35H382.594V116H349.744ZM441.265 116V7.85H461.065V96.05H549.265V116H441.265ZM557.409 116V29H577.059V116H557.409ZM557.409 20.3V0.499994H577.059V20.3H557.409ZM614.863 116C611.063 116 607.613 115.05 604.513 113.15C601.413 111.25 598.913 108.75 597.013 105.65C595.113 102.55 594.163 99.1 594.163 95.3V92H613.813V94.55C613.813 95.05 613.963 95.5 614.263 95.9C614.663 96.2 615.113 96.35 615.613 96.35H661.063C661.563 96.35 661.963 96.2 662.263 95.9C662.663 95.5 662.863 95.05 662.863 94.55V84.2C662.863 83.7 662.663 83.3 662.263 83C661.963 82.6 661.563 82.4 661.063 82.4H614.863C611.063 82.4 607.613 81.45 604.513 79.55C601.413 77.65 598.913 75.15 597.013 72.05C595.113 68.95 594.163 65.5 594.163 61.7V49.7C594.163 45.9 595.113 42.45 597.013 39.35C598.913 36.25 601.413 33.75 604.513 31.85C607.613 29.95 611.063 29 614.863 29H661.813C665.713 29 669.213 29.95 672.313 31.85C675.413 33.75 677.913 36.25 679.813 39.35C681.713 42.45 682.663 45.9 682.663 49.7V53H662.863V50.45C662.863 49.95 662.663 49.55 662.263 49.25C661.963 48.85 661.563 48.65 661.063 48.65H615.613C615.113 48.65 614.663 48.85 614.263 49.25C613.963 49.55 613.813 49.95 613.813 50.45V60.8C613.813 61.3 613.963 61.75 614.263 62.15C614.663 62.45 615.113 62.6 615.613 62.6H661.813C665.713 62.6 669.213 63.55 672.313 65.45C675.413 67.35 677.913 69.85 679.813 72.95C681.713 76.05 682.663 79.5 682.663 83.3V95.3C682.663 99.1 681.713 102.55 679.813 105.65C677.913 108.75 675.413 111.25 672.313 113.15C669.213 115.05 665.713 116 661.813 116H614.863ZM718.445 116C714.645 116 711.195 115.05 708.095 113.15C704.995 111.25 702.495 108.75 700.595 105.65C698.695 102.55 697.745 99.1 697.745 95.3V2.3H717.395V29H751.295V48.65H717.395V94.55C717.395 95.05 717.545 95.5 717.845 95.9C718.245 96.2 718.695 96.35 719.195 96.35H751.295V116H718.445ZM783.916 116C780.116 116 776.666 115.05 773.566 113.15C770.466 111.25 767.966 108.75 766.066 105.65C764.166 102.55 763.216 99.1 763.216 95.3V49.7C763.216 45.9 764.166 42.45 766.066 39.35C767.966 36.25 770.466 33.75 773.566 31.85C776.666 29.95 780.116 29 783.916 29H830.866C834.666 29 838.116 29.95 841.216 31.85C844.416 33.75 846.916 36.25 848.716 39.35C850.616 42.45 851.566 45.9 851.566 49.7V82.4H782.866V94.55C782.866 95.05 783.016 95.5 783.316 95.9C783.716 96.2 784.166 96.35 784.666 96.35H851.566V116H783.916ZM782.866 64.7H831.916V50.45C831.916 49.95 831.716 49.55 831.316 49.25C831.016 48.85 830.616 48.65 830.116 48.65H784.666C784.166 48.65 783.716 48.85 783.316 49.25C783.016 49.55 782.866 49.95 782.866 50.45V64.7ZM883.574 116C879.674 116 876.174 115.05 873.074 113.15C869.974 111.25 867.474 108.75 865.574 105.65C863.774 102.55 862.874 99.1 862.874 95.3V49.7C862.874 45.9 863.774 42.45 865.574 39.35C867.474 36.25 869.974 33.75 873.074 31.85C876.174 29.95 879.674 29 883.574 29H931.724V0.499994H951.374V116H883.574ZM884.474 96.35H929.924C930.424 96.35 930.824 96.2 931.124 95.9C931.524 95.5 931.724 95.05 931.724 94.55V50.45C931.724 49.95 931.524 49.55 931.124 49.25C930.824 48.85 930.424 48.65 929.924 48.65H884.474C883.974 48.65 883.524 48.85 883.124 49.25C882.824 49.55 882.674 49.95 882.674 50.45V94.55C882.674 95.05 882.824 95.5 883.124 95.9C883.524 96.2 883.974 96.35 884.474 96.35Z" fill="black"/>
-</svg>
-    `
+      return Skia.ParagraphBuilder.Make(baseParagraphStyle, customFontMgr).pushStyle(textStyle).addText(text).build()
+    }
+
+    return createTextParagraph
+  }, [customFontMgr])
+
+  // Create all paragraphs using the consolidated function
+  const paragraphs = useMemo(() => {
+    if (!createParagraph) return {}
+
+    return {
+      sqft: createParagraph(`${data.propInformation.description.sqft} sqft`, 15),
+      address: (() => {
+        const para = Skia.ParagraphBuilder.Make({ textAlign: TextAlign.Right }, customFontMgr!)
+          .pushStyle({
+            color: Skia.Color('white'),
+            fontFamilies: ['PlayfairDisplay'],
+            fontSize: 14,
+          })
+          .addText(`${data.propInformation.line}`)
+          .addText(`\n${data.propInformation.city}, ${data.propInformation.state}`)
+          .addText(`\n${data.propInformation.postalCode}`)
+          .build()
+        return para
+      })(),
+      beds: createParagraph(`${data.propInformation.description.beds} beds`),
+      baths: createParagraph(`${data.propInformation.description.baths} baths`),
+    }
+  }, [createParagraph, customFontMgr, data.propInformation])
+
+  // Early return if fonts aren't loaded
+  if (!customFontMgr || !paragraphs.sqft || !paragraphs.beds || !paragraphs.baths) {
+    return null
+  }
+
+  const primaryColor = canvas.primaryColor || '#fafafa'
+  const gradientColors = [
+    hexToRgba(primaryColor, 0.4) || 'rgba(0, 0, 0, 0.3)',
+    hexToRgba(primaryColor, 0.4) || 'rgba(0, 0, 0, 0.5)',
+  ]
 
   return (
     <>
-      <Rect x={0} y={0} width={screenWidth} height={screenWidth}>
-        <LinearGradient
-          start={vec(0, 0)}
-          end={vec(0, screenWidth)}
-          positions={[0, 0.9]}
-          colors={['rgba(0, 0, 0, 0.3)', 'rgba(0, 0, 0, 0.5)']}
-        />
+      <Rect x={0} y={0} width={screenWidth} height={screenWidth * 1.25}>
+        <LinearGradient start={vec(0, 0)} end={vec(0, screenWidth)} positions={[0, 0.9]} colors={gradientColors} />
       </Rect>
 
-      <Image
-        svgString={svgString}
-        color="white"
-        position={{
-          x: screenWidth * 0.1,
-          y: screenWidth * 0.3,
-          width: screenWidth * 0.8,
-          height: screenWidth * 0.2,
-        }}
+      <TemplateHeading
+        screenWidth={screenWidth}
+        text={postType === 'JUST_SOLD' ? 'Just Sold' : 'Just Listed'}
+        x={screenWidth * 0}
+        y={screenWidth * 0.15}
       />
 
-      <Circle cx={screenWidth * 0.01} cy={screenWidth * 0.95} r={screenWidth * 0.3} color="lightblue" />
-      <Rect x={0} y={screenWidth * 0.8} width={screenWidth} height={screenWidth * 0.2} color="lightblue" />
-      <Paragraph paragraph={paragraph} x={-screenWidth * 0.025} y={screenWidth * 0.85} width={screenWidth} />
+      <Circle cx={screenWidth * 0.01} cy={screenWidth * 1.15} r={screenWidth * 0.3} color={primaryColor} />
+      <Rect x={0} y={screenWidth * 1.05} width={screenWidth} height={screenWidth * 0.2} color={primaryColor} />
+
+      {brokerageLogo && (
+        <Image
+          image={brokerageLogo}
+          fit="contain"
+          x={screenWidth * 0.175}
+          y={screenWidth * 1.0}
+          width={screenWidth * 0.27}
+          height={screenWidth * 0.27}
+        />
+      )}
+      {realtorPicture && (
+        <Image
+          image={realtorPicture}
+          fit="contain"
+          x={-screenWidth * 0.05}
+          y={screenWidth * 0.9}
+          width={screenWidth * 0.35}
+          height={screenWidth * 0.35}
+        />
+      )}
+
+      <Group transform={[{ translateX: screenWidth * 0.05 }, { translateY: -screenWidth * 0.017 }]}>
+        <ImageSVG svg={sqftIcon('#ffffff')} x={screenWidth * 0.4} y={screenWidth * 1.1} />
+        <Paragraph paragraph={paragraphs.sqft} x={screenWidth * 0.34} y={screenWidth * 1.09} width={100} />
+      </Group>
+
+      <Group transform={[{ translateX: screenWidth * 0.05 }, { translateY: screenWidth * 0.03 }]}>
+        <ImageSVG svg={bedIcon('#ffffff')} x={screenWidth * 0.4} y={screenWidth * 1.1} />
+        <Paragraph paragraph={paragraphs.beds} x={screenWidth * 0.305} y={screenWidth * 1.09} width={100} />
+      </Group>
+
+      <Group transform={[{ translateX: screenWidth * 0.05 }, { translateY: screenWidth * 0.08 }]}>
+        <ImageSVG svg={bathIcon('#ffffff')} x={screenWidth * 0.4} y={screenWidth * 1.1} />
+        <Paragraph paragraph={paragraphs.baths} x={screenWidth * 0.315} y={screenWidth * 1.09} width={100} />
+      </Group>
+
+      <Paragraph paragraph={paragraphs.address} x={-screenWidth * 0.025} y={screenWidth * 1.075} width={screenWidth} />
     </>
   )
 }

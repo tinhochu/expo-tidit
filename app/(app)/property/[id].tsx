@@ -16,21 +16,13 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { VStack } from '@/components/ui/vstack'
-import { deletePost, getPostById } from '@/lib/postService'
+import { useAuth } from '@/context/AuthContext'
+import { deletePost, getPostById, updatePost } from '@/lib/postService'
 import { saveSkiaImageToPhotos } from '@/lib/saveSkiaImage'
+import { getUserPrefs } from '@/lib/userService'
+import { ColorPicker } from '@expo/ui/swift-ui'
 import AntDesign from '@expo/vector-icons/AntDesign'
-import {
-  Canvas,
-  Group,
-  ImageSVG,
-  Rect,
-  Image as SkImage,
-  fitbox,
-  rect,
-  useCanvasRef,
-  useImage,
-  useSVG,
-} from '@shopify/react-native-skia'
+import { Canvas, Image as SkImage, useCanvasRef, useImage } from '@shopify/react-native-skia'
 import * as MediaLibrary from 'expo-media-library'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useState } from 'react'
@@ -48,21 +40,26 @@ const slugify = (text: string): string => {
 
 export default function PropertyDetails() {
   const { id } = useLocalSearchParams()
+  const { user } = useAuth()
   const { width: screenWidth } = useWindowDimensions()
   const ref = useCanvasRef()
   const [data, setData] = useState<any>(null)
   const [imageUrl, setImageUrl] = useState<string>('')
   const [status, requestPermission] = MediaLibrary.usePermissions()
-  const [template, setTemplate] = useState<string>('1')
+  const [templateStyle, setTemplateStyle] = useState<string>('1')
+  const [postType, setPostType] = useState<
+    'JUST_SOLD' | 'JUST_LISTED' | 'JUST_RENTED' | 'OPEN_HOUSE' | 'UNDER_CONTRACT' | 'BACK_ON_MARKET' | 'LOADING'
+  >('LOADING')
+  const [canvas, setCanvas] = useState<{ primaryColor?: string; template?: string } | null>(null)
+  const [userPrefs, setUserPrefs] = useState<any>(null)
+  // Use the useImage hook with the actual image URL
+  const img = useImage(imageUrl)
 
   useEffect(() => {
     if (!status?.granted) {
       requestPermission()
     }
   }, [status])
-
-  // Use the useImage hook with the actual image URL
-  const img = useImage(imageUrl)
 
   useEffect(() => {
     const fetchPropertyDetails = async () => {
@@ -73,13 +70,47 @@ export default function PropertyDetails() {
       }
       setData(parsedData)
 
+      if (propertyDetails?.canvas) {
+        const parsedCanvas = JSON.parse(propertyDetails?.canvas)
+        setCanvas(parsedCanvas)
+      } else {
+        // Set default canvas state if none exists
+        setCanvas({ primaryColor: '#000000' })
+      }
+
+      const newPostType = propertyDetails.postType as
+        | 'JUST_SOLD'
+        | 'JUST_LISTED'
+        | 'JUST_RENTED'
+        | 'OPEN_HOUSE'
+        | 'UNDER_CONTRACT'
+        | 'BACK_ON_MARKET'
+
+      setPostType(newPostType)
+
+      // Reset templateStyle to a valid template for the new post type
+      const availableTemplates = getTemplates(newPostType)
+      if (availableTemplates.length > 0) {
+        setTemplateStyle(availableTemplates[0].value)
+      }
+
       // Set the image URL for the useImage hook
       if (parsedData?.propInformation?.photos?.[0]?.href) {
         setImageUrl(parsedData.propInformation.photos[0].href.replace('.jpg', '-w1200_h1200.jpg'))
       }
     }
+
     fetchPropertyDetails()
   }, [])
+
+  useEffect(() => {
+    const fetchUserPrefs = async () => {
+      const userPrefs = await getUserPrefs(user?.$id as string)
+      setUserPrefs(userPrefs)
+    }
+
+    fetchUserPrefs()
+  }, [user?.$id])
 
   const handleDelete = () => {
     Alert.alert('Delete Post', 'Are you sure you want to delete this post? This action cannot be undone.', [
@@ -115,6 +146,29 @@ export default function PropertyDetails() {
     }
   }
 
+  const handleCanvasChange = async (key: string, value: string) => {
+    const updatedCanvas = {
+      ...canvas,
+      [key]: value,
+    }
+
+    // Save the updated post first
+    try {
+      await updatePost(id as string, { canvas: JSON.stringify(updatedCanvas) })
+      // Only update local state after successful save
+      setCanvas(updatedCanvas)
+    } catch (error) {
+      console.error('Error updating post:', error)
+    }
+  }
+
+  // Get the label for the currently selected template
+  const getSelectedTemplateLabel = () => {
+    const templates = getTemplates(postType)
+    const selectedTemplate = templates.find((t) => t.value === templateStyle)
+    return selectedTemplate?.label || 'Select a template'
+  }
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -145,11 +199,12 @@ export default function PropertyDetails() {
         </Box>
 
         <ScrollView>
-          {!img ? (
-            <Box className="relative" style={{ width: screenWidth, height: screenWidth }}>
-              <Skeleton className="absolute inset-0 h-20 w-20" />
+          {!img && postType === 'LOADING' ? (
+            <Box className="relative" style={{ width: screenWidth, height: screenWidth * 1.25 }}>
+              <Skeleton className="absolute inset-0 h-full w-full" />
+
               <AntDesign
-                name="camera"
+                name="loading1"
                 size={50}
                 color="white"
                 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
@@ -160,38 +215,65 @@ export default function PropertyDetails() {
               ref={ref}
               style={{
                 width: screenWidth,
-                height: screenWidth,
+                height: screenWidth * 1.25, // 4:5 aspect ratio (1080x1350)
                 flex: 1,
               }}
             >
-              {img && <SkImage image={img} x={0} y={0} width={screenWidth} height={screenWidth} fit="cover" />}
-              <TemplateRenderer postType="JUST_SOLD" template={template} data={data} />
+              {img && <SkImage image={img} x={0} y={0} width={screenWidth} height={screenWidth * 1.25} fit="cover" />}
+              <TemplateRenderer
+                postType={postType}
+                template={templateStyle}
+                data={data}
+                canvas={canvas}
+                userPrefs={userPrefs}
+              />
             </Canvas>
           )}
 
-          <VStack className="p-5" space="md">
-            <FormControl>
-              <FormControlLabel>
-                <FormControlLabelText>Template</FormControlLabelText>
-              </FormControlLabel>
-              <Select className="bg-white" onValueChange={(value) => console.log(value)}>
-                <SelectTrigger>
-                  <SelectInput placeholder="Select option" className="flex-1" />
-                  <AntDesign name="down" size={15} className="mr-3" />
-                </SelectTrigger>
-                <SelectPortal>
-                  <SelectBackdrop />
-                  <SelectContent className="pb-10">
-                    <SelectDragIndicatorWrapper>
-                      <SelectDragIndicator />
-                    </SelectDragIndicatorWrapper>
-                    {getTemplates(data?.postType || 'JUST_SOLD')?.map((template) => (
-                      <SelectItem key={template.value} label={template.label} value={template.value} />
-                    ))}
-                  </SelectContent>
-                </SelectPortal>
-              </Select>
-            </FormControl>
+          <VStack className="p-5" space="2xl">
+            {canvas && postType !== 'LOADING' && (
+              <>
+                {getTemplates(postType).length > 0 && (
+                  <FormControl>
+                    <FormControlLabel>
+                      <FormControlLabelText className="font-bold">Select a template</FormControlLabelText>
+                    </FormControlLabel>
+                    <Select
+                      className="bg-white"
+                      onValueChange={(value) => {
+                        setTemplateStyle(value)
+                        handleCanvasChange('template', value)
+                      }}
+                      defaultValue={templateStyle}
+                    >
+                      <SelectTrigger>
+                        <SelectInput value={getSelectedTemplateLabel()} className="flex-1" />
+                        <AntDesign name="down" size={15} className="mr-3" />
+                      </SelectTrigger>
+                      <SelectPortal>
+                        <SelectBackdrop />
+                        <SelectContent className="pb-10">
+                          <SelectDragIndicatorWrapper>
+                            <SelectDragIndicator />
+                          </SelectDragIndicatorWrapper>
+                          {getTemplates(postType)?.map((template) => (
+                            <SelectItem key={template.value} label={template.label} value={template.value} />
+                          ))}
+                        </SelectContent>
+                      </SelectPortal>
+                    </Select>
+                  </FormControl>
+                )}
+                <HStack className="flex items-center justify-between">
+                  <Heading size="sm">Select a primary color</Heading>
+                  <ColorPicker
+                    selection={canvas.primaryColor || '#fafafa'}
+                    onValueChanged={(color) => handleCanvasChange('primaryColor', color)}
+                    supportsOpacity={false}
+                  />
+                </HStack>
+              </>
+            )}
           </VStack>
         </ScrollView>
       </VStack>
