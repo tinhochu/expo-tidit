@@ -22,6 +22,7 @@ import { Switch } from '@/components/ui/switch'
 import { Text } from '@/components/ui/text'
 import { VStack } from '@/components/ui/vstack'
 import { useAuth } from '@/context/AuthContext'
+import { formatFileSize, getCompressionStats, processImage } from '@/lib/imageProcessor'
 import { deletePost, getPostById, updatePost } from '@/lib/postService'
 import { saveSkiaImageToPhotos } from '@/lib/saveSkiaImage'
 import { getUserPrefs } from '@/lib/userService'
@@ -76,28 +77,71 @@ export default function PropertyDetails() {
 
       // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 5], // 4:5 aspect ratio to match canvas
         quality: 0.8,
       })
 
       if (!result.canceled && result.assets[0]) {
-        const imageUri = result.assets[0].uri
-        setCustomImage(imageUri)
+        const originalImageUri = result.assets[0].uri
 
-        // Save custom image to canvas in database
         try {
-          const updatedCanvas = {
-            ...canvas,
-            customImage: imageUri,
-          }
-          await updatePost(id as string, {
-            canvas: JSON.stringify(updatedCanvas),
+          // Process and optimize the image using existing functionality
+          const processedImage = await processImage(originalImageUri, {
+            maxWidth: 800,
+            maxHeight: 1000, // Allow for 4:5 aspect ratio
+            quality: 0.85,
+            format: 'auto',
+            maintainAspectRatio: true,
           })
-          setCanvas(updatedCanvas)
-        } catch (error) {
-          console.error('Error saving custom image:', error)
+
+          // Get compression statistics
+          const compressionStats = await getCompressionStats(originalImageUri, processedImage.uri)
+
+          // Show optimization results
+          // Alert.alert(
+          //   'Image Optimized!',
+          //   `Original: ${formatFileSize(compressionStats.originalSize)}\n` +
+          //     `Optimized: ${formatFileSize(compressionStats.processedSize)}\n` +
+          //     `Size reduction: ${compressionStats.sizeReduction} (${compressionStats.compressionRatio.toFixed(1)}%)`
+          // )
+
+          // Use the optimized image
+          setCustomImage(processedImage.uri)
+
+          // Save optimized image to canvas in database
+          try {
+            const updatedCanvas = {
+              ...canvas,
+              customImage: processedImage.uri,
+            }
+            await updatePost(id as string, {
+              canvas: JSON.stringify(updatedCanvas),
+            })
+            setCanvas(updatedCanvas)
+          } catch (error) {
+            console.error('Error saving custom image:', error)
+          }
+        } catch (processingError) {
+          console.error('Error processing image:', processingError)
+          // Fallback to original image if processing fails
+          Alert.alert('Processing Failed', 'Using original image. Please try again.')
+          setCustomImage(originalImageUri)
+
+          // Save original image to canvas in database
+          try {
+            const updatedCanvas = {
+              ...canvas,
+              customImage: originalImageUri,
+            }
+            await updatePost(id as string, {
+              canvas: JSON.stringify(updatedCanvas),
+            })
+            setCanvas(updatedCanvas)
+          } catch (error) {
+            console.error('Error saving custom image:', error)
+          }
         }
       }
     } catch (error) {
@@ -719,7 +763,7 @@ export default function PropertyDetails() {
 
                 {/* Custom Image Upload Section */}
                 <VStack className="pt-5">
-                  <Heading size="sm">Custom Photo</Heading>
+                  <Heading size="sm">Custom Property Photo</Heading>
                   <Text className="text-gray-600">
                     {customImage ? 'Custom photo selected' : 'Use your own photo instead of the property photo'}
                   </Text>
@@ -731,7 +775,7 @@ export default function PropertyDetails() {
                       </Button>
                     ) : (
                       <Button size="lg" onPress={pickImage}>
-                        <ButtonText>Upload Photo</ButtonText>
+                        <ButtonText>Upload Property Photo</ButtonText>
                       </Button>
                     )}
                   </Box>
