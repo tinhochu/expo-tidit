@@ -53,7 +53,7 @@ export default function PropertyDetails() {
   const [data, setData] = useState<any>(null)
   const [imageUrl, setImageUrl] = useState<string>('')
   const [status, requestPermission] = MediaLibrary.usePermissions()
-  const [templateStyle, setTemplateStyle] = useState<string>('1')
+  const [templateStyle, setTemplateStyle] = useState<string>('classic')
   const [postType, setPostType] = useState<
     'JUST_SOLD' | 'JUST_LISTED' | 'JUST_RENTED' | 'OPEN_HOUSE' | 'UNDER_CONTRACT' | 'BACK_ON_MARKET' | 'LOADING'
   >('LOADING')
@@ -193,6 +193,9 @@ export default function PropertyDetails() {
   const [showPrice, setShowPrice] = useState<boolean>(false) // Default to false (disabled)
   const [priceText, setPriceText] = useState<string>('') // Default to empty string
   const [customImage, setCustomImage] = useState<string | null>(null)
+  const [customText, setCustomText] = useState<
+    { mainHeading?: string; subHeading?: string; description?: string } | undefined
+  >(undefined)
   // Use the useImage hook with the actual image URL - provide fallback to prevent conditional hook calls
   const img = useImage(imageUrl || 'https://via.placeholder.com/400x300?text=Loading...')
   const customImg = useImage(customImage || '')
@@ -229,6 +232,10 @@ export default function PropertyDetails() {
         if (parsedCanvas.customImage) {
           setCustomImage(parsedCanvas.customImage)
         }
+        // Load custom text from canvas if it exists
+        if (parsedCanvas.customText) {
+          setCustomText(parsedCanvas.customText)
+        }
       } else {
         // Set default canvas state if none exists
         // We'll set the primary color after fetching user preferences
@@ -237,6 +244,7 @@ export default function PropertyDetails() {
         setShowRealtor(true)
         setShowPrice(false)
         setPriceText('')
+        setCustomText(undefined)
       }
 
       const newPostType = propertyDetails.postType as
@@ -249,8 +257,8 @@ export default function PropertyDetails() {
 
       setPostType(newPostType)
 
-      // Reset templateStyle to a valid template for the new post type
-      const availableTemplates = getTemplates(newPostType)
+      // Reset templateStyle to a valid template
+      const availableTemplates = getTemplates()
       if (availableTemplates.length > 0) {
         // Check if there's a saved template in the canvas
         const savedTemplate = parsedCanvas?.template
@@ -259,7 +267,9 @@ export default function PropertyDetails() {
         if (isValidSavedTemplate && savedTemplate) {
           setTemplateStyle(savedTemplate)
         } else {
-          setTemplateStyle(availableTemplates[0].value)
+          // Prefer 'classic' template if available, otherwise use first available
+          const defaultTemplate = availableTemplates.find((t) => t.value === 'classic') || availableTemplates[0]
+          setTemplateStyle(defaultTemplate.value)
         }
       }
 
@@ -296,19 +306,41 @@ export default function PropertyDetails() {
     fetchUserPrefs()
   }, [user?.$id, canvas])
 
+  // Save custom text to canvas when it changes
+  useEffect(() => {
+    if (customText && canvas) {
+      const updatedCanvas = { ...canvas, customText }
+      setCanvas(updatedCanvas)
+
+      // Save to database
+      const saveCustomText = async () => {
+        try {
+          await updatePost(id as string, {
+            canvas: JSON.stringify(updatedCanvas),
+          })
+        } catch (error) {
+          console.error('Error updating canvas with custom text:', error)
+        }
+      }
+
+      saveCustomText()
+    }
+  }, [customText])
+
   // Update templateStyle when postType changes to ensure we have a valid template
   useEffect(() => {
     if (isValidPostType(postType)) {
-      const availableTemplates = getTemplates(postType)
+      const availableTemplates = getTemplates()
       console.log('Post type changed to:', postType, 'Available templates:', availableTemplates)
 
       if (availableTemplates.length > 0) {
         // Only update if current templateStyle is not valid for the new postType
         const isValidTemplate = availableTemplates.some((t) => t.value === templateStyle)
-        console.log('Current templateStyle:', templateStyle, 'Is valid?', isValidTemplate)
+
         if (!isValidTemplate) {
-          console.log('Updating template from', templateStyle, 'to', availableTemplates[0].value)
-          setTemplateStyle(availableTemplates[0].value)
+          // Prefer 'classic' template if available, otherwise use first available
+          const defaultTemplate = availableTemplates.find((t) => t.value === 'classic') || availableTemplates[0]
+          setTemplateStyle(defaultTemplate.value)
         }
       }
     }
@@ -366,9 +398,7 @@ export default function PropertyDetails() {
 
   // Get the label for the currently selected template
   const getSelectedTemplateLabel = () => {
-    if (!isValidPostType(postType)) return 'Select a template'
-
-    const templates = getTemplates(postType)
+    const templates = getTemplates()
     const selectedTemplate = templates.find((t) => t.value === templateStyle)
     return selectedTemplate?.label || 'Select a template'
   }
@@ -441,6 +471,7 @@ export default function PropertyDetails() {
                 userPrefs={userPrefs}
                 showBrokerage={showBrokerage}
                 showRealtor={showRealtor}
+                customText={customText}
               />
             </Canvas>
           )}
@@ -467,11 +498,14 @@ export default function PropertyDetails() {
 
                           setPostType(newPostType)
 
-                          // Update templateStyle to match the first available template for the new post type
-                          const availableTemplates = getTemplates(newPostType)
+                          // Update templateStyle to match the first available template
+                          const availableTemplates = getTemplates()
 
                           if (availableTemplates.length > 0) {
-                            const newTemplateStyle = availableTemplates[0].value
+                            // Prefer 'classic' template if available, otherwise use first available
+                            const defaultTemplate =
+                              availableTemplates.find((t) => t.value === 'classic') || availableTemplates[0]
+                            const newTemplateStyle = defaultTemplate.value
                             console.log('Setting new template style:', newTemplateStyle, 'for post type:', newPostType)
 
                             setTemplateStyle(newTemplateStyle)
@@ -547,7 +581,7 @@ export default function PropertyDetails() {
                               <SelectDragIndicatorWrapper>
                                 <SelectDragIndicator />
                               </SelectDragIndicatorWrapper>
-                              {getTemplates(postType)?.map((template) => (
+                              {getTemplates()?.map((template) => (
                                 <SelectItem key={template.value} label={template.label} value={template.value} />
                               ))}
                             </SelectContent>
@@ -578,10 +612,12 @@ export default function PropertyDetails() {
                           setPostType(newPostType)
 
                           // Update templateStyle to match the first available template for the new post type
-                          const availableTemplates = getTemplates(newPostType)
+                          const availableTemplates = getTemplates()
 
                           if (availableTemplates.length > 0) {
-                            const newTemplateStyle = availableTemplates[0].value
+                            // Prefer 'classic' template if available, otherwise use first available
+                            const defaultTemplate = availableTemplates.find(t => t.value === 'classic') || availableTemplates[0]
+                            const newTemplateStyle = defaultTemplate.value
                             console.log('Setting new template style:', newTemplateStyle, 'for post type:', newPostType)
 
                             setTemplateStyle(newTemplateStyle)
@@ -657,7 +693,7 @@ export default function PropertyDetails() {
                               <SelectDragIndicatorWrapper>
                                 <SelectDragIndicator />
                               </SelectDragIndicatorWrapper>
-                              {getTemplates(postType)?.map((template) => (
+                              {getTemplates()?.map((template) => (
                                 <SelectItem key={template.value} label={template.label} value={template.value} />
                               ))}
                             </SelectContent>
@@ -694,8 +730,8 @@ export default function PropertyDetails() {
                       <Switch
                         size="md"
                         isDisabled={false}
-                        trackColor={{ false: '#3b82f6', true: '#3b82f6' }}
-                        ios_backgroundColor="#3b82f6"
+                        trackColor={{ false: '#333333', true: '#3b82f6' }}
+                        ios_backgroundColor="#333333"
                         thumbColor="#fafafa"
                         onValueChange={(value) => {
                           setShowBrokerage(value)
@@ -712,7 +748,7 @@ export default function PropertyDetails() {
                         size="md"
                         isDisabled={false}
                         trackColor={{ false: '#3b82f6', true: '#3b82f6' }}
-                        ios_backgroundColor="#3b82f6"
+                        ios_backgroundColor="#333333"
                         thumbColor="#fafafa"
                         onValueChange={(value) => {
                           setShowRealtor(value)
@@ -725,14 +761,14 @@ export default function PropertyDetails() {
                   </GridItem>
                 </Grid>
 
-                <Grid _extra={{ className: 'grid-cols-2 mb-2' }}>
+                <Grid _extra={{ className: 'grid-cols-2 mb-2 items-center' }}>
                   <GridItem _extra={{ className: 'col-span-1' }}>
                     <HStack space="md" className="items-center">
                       <Switch
                         size="md"
                         isDisabled={false}
                         trackColor={{ false: '#3b82f6', true: '#3b82f6' }}
-                        ios_backgroundColor="#3b82f6"
+                        ios_backgroundColor="#333333"
                         thumbColor="#fafafa"
                         onValueChange={(value) => {
                           setShowPrice(value)
@@ -748,19 +784,52 @@ export default function PropertyDetails() {
                       <FormControl>
                         <Input className="bg-white">
                           <InputField
-                            placeholder="Enter your price text"
+                            placeholder="Enter Your Price"
                             value={priceText}
-                            onChangeText={(value: string) => {
-                              setPriceText(value)
-                              handleCanvasChange('priceText', value)
+                            onChangeText={(text) => {
+                              setPriceText(text)
+                              handleCanvasChange('priceText', text)
                             }}
-                            autoCapitalize="none"
                           />
                         </Input>
                       </FormControl>
                     )}
                   </GridItem>
                 </Grid>
+
+                {/* Custom Text Customization */}
+                <VStack space="md">
+                  <Heading size="sm">Customize Template Text</Heading>
+                  <FormControl>
+                    <FormControlLabel>
+                      <FormControlLabelText>Main Heading (optional)</FormControlLabelText>
+                    </FormControlLabel>
+                    <Input className="bg-white">
+                      <InputField
+                        placeholder="Leave empty to use default post type text"
+                        value={customText?.mainHeading || ''}
+                        onChangeText={(text) => {
+                          setCustomText((prev) => ({ ...prev, mainHeading: text }))
+                        }}
+                      />
+                    </Input>
+                  </FormControl>
+
+                  <FormControl>
+                    <FormControlLabel>
+                      <FormControlLabelText>Sub Heading (optional)</FormControlLabelText>
+                    </FormControlLabel>
+                    <Input className="bg-white">
+                      <InputField
+                        placeholder="Add a subtitle or additional text"
+                        value={customText?.subHeading || ''}
+                        onChangeText={(text) => {
+                          setCustomText((prev) => ({ ...prev, subHeading: text }))
+                        }}
+                      />
+                    </Input>
+                  </FormControl>
+                </VStack>
 
                 {/* Custom Image Upload Section */}
                 <VStack className="pt-5">

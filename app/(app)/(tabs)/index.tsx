@@ -108,7 +108,7 @@ export default function Home() {
                           {propInfo.line},
                         </Heading>
                         <Heading size="md" className="leading-tight">
-                          {propInfo.city && `${propInfo.city}`}
+                          {propInfo.city && ` ${propInfo.city}`}
                           {propInfo.state && `, ${propInfo.state}`}
                           {propInfo.postalCode && `, ${propInfo.postalCode}`}
                         </Heading>

@@ -1,5 +1,4 @@
-import JustListedTemplateOne from './templates/just-listed/templateOne'
-import JustSoldTemplateOne from './templates/just-sold/templateOne'
+import { BoldTemplate, ClassicTemplate, ElegantTemplate, ModernTemplate } from './templates/base-templates'
 
 interface TemplateRendererProps {
   postType: 'JUST_SOLD' | 'JUST_LISTED' | 'JUST_RENTED' | 'OPEN_HOUSE' | 'UNDER_CONTRACT' | 'BACK_ON_MARKET' | 'LOADING'
@@ -9,6 +8,11 @@ interface TemplateRendererProps {
   userPrefs: any
   showBrokerage: boolean
   showRealtor: boolean
+  customText?: {
+    mainHeading?: string
+    subHeading?: string
+    description?: string
+  }
 }
 
 interface TemplateComponent {
@@ -22,64 +26,37 @@ interface TemplateComponent {
     userPrefs: any
     showBrokerage: boolean
     showRealtor: boolean
+    customText?: {
+      mainHeading?: string
+      subHeading?: string
+      description?: string
+    }
   }>
 }
 
-function getTemplates(postType: string): TemplateComponent[] {
-  switch (postType) {
-    case 'JUST_SOLD':
-      return [
-        {
-          label: 'Template 1',
-          value: '1',
-          component: JustSoldTemplateOne,
-        },
-      ]
-    case 'JUST_LISTED':
-      return [
-        {
-          label: 'Template 1',
-          value: '1',
-          component: JustListedTemplateOne,
-        },
-      ]
-    case 'JUST_RENTED':
-      return [
-        {
-          label: 'Template 1',
-          value: '1',
-          component: JustListedTemplateOne, // Using JustSoldTemplateOne as fallback for now
-        },
-      ]
-    case 'OPEN_HOUSE':
-      return [
-        {
-          label: 'Template 1',
-          value: '1',
-          component: JustListedTemplateOne, // Using JustSoldTemplateOne as fallback for now
-        },
-      ]
-    case 'UNDER_CONTRACT':
-      return [
-        {
-          label: 'Template 1',
-          value: '1',
-          component: JustSoldTemplateOne, // Using JustSoldTemplateOne as fallback for now
-        },
-      ]
-    case 'BACK_ON_MARKET':
-      return [
-        {
-          label: 'Template 1',
-          value: '1',
-          component: JustSoldTemplateOne, // Using JustSoldTemplateOne as fallback for now
-        },
-      ]
-    case 'LOADING':
-      return []
-    default:
-      return []
-  }
+function getTemplates(): TemplateComponent[] {
+  return [
+    {
+      label: 'Classic',
+      value: 'classic',
+      component: ClassicTemplate,
+    },
+    {
+      label: 'Modern',
+      value: 'modern',
+      component: ModernTemplate,
+    },
+    {
+      label: 'Bold',
+      value: 'bold',
+      component: BoldTemplate,
+    },
+    {
+      label: 'Elegant',
+      value: 'elegant',
+      component: ElegantTemplate,
+    },
+  ]
 }
 
 function TemplateRenderer({
@@ -90,8 +67,9 @@ function TemplateRenderer({
   userPrefs,
   showBrokerage,
   showRealtor,
+  customText,
 }: TemplateRendererProps) {
-  const Template = getTemplates(postType)?.find((t) => t.value === template)?.component
+  const Template = getTemplates()?.find((t) => t.value === template)?.component
   return Template ? (
     <Template
       data={data}
@@ -101,6 +79,7 @@ function TemplateRenderer({
       userPrefs={userPrefs}
       showBrokerage={showBrokerage}
       showRealtor={showRealtor}
+      customText={customText}
     />
   ) : null
 }
