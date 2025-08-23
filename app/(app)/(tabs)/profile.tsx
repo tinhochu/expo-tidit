@@ -1,5 +1,7 @@
 import { Button, ButtonText } from '@/components/ui/button'
 import { FormControl, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control'
+import { Grid, GridItem } from '@/components/ui/grid'
+import { HStack } from '@/components/ui/hstack'
 import { Icon } from '@/components/ui/icon'
 import { Input, InputField } from '@/components/ui/input'
 import { Pressable } from '@/components/ui/pressable'
@@ -108,11 +110,16 @@ export default function Profile() {
             style: 'destructive',
             onPress: async () => {
               try {
-                // Clear the image from form data
-                setFormData((prev) => ({ ...prev, [type]: null }))
+                // Save the updated preferences first
+                if (!user?.$id) {
+                  throw new Error('User ID is not available')
+                }
 
-                // Automatically save the updated preferences
-                await updateUserPrefs(user?.$id, {
+                console.log(`Saving preferences after clearing ${type}`)
+                console.log('Current formData:', formData)
+                console.log('User ID:', user.$id)
+
+                await updateUserPrefs(user.$id, {
                   firstName: formData.firstName,
                   lastName: formData.lastName,
                   email: formData.email,
@@ -120,6 +127,14 @@ export default function Profile() {
                   brokerageLogo: type === 'brokerageLogo' ? null : formData.brokerageLogo,
                   realtorPicture: type === 'realtorPicture' ? null : formData.realtorPicture,
                 })
+
+                console.log(`Preferences saved successfully after clearing ${type}`)
+
+                // Only clear the image from form data after successful save
+                setFormData((prev) => ({ ...prev, [type]: null }))
+
+                // Small delay to ensure state update is processed
+                await new Promise((resolve) => setTimeout(resolve, 100))
 
                 // Show success toast
                 toast.show({
@@ -253,25 +268,69 @@ export default function Profile() {
         })
 
         // Update with the uploaded image URL
-        setFormData((prev) => ({
-          ...prev,
-          [type]: `${process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT!}/storage/buckets/${BUCKET_ID}/files/${response.$id}/view?project=${process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID}`,
-        }))
+        const uploadedImageUrl = `${process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT!}/storage/buckets/${BUCKET_ID}/files/${response.$id}/view?project=${process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID}`
 
-        // Show final success toast with compression info
-        toast.show({
-          id: ID.unique(),
-          placement: 'top',
-          duration: 3000,
-          render: ({ id }) => {
-            const uniqueToastId = 'toast-' + id
-            return (
-              <Toast nativeID={uniqueToastId} action="success" variant="solid">
-                <ToastTitle>{`${type === 'brokerageLogo' ? 'Brokerage logo' : 'Profile picture'} uploaded successfully!`}</ToastTitle>
-              </Toast>
-            )
-          },
-        })
+        // Automatically save the updated preferences first
+        // Note: We use the current formData values, not the processed image URI
+        try {
+          if (!user?.$id) {
+            throw new Error('User ID is not available')
+          }
+
+          await updateUserPrefs(user.$id, {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phone: formData.phone,
+            brokerageLogo: type === 'brokerageLogo' ? uploadedImageUrl : formData.brokerageLogo,
+            realtorPicture: type === 'realtorPicture' ? uploadedImageUrl : formData.realtorPicture,
+          })
+
+          console.log(`Preferences saved successfully for ${type}`)
+
+          // Only update the form data after successful save
+          setFormData((prev) => ({
+            ...prev,
+            [type]: uploadedImageUrl,
+          }))
+
+          // Small delay to ensure state update is processed
+          await new Promise((resolve) => setTimeout(resolve, 100))
+
+          // Show final success toast with compression info
+          toast.show({
+            id: ID.unique(),
+            placement: 'top',
+            duration: 3000,
+            render: ({ id }) => {
+              const uniqueToastId = 'toast-' + id
+              return (
+                <Toast nativeID={uniqueToastId} action="success" variant="solid">
+                  <ToastTitle>{`${type === 'brokerageLogo' ? 'Brokerage logo' : 'Profile picture'} uploaded and saved successfully!`}</ToastTitle>
+                </Toast>
+              )
+            },
+          })
+        } catch (saveError) {
+          console.error('Error saving preferences after image upload:', saveError)
+
+          // Show error toast for save failure
+          toast.show({
+            id: ID.unique(),
+            placement: 'top',
+            duration: 3000,
+            render: ({ id }) => {
+              const uniqueToastId = 'toast-' + id
+              return (
+                <Toast nativeID={uniqueToastId} action="error" variant="solid">
+                  <ToastTitle>
+                    Image uploaded but failed to save preferences. Please try updating your profile manually.
+                  </ToastTitle>
+                </Toast>
+              )
+            },
+          })
+        }
 
         console.log(
           `Image compression stats: Original: ${formatFileSize(compressionStats.originalSize)}, Processed: ${formatFileSize(compressionStats.processedSize)}, Reduction: ${compressionStats.compressionRatio.toFixed(1)}%`
@@ -430,123 +489,117 @@ export default function Profile() {
               </Input>
             </FormControl>
 
-            {/* Brokerage Logo */}
-            <FormControl>
-              <FormControlLabel>
-                <FormControlLabelText className="font-medium text-gray-700">Brokerage Logo</FormControlLabelText>
-              </FormControlLabel>
-              <VStack space="sm">
-                <Pressable onPress={() => pickImage('brokerageLogo')} disabled={uploadingImage === 'brokerageLogo'}>
-                  <VStack
-                    className="items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-4"
-                    style={{ minHeight: 100 }}
-                  >
-                    {formData.brokerageLogo ? (
-                      <VStack space="sm" className="items-center">
-                        <Image
-                          source={{ uri: formData.brokerageLogo }}
-                          className="h-24 w-24 rounded-lg"
-                          resizeMode="cover"
-                        />
-                        {uploadingImage === 'brokerageLogo' && (
-                          <VStack space="xs" className="items-center">
-                            <ActivityIndicator size="small" color="#3b82f6" />
-                            <Text className="text-center text-sm text-blue-500">Uploading...</Text>
-                          </VStack>
-                        )}
-                      </VStack>
-                    ) : (
-                      <VStack space="sm" className="items-center">
-                        {uploadingImage === 'brokerageLogo' ? (
-                          <VStack space="xs" className="items-center">
-                            <ActivityIndicator size="small" color="#3b82f6" />
-                            <Text className="text-center text-sm text-blue-500">Selecting...</Text>
-                          </VStack>
-                        ) : (
-                          <>
-                            <Icon size="lg" className="text-gray-400" />
-                            <Text className="text-center text-gray-500">Tap to select brokerage logo</Text>
-                          </>
-                        )}
-                      </VStack>
-                    )}
-                  </VStack>
-                </Pressable>
+            <HStack space="lg" className="justify-center">
+              {/* Brokerage Logo */}
+              <FormControl>
+                <FormControlLabel>
+                  <FormControlLabelText className="font-medium text-gray-700">Brokerage Logo</FormControlLabelText>
+                </FormControlLabel>
+                <VStack space="sm">
+                  <Pressable onPress={() => pickImage('brokerageLogo')} disabled={uploadingImage === 'brokerageLogo'}>
+                    <VStack className="aspect-square h-40 w-40 items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-400">
+                      {formData.brokerageLogo ? (
+                        <VStack space="sm" className="min-h-40 w-40 items-center justify-center px-5">
+                          <Image
+                            source={{ uri: formData.brokerageLogo }}
+                            className="min-h-40 w-40 rounded-lg"
+                            resizeMode="cover"
+                          />
+                          {uploadingImage === 'brokerageLogo' && (
+                            <VStack space="xs" className="items-center">
+                              <ActivityIndicator size="small" color="#3b82f6" />
+                              <Text className="text-center text-sm text-blue-500">Uploading...</Text>
+                            </VStack>
+                          )}
+                        </VStack>
+                      ) : (
+                        <VStack space="sm" className="min-h-40 w-40 items-center justify-center px-5">
+                          {uploadingImage === 'brokerageLogo' ? (
+                            <VStack space="xs" className="items-center">
+                              <ActivityIndicator size="small" color="#3b82f6" />
+                              <Text className="text-center text-sm text-blue-500">Selecting...</Text>
+                            </VStack>
+                          ) : (
+                            <>
+                              <Icon size="lg" className="text-gray-400" />
+                              <Text className="text-center text-gray-500">Tap to select brokerage logo</Text>
+                            </>
+                          )}
+                        </VStack>
+                      )}
+                    </VStack>
+                  </Pressable>
 
-                {/* Clear Button - Only show when image exists */}
-                {formData.brokerageLogo && (
-                  <Button
-                    size="sm"
-                    action="negative"
-                    variant="outline"
-                    onPress={() => clearImage('brokerageLogo')}
-                    disabled={uploadingImage === 'brokerageLogo'}
-                    className="self-center"
-                  >
-                    <ButtonText className="text-red-500">Remove Logo</ButtonText>
-                  </Button>
-                )}
-              </VStack>
-            </FormControl>
+                  {/* Clear Button - Only show when image exists */}
+                  {formData.brokerageLogo && (
+                    <Button
+                      size="xs"
+                      action="negative"
+                      onPress={() => clearImage('brokerageLogo')}
+                      disabled={uploadingImage === 'brokerageLogo'}
+                      className="absolute bottom-0 left-0 right-0"
+                    >
+                      <ButtonText>Remove Logo</ButtonText>
+                    </Button>
+                  )}
+                </VStack>
+              </FormControl>
 
-            {/* Realtor Picture */}
-            <FormControl>
-              <FormControlLabel>
-                <FormControlLabelText className="font-medium text-gray-700">Realtor Picture</FormControlLabelText>
-              </FormControlLabel>
-              <VStack space="sm">
-                <Pressable onPress={() => pickImage('realtorPicture')} disabled={uploadingImage === 'realtorPicture'}>
-                  <VStack
-                    className="items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-4"
-                    style={{ minHeight: 100 }}
-                  >
-                    {formData.realtorPicture ? (
-                      <VStack space="sm" className="items-center">
-                        <Image
-                          source={{ uri: formData.realtorPicture }}
-                          className="h-24 w-24 rounded-lg"
-                          resizeMode="cover"
-                        />
-                        {uploadingImage === 'realtorPicture' && (
-                          <VStack space="xs" className="items-center">
-                            <ActivityIndicator size="small" color="#3b82f6" />
-                            <Text className="text-center text-sm text-blue-500">Uploading...</Text>
-                          </VStack>
-                        )}
-                      </VStack>
-                    ) : (
-                      <VStack space="sm" className="items-center">
-                        {uploadingImage === 'realtorPicture' ? (
-                          <VStack space="xs" className="items-center">
-                            <ActivityIndicator size="small" color="#3b82f6" />
-                            <Text className="text-center text-sm text-blue-500">Selecting...</Text>
-                          </VStack>
-                        ) : (
-                          <>
-                            <Icon size="lg" className="text-gray-400" />
-                            <Text className="text-center text-gray-500">Tap to select profile picture</Text>
-                          </>
-                        )}
-                      </VStack>
-                    )}
-                  </VStack>
-                </Pressable>
+              {/* Realtor Picture */}
+              <FormControl>
+                <FormControlLabel>
+                  <FormControlLabelText className="font-medium text-gray-700">Realtor Picture</FormControlLabelText>
+                </FormControlLabel>
+                <VStack space="sm">
+                  <Pressable onPress={() => pickImage('realtorPicture')} disabled={uploadingImage === 'realtorPicture'}>
+                    <VStack className="aspect-square items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-400">
+                      {formData.realtorPicture ? (
+                        <VStack space="sm" className="min-h-40 w-40 items-center justify-center px-5">
+                          <Image
+                            source={{ uri: formData.realtorPicture }}
+                            className="min-h-40 w-40 rounded-lg"
+                            resizeMode="cover"
+                          />
+                          {uploadingImage === 'realtorPicture' && (
+                            <VStack space="xs" className="items-center">
+                              <ActivityIndicator size="small" color="#3b82f6" />
+                              <Text className="text-center text-sm text-blue-500">Uploading...</Text>
+                            </VStack>
+                          )}
+                        </VStack>
+                      ) : (
+                        <VStack space="sm" className="min-h-40 w-40 items-center justify-center px-5">
+                          {uploadingImage === 'realtorPicture' ? (
+                            <VStack space="xs" className="items-center">
+                              <ActivityIndicator size="small" color="#3b82f6" />
+                              <Text className="text-center text-sm text-blue-500">Selecting...</Text>
+                            </VStack>
+                          ) : (
+                            <>
+                              <Icon size="lg" className="text-gray-400" />
+                              <Text className="text-center text-gray-500">Tap to select profile picture</Text>
+                            </>
+                          )}
+                        </VStack>
+                      )}
+                    </VStack>
+                  </Pressable>
 
-                {/* Clear Button - Only show when image exists */}
-                {formData.realtorPicture && (
-                  <Button
-                    size="sm"
-                    action="negative"
-                    variant="outline"
-                    onPress={() => clearImage('realtorPicture')}
-                    disabled={uploadingImage === 'realtorPicture'}
-                    className="self-center"
-                  >
-                    <ButtonText className="text-red-500">Remove Picture</ButtonText>
-                  </Button>
-                )}
-              </VStack>
-            </FormControl>
+                  {/* Clear Button - Only show when image exists */}
+                  {formData.realtorPicture && (
+                    <Button
+                      size="xs"
+                      action="negative"
+                      onPress={() => clearImage('realtorPicture')}
+                      disabled={uploadingImage === 'realtorPicture'}
+                      className="absolute bottom-0 left-0 right-0"
+                    >
+                      <ButtonText>Remove Picture</ButtonText>
+                    </Button>
+                  )}
+                </VStack>
+              </FormControl>
+            </HStack>
 
             {/* Submit Button */}
             <Button size="lg" onPress={handleSubmit} disabled={isLoading} className="mt-4">
