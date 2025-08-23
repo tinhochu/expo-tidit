@@ -187,6 +187,7 @@ export default function PropertyDetails() {
         }
       } else {
         // Set default canvas state if none exists
+        // We'll set the primary color after fetching user preferences
         setCanvas({ primaryColor: '#000000', showBrokerage: true, showRealtor: true, showPrice: false, priceText: '' })
         setShowBrokerage(true)
         setShowRealtor(true)
@@ -231,10 +232,25 @@ export default function PropertyDetails() {
     const fetchUserPrefs = async () => {
       const userPrefs = await getUserPrefs(user?.$id as string)
       setUserPrefs(userPrefs)
+
+      // If we have user preferences with global primary color and no primary color is set in canvas, use the global primary color
+      if (userPrefs?.globalPrimaryColor && canvas && !canvas.primaryColor) {
+        const updatedCanvas = { ...canvas, primaryColor: userPrefs.globalPrimaryColor }
+        setCanvas(updatedCanvas)
+
+        // Also update the canvas in the database if this is a new post
+        try {
+          await updatePost(id as string, {
+            canvas: JSON.stringify(updatedCanvas),
+          })
+        } catch (error) {
+          console.error('Error updating canvas with global primary color:', error)
+        }
+      }
     }
 
     fetchUserPrefs()
-  }, [user?.$id])
+  }, [user?.$id, canvas])
 
   // Update templateStyle when postType changes to ensure we have a valid template
   useEffect(() => {
@@ -610,11 +626,21 @@ export default function PropertyDetails() {
 
                 <HStack className="flex items-center justify-between">
                   <Heading size="sm">Select a Primary Color</Heading>
-                  <ColorPicker
-                    selection={canvas.primaryColor || '#fafafa'}
-                    onValueChanged={(color) => handleCanvasChange('primaryColor', color)}
-                    supportsOpacity={false}
-                  />
+                  <HStack space="xs" className="items-end gap-4">
+                    <ColorPicker
+                      selection={canvas.primaryColor || '#3b82f6'}
+                      onValueChanged={(color) => handleCanvasChange('primaryColor', color)}
+                      supportsOpacity={false}
+                    />
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      onPress={() => handleCanvasChange('primaryColor', userPrefs.globalPrimaryColor)}
+                      className="mt-2"
+                    >
+                      <ButtonText>Reset</ButtonText>
+                    </Button>
+                  </HStack>
                 </HStack>
 
                 <Grid _extra={{ className: 'grid-cols-2 mb-2' }}>

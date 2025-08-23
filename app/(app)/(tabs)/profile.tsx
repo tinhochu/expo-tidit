@@ -1,6 +1,5 @@
 import { Button, ButtonText } from '@/components/ui/button'
 import { FormControl, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control'
-import { Grid, GridItem } from '@/components/ui/grid'
 import { HStack } from '@/components/ui/hstack'
 import { Icon } from '@/components/ui/icon'
 import { Input, InputField } from '@/components/ui/input'
@@ -19,6 +18,7 @@ import {
   processProfileImage,
 } from '@/lib/imageProcessor'
 import { getUserPrefs, updateUserPrefs } from '@/lib/userService'
+import { ColorPicker } from '@expo/ui/swift-ui'
 import * as ImagePicker from 'expo-image-picker'
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView } from 'react-native'
@@ -34,6 +34,7 @@ export default function Profile() {
     phone: '',
     brokerageLogo: null,
     realtorPicture: null,
+    globalPrimaryColor: '#3b82f6', // Default blue color
   })
   const [isLoading, setIsLoading] = useState(false)
   const [isInitialLoading, setIsInitialLoading] = useState(true)
@@ -58,6 +59,7 @@ export default function Profile() {
             phone: userPrefs.phone || '',
             brokerageLogo: userPrefs.brokerageLogo || null,
             realtorPicture: userPrefs.realtorPicture || null,
+            globalPrimaryColor: userPrefs.globalPrimaryColor || '#3b82f6', // Default blue color
           }))
         }
       } catch (error) {
@@ -362,6 +364,7 @@ export default function Profile() {
           phone: userPrefs.phone || '',
           brokerageLogo: userPrefs.brokerageLogo || null,
           realtorPicture: userPrefs.realtorPicture || null,
+          globalPrimaryColor: userPrefs.globalPrimaryColor || '#3b82f6', // Default blue color
         }))
       }
     } catch (error) {
@@ -379,6 +382,7 @@ export default function Profile() {
         phone: formData?.phone ?? '',
         brokerageLogo: formData?.brokerageLogo ?? null,
         realtorPicture: formData?.realtorPicture ?? null,
+        globalPrimaryColor: formData?.globalPrimaryColor ?? '#3b82f6', // Default blue color
       })
 
       // Refresh the form data to show the updated values
@@ -487,6 +491,23 @@ export default function Profile() {
                   onChangeText={(value: string) => handleInputChange('phone', value)}
                 />
               </Input>
+            </FormControl>
+
+            {/* Global Primary Color */}
+            <FormControl>
+              <FormControlLabel>
+                <FormControlLabelText className="font-medium text-gray-700">Global Primary Color</FormControlLabelText>
+              </FormControlLabel>
+              <VStack space="sm">
+                <Text className="text-gray-600">
+                  This color will be used as the default primary color for all new posts
+                </Text>
+                <ColorPicker
+                  selection={formData.globalPrimaryColor}
+                  onValueChanged={(color: string) => handleInputChange('globalPrimaryColor', color)}
+                  supportsOpacity={false}
+                />
+              </VStack>
             </FormControl>
 
             <HStack space="lg" className="justify-center">
