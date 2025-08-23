@@ -681,8 +681,9 @@ export default function PropertyDetails() {
                       variant="outline"
                       onPress={() => handleCanvasChange('primaryColor', userPrefs.globalPrimaryColor)}
                       className="mt-2"
+                      action="negative"
                     >
-                      <ButtonText>Reset</ButtonText>
+                      <ButtonText className="text-red-500">Reset</ButtonText>
                     </Button>
                   </HStack>
                 </HStack>
@@ -693,9 +694,9 @@ export default function PropertyDetails() {
                       <Switch
                         size="md"
                         isDisabled={false}
-                        trackColor={{ false: '#d4d4d4', true: '#525252' }}
+                        trackColor={{ false: '#3b82f6', true: '#3b82f6' }}
+                        ios_backgroundColor="#3b82f6"
                         thumbColor="#fafafa"
-                        ios_backgroundColor="#d4d4d4"
                         onValueChange={(value) => {
                           setShowBrokerage(value)
                           handleCanvasChange('showBrokerage', value)
@@ -710,9 +711,9 @@ export default function PropertyDetails() {
                       <Switch
                         size="md"
                         isDisabled={false}
-                        trackColor={{ false: '#d4d4d4', true: '#525252' }}
+                        trackColor={{ false: '#3b82f6', true: '#3b82f6' }}
+                        ios_backgroundColor="#3b82f6"
                         thumbColor="#fafafa"
-                        ios_backgroundColor="#d4d4d4"
                         onValueChange={(value) => {
                           setShowRealtor(value)
                           handleCanvasChange('showRealtor', value)
@@ -730,9 +731,9 @@ export default function PropertyDetails() {
                       <Switch
                         size="md"
                         isDisabled={false}
-                        trackColor={{ false: '#d4d4d4', true: '#525252' }}
+                        trackColor={{ false: '#3b82f6', true: '#3b82f6' }}
+                        ios_backgroundColor="#3b82f6"
                         thumbColor="#fafafa"
-                        ios_backgroundColor="#d4d4d4"
                         onValueChange={(value) => {
                           setShowPrice(value)
                           handleCanvasChange('showPrice', value)
@@ -774,7 +775,7 @@ export default function PropertyDetails() {
                         <ButtonText className="text-red-500">Remove</ButtonText>
                       </Button>
                     ) : (
-                      <Button size="lg" onPress={pickImage}>
+                      <Button size="lg" onPress={pickImage} className="bg-blue-500">
                         <ButtonText>Upload Property Photo</ButtonText>
                       </Button>
                     )}

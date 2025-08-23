@@ -74,7 +74,7 @@ export default function Home() {
                 <Pressable key={post.id} onPress={() => router.push(`/property/${post.id}`)}>
                   <Box className="mb-5 overflow-hidden rounded-xl border border-gray-300 bg-white">
                     <Grid _extra={{ className: 'grid-cols-5 items-start' }}>
-                      <GridItem _extra={{ className: 'col-span-2' }} className="p-0">
+                      <GridItem _extra={{ className: 'col-span-2' }} className="relative p-0">
                         {propInfo.photos === null ? (
                           <Skeleton variant="sharp" className="aspect-square h-44 w-full" />
                         ) : (
@@ -84,20 +84,33 @@ export default function Home() {
                             className="aspect-video h-44 object-fill"
                           />
                         )}
+                        {post.postType && (
+                          <Box className="absolute left-0 top-0 p-2">
+                            <StatusBadge status={post.postType} />
+                          </Box>
+                        )}
                       </GridItem>
-                      <GridItem _extra={{ className: 'col-span-2' }} className="p-3">
-                        <HStack className="mb-2 items-center justify-between gap-4">
+                      <GridItem _extra={{ className: 'col-span-3' }} className="p-3">
+                        <HStack space="lg" className="mb-2 items-center justify-between">
                           {propInfo && (
                             <Text className="font-bold text-gray-600">
-                              {propInfo.description?.beds || 'N/A'} <FontAwesome name="bed" size={14} color="inherit" />{' '}
-                              • {propInfo.description?.baths || 'N/A'}{' '}
-                              <FontAwesome name="bath" size={14} color="inherit" />
+                              <FontAwesome name="bed" size={14} color="inherit" /> {propInfo.description?.beds || 'N/A'}
+                              {' • '}
+                              <FontAwesome name="bath" size={14} color="inherit" />{' '}
+                              {propInfo.description?.baths || 'N/A'}
+                              {' • '}
+                              <FontAwesome name="home" size={14} color="inherit" />{' '}
+                              {`${propInfo.description?.sqft} sqft` || 'N/A'}
                             </Text>
                           )}
-                          {propInfo?.postType && <StatusBadge status={propInfo?.postType} />}
                         </HStack>
-                        <Heading size="sm" className="leading-tight">
-                          {post.title.trim()}
+                        <Heading size="md" className="leading-tight">
+                          {propInfo.line},
+                        </Heading>
+                        <Heading size="md" className="leading-tight">
+                          {propInfo.city && `${propInfo.city}`}
+                          {propInfo.state && `, ${propInfo.state}`}
+                          {propInfo.postalCode && `, ${propInfo.postalCode}`}
                         </Heading>
                       </GridItem>
                     </Grid>

@@ -12,8 +12,8 @@ const statusMap = {
 
 export default function StatusBadge({ status }: { status: string }) {
   return (
-    <Badge variant="outline" action="info">
-      <BadgeText>{statusMap[status as keyof typeof statusMap]}</BadgeText>
+    <Badge variant="outline" action="success">
+      <BadgeText className="font-semibold text-success-600">{statusMap[status as keyof typeof statusMap]}</BadgeText>
     </Badge>
   )
 }
