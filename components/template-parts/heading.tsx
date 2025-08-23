@@ -6,11 +6,13 @@ export default function TemplateHeading({
   text = 'Just Sold',
   x = 0,
   y = 0,
+  size = 1,
 }: {
   screenWidth: number
   text: string
   x: number
   y: number
+  size?: number
 }) {
   const customFontMgr = useFonts({
     PlayfairDisplay: [require('@/assets/fonts/PlayfairDisplay-Regular.ttf')],
@@ -26,7 +28,7 @@ export default function TemplateHeading({
     const textStyle = {
       color: Skia.Color('white'),
       fontFamilies: ['PlayfairDisplay'],
-      fontSize: 55,
+      fontSize: 55 * size,
     }
 
     return Skia.ParagraphBuilder.Make(paragraphStyle, customFontMgr)
@@ -35,7 +37,7 @@ export default function TemplateHeading({
       .pushStyle({ ...textStyle, fontStyle: { weight: 500 } })
       .pop()
       .build()
-  }, [customFontMgr])
+  }, [customFontMgr, text, size])
 
   // Create shadow paragraph with dark color
   const ShadowParagraph = useMemo(() => {
@@ -47,7 +49,7 @@ export default function TemplateHeading({
     const textStyle = {
       color: Skia.Color('rgba(0, 0, 0, 0.5)'),
       fontFamilies: ['PlayfairDisplay'],
-      fontSize: 55,
+      fontSize: 55 * size,
     }
 
     return Skia.ParagraphBuilder.Make(paragraphStyle, customFontMgr)

@@ -39,6 +39,14 @@ interface UserPrefs {
 
 interface Canvas {
   primaryColor?: string
+  showPrice?: boolean
+  priceText?: string
+  showBrokerage?: boolean
+  showRealtor?: boolean
+  showAddress?: boolean
+  showBeds?: boolean
+  showBaths?: boolean
+  showSqft?: boolean
 }
 
 interface Props {
@@ -140,6 +148,16 @@ export default function JustSoldTemplateOne({
         x={screenWidth * 0}
         y={screenWidth * 0.15}
       />
+
+      {canvas.showPrice && (
+        <TemplateHeading
+          screenWidth={screenWidth}
+          text={canvas.priceText || ''}
+          x={screenWidth * 0}
+          y={screenWidth * 0.325}
+          size={1.25}
+        />
+      )}
 
       <Circle cx={screenWidth * 0.01} cy={screenWidth * 1.15} r={screenWidth * 0.3} color={primaryColor} />
       <Rect x={0} y={screenWidth * 1.05} width={screenWidth} height={screenWidth * 0.2} color={primaryColor} />

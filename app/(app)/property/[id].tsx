@@ -5,6 +5,7 @@ import { FormControl, FormControlLabel, FormControlLabelText } from '@/component
 import { Grid, GridItem } from '@/components/ui/grid'
 import { Heading } from '@/components/ui/heading'
 import { HStack } from '@/components/ui/hstack'
+import { Input, InputField } from '@/components/ui/input'
 import {
   Select,
   SelectBackdrop,
@@ -138,11 +139,15 @@ export default function PropertyDetails() {
     template?: string
     showBrokerage?: boolean
     showRealtor?: boolean
+    showPrice?: boolean
+    priceText?: string
     customImage?: string | null
   } | null>(null)
   const [userPrefs, setUserPrefs] = useState<any>(null)
   const [showBrokerage, setShowBrokerage] = useState<boolean>(true) // Default to true (enabled)
   const [showRealtor, setShowRealtor] = useState<boolean>(true) // Default to true (enabled)
+  const [showPrice, setShowPrice] = useState<boolean>(false) // Default to false (disabled)
+  const [priceText, setPriceText] = useState<string>('') // Default to empty string
   const [customImage, setCustomImage] = useState<string | null>(null)
   // Use the useImage hook with the actual image URL - provide fallback to prevent conditional hook calls
   const img = useImage(imageUrl || 'https://via.placeholder.com/400x300?text=Loading...')
@@ -172,15 +177,21 @@ export default function PropertyDetails() {
         // Load showBrokerage from canvas if it exists, otherwise default to true
         setShowBrokerage(parsedCanvas.showBrokerage !== undefined ? parsedCanvas.showBrokerage : true)
         setShowRealtor(parsedCanvas.showRealtor !== undefined ? parsedCanvas.showRealtor : true)
+        // Load showPrice from canvas if it exists, otherwise default to false
+        setShowPrice(parsedCanvas.showPrice !== undefined ? parsedCanvas.showPrice : false)
+        // Load priceText from canvas if it exists, otherwise default to empty string
+        setPriceText(parsedCanvas.priceText || '')
         // Load custom image from canvas if it exists
         if (parsedCanvas.customImage) {
           setCustomImage(parsedCanvas.customImage)
         }
       } else {
         // Set default canvas state if none exists
-        setCanvas({ primaryColor: '#000000', showBrokerage: true, showRealtor: true })
+        setCanvas({ primaryColor: '#000000', showBrokerage: true, showRealtor: true, showPrice: false, priceText: '' })
         setShowBrokerage(true)
         setShowRealtor(true)
+        setShowPrice(false)
+        setPriceText('')
       }
 
       const newPostType = propertyDetails.postType as
@@ -640,6 +651,43 @@ export default function PropertyDetails() {
                       />
                       <Text>Show Realtor</Text>
                     </HStack>
+                  </GridItem>
+                </Grid>
+
+                <Grid _extra={{ className: 'grid-cols-2 mb-2' }}>
+                  <GridItem _extra={{ className: 'col-span-1' }}>
+                    <HStack space="md" className="items-center">
+                      <Switch
+                        size="md"
+                        isDisabled={false}
+                        trackColor={{ false: '#d4d4d4', true: '#525252' }}
+                        thumbColor="#fafafa"
+                        ios_backgroundColor="#d4d4d4"
+                        onValueChange={(value) => {
+                          setShowPrice(value)
+                          handleCanvasChange('showPrice', value)
+                        }}
+                        value={showPrice}
+                      />
+                      <Text>Show Price</Text>
+                    </HStack>
+                  </GridItem>
+                  <GridItem _extra={{ className: 'col-span-1' }}>
+                    {showPrice && (
+                      <FormControl>
+                        <Input className="bg-white">
+                          <InputField
+                            placeholder="Enter your price text"
+                            value={priceText}
+                            onChangeText={(value: string) => {
+                              setPriceText(value)
+                              handleCanvasChange('priceText', value)
+                            }}
+                            autoCapitalize="none"
+                          />
+                        </Input>
+                      </FormControl>
+                    )}
                   </GridItem>
                 </Grid>
 
