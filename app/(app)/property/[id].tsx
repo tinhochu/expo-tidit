@@ -483,7 +483,7 @@ export default function PropertyDetails() {
                   <GridItem _extra={{ className: 'col-span-1' }}>
                     <FormControl className="pr-2">
                       <FormControlLabel>
-                        <FormControlLabelText className="font-bold">Choose a Post Type</FormControlLabelText>
+                        <FormControlLabelText className="font-bold">Select a Post Type</FormControlLabelText>
                       </FormControlLabel>
                       <Select
                         className="bg-white"
