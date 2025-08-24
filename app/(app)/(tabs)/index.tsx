@@ -8,6 +8,7 @@ import { Pressable } from '@/components/ui/pressable'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
 import { VStack } from '@/components/ui/vstack'
+import { POST_TYPES } from '@/constants/PostTypes'
 import { useAuth } from '@/context/AuthContext'
 import { Post, getPostsByUserId } from '@/lib/postService'
 import AntDesign from '@expo/vector-icons/AntDesign'
@@ -21,6 +22,7 @@ export default function Home() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [selectedFilter, setSelectedFilter] = useState<string>('all')
 
   const fetchPosts = useCallback(async () => {
     if (!user?.$id) return
@@ -41,6 +43,12 @@ export default function Home() {
     setRefreshing(false)
   }, [fetchPosts])
 
+  // Filter posts based on selected filter
+  const filteredPosts = posts.filter((post) => {
+    if (selectedFilter === 'all') return true
+    return post.postType === selectedFilter
+  })
+
   // Fetch posts when screen comes into focus
   useFocusEffect(
     useCallback(() => {
@@ -52,12 +60,43 @@ export default function Home() {
     <VStack>
       <Box className="border-b border-gray-200 bg-white p-2 px-5 pt-[72px]">
         <HStack className="items-center justify-between">
-          <Heading size="xl">My Posts</Heading>
+          <Heading size="xl">My Listings</Heading>
           <Pressable onPress={() => router.push('/create-post')}>
             <AntDesign size={28} name="pluscircleo" color="black" />
           </Pressable>
         </HStack>
       </Box>
+
+      {/* Post Type Filter */}
+      <Box className="border-b border-gray-200 bg-white p-3">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <HStack space="md" className="px-2">
+            <Pressable
+              onPress={() => setSelectedFilter('all')}
+              className={`rounded-full border px-4 py-2 ${
+                selectedFilter === 'all' ? 'border-blue-500 bg-blue-500' : 'border-gray-300 bg-white'
+              }`}
+            >
+              <Text className={`font-medium ${selectedFilter === 'all' ? 'text-white' : 'text-gray-700'}`}>All</Text>
+            </Pressable>
+
+            {Object.entries(POST_TYPES).map(([key, label]) => (
+              <Pressable
+                key={key}
+                onPress={() => setSelectedFilter(key)}
+                className={`rounded-full border px-4 py-2 ${
+                  selectedFilter === key ? 'border-blue-500 bg-blue-500' : 'border-gray-300 bg-white'
+                }`}
+              >
+                <Text className={`font-medium ${selectedFilter === key ? 'text-white' : 'text-gray-700'}`}>
+                  {label}
+                </Text>
+              </Pressable>
+            ))}
+          </HStack>
+        </ScrollView>
+      </Box>
+
       <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         <VStack className="px-5 pb-32 pt-5">
           {loading ? (
@@ -66,8 +105,8 @@ export default function Home() {
                 <Skeleton key={index} variant="sharp" className="h-44 w-full rounded-xl" />
               ))}
             </VStack>
-          ) : posts.length > 0 ? (
-            posts.map((post: any) => {
+          ) : filteredPosts.length > 0 ? (
+            filteredPosts.map((post: any) => {
               const propInfo = post.propInformation
 
               return (
