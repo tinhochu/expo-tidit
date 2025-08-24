@@ -4,6 +4,7 @@ import { Box } from '@/components/ui/box'
 import { Grid, GridItem } from '@/components/ui/grid'
 import { Heading } from '@/components/ui/heading'
 import { HStack } from '@/components/ui/hstack'
+import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input'
 import { Pressable } from '@/components/ui/pressable'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
@@ -23,6 +24,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState<string>('')
 
   const fetchPosts = useCallback(async () => {
     if (!user?.$id) return
@@ -43,10 +45,21 @@ export default function Home() {
     setRefreshing(false)
   }, [fetchPosts])
 
-  // Filter posts based on selected filter
+  // Filter posts based on selected filter and search query
   const filteredPosts = posts.filter((post) => {
-    if (selectedFilter === 'all') return true
-    return post.postType === selectedFilter
+    // First filter by post type
+    const matchesType = selectedFilter === 'all' || post.postType === selectedFilter
+
+    // Then filter by search query (case insensitive)
+    const matchesSearch =
+      !searchQuery ||
+      post.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (typeof post.propInformation === 'object' &&
+        post.propInformation &&
+        (post.propInformation as any)?.line?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (post.propInformation as any)?.city?.toLowerCase().includes(searchQuery.toLowerCase())
+
+    return matchesType && matchesSearch
   })
 
   // Fetch posts when screen comes into focus
@@ -65,6 +78,24 @@ export default function Home() {
             <AntDesign size={28} name="pluscircleo" color="black" />
           </Pressable>
         </HStack>
+      </Box>
+
+      {/* Search Bar */}
+      <Box className="border-b border-gray-200 bg-white p-3">
+        <Input className="border-gray-200 bg-gray-50">
+          <InputField
+            placeholder="Search listings by title, address, or city..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <InputSlot className="mr-2">
+              <Pressable onPress={() => setSearchQuery('')}>
+                <AntDesign size={16} name="close" color="black" />
+              </Pressable>
+            </InputSlot>
+          )}
+        </Input>
       </Box>
 
       {/* Post Type Filter */}
