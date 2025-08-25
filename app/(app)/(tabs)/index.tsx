@@ -81,8 +81,8 @@ export default function Home() {
       </Box>
 
       {/* Search Bar */}
-      <Box className="border-b border-gray-200 bg-white p-3">
-        <Input className="border-gray-200 bg-gray-50">
+      <Box className="border-b border-gray-200 bg-white px-5 py-3">
+        <Input>
           <InputField
             placeholder="Search listings by title, address, or city..."
             value={searchQuery}
