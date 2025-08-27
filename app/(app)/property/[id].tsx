@@ -1,7 +1,7 @@
 import { TemplateRenderer, getTemplates } from '@/components/template-renderer'
 import { Box } from '@/components/ui/box'
 import { Button, ButtonText } from '@/components/ui/button'
-import { FormControl, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control'
+import { FormControl, FormControlHelper, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control'
 import { Grid, GridItem } from '@/components/ui/grid'
 import { Heading } from '@/components/ui/heading'
 import { HStack } from '@/components/ui/hstack'
@@ -592,118 +592,6 @@ export default function PropertyDetails() {
                   </GridItem>
                 </Grid>
 
-                {/* <Grid _extra={{ className: 'grid-cols-2' }}>
-                  <GridItem _extra={{ className: 'col-span-1' }}>
-                    <FormControl className="pr-2">
-                      <FormControlLabel>
-                        <FormControlLabelText className="font-bold">Choose a Post Type</FormControlLabelText>
-                      </FormControlLabel>
-                      <Select
-                        className="bg-white"
-                        onValueChange={async (value) => {
-                          const newPostType = value as
-                            | 'JUST_SOLD'
-                            | 'JUST_LISTED'
-                            | 'JUST_RENTED'
-                            | 'OPEN_HOUSE'
-                            | 'UNDER_CONTRACT'
-                            | 'BACK_ON_MARKET'
-
-                          setPostType(newPostType)
-
-                          // Update templateStyle to match the first available template for the new post type
-                          const availableTemplates = getTemplates()
-
-                          if (availableTemplates.length > 0) {
-                            // Prefer 'classic' template if available, otherwise use first available
-                            const defaultTemplate = availableTemplates.find(t => t.value === 'classic') || availableTemplates[0]
-                            const newTemplateStyle = defaultTemplate.value
-                            console.log('Setting new template style:', newTemplateStyle, 'for post type:', newPostType)
-
-                            setTemplateStyle(newTemplateStyle)
-
-                            // Update the post type and template in the database
-                            try {
-                              await updatePost(id as string, {
-                                postType: newPostType,
-                                canvas: JSON.stringify({
-                                  ...canvas,
-                                  template: newTemplateStyle,
-                                }),
-                              })
-                            } catch (error) {
-                              console.error('Error updating post type and template:', error)
-                            }
-                          } else {
-                            // Update just the post type in the database
-                            try {
-                              await updatePost(id as string, {
-                                postType: newPostType,
-                              })
-                            } catch (error) {
-                              console.error('Error updating post type:', error)
-                            }
-                          }
-                        }}
-                        defaultValue={postType}
-                      >
-                        <SelectTrigger>
-                          <SelectInput
-                            value={postTypeOptions.find((opt) => opt.value === postType)?.label || 'Select post type'}
-                            className="flex-1"
-                          />
-                          <AntDesign name="down" size={15} className="mr-3" />
-                        </SelectTrigger>
-                        <SelectPortal>
-                          <SelectBackdrop />
-                          <SelectContent className="pb-10">
-                            <SelectDragIndicatorWrapper>
-                              <SelectDragIndicator />
-                            </SelectDragIndicatorWrapper>
-                            {postTypeOptions.map((option) => (
-                              <SelectItem key={option.value} label={option.label} value={option.value} />
-                            ))}
-                          </SelectContent>
-                        </SelectPortal>
-                      </Select>
-                    </FormControl>
-                  </GridItem>
-                  <GridItem _extra={{ className: 'col-span-1' }}>
-                    {isValidPostType(postType) && (
-                      <FormControl className="pl-2">
-                        <FormControlLabel>
-                          <FormControlLabelText className="font-bold">Select a Template</FormControlLabelText>
-                        </FormControlLabel>
-                        <Select
-                          key={`template-select-${postType}`}
-                          className="bg-white"
-                          onValueChange={(value) => {
-                            setTemplateStyle(value)
-                            handleCanvasChange('template', value)
-                          }}
-                          defaultValue={templateStyle}
-                        >
-                          <SelectTrigger>
-                            <SelectInput value={getSelectedTemplateLabel()} className="flex-1" />
-                            <AntDesign name="down" size={15} className="mr-3" />
-                          </SelectTrigger>
-                          <SelectPortal>
-                            <SelectBackdrop />
-                            <SelectContent className="pb-10">
-                              <SelectDragIndicatorWrapper>
-                                <SelectDragIndicator />
-                              </SelectDragIndicatorWrapper>
-                              {getTemplates()?.map((template) => (
-                                <SelectItem key={template.value} label={template.label} value={template.value} />
-                              ))}
-                            </SelectContent>
-                          </SelectPortal>
-                        </Select>
-                      </FormControl>
-                    )}
-                  </GridItem>
-                </Grid> */}
-
                 <HStack className="flex items-center justify-between">
                   <Heading size="sm">Select a Primary Color</Heading>
                   <HStack space="xs" className="items-end gap-4">
@@ -813,6 +701,9 @@ export default function PropertyDetails() {
                         }}
                       />
                     </Input>
+                    <FormControlHelper className="mt-2 block">
+                      <Text size="sm">This will override the main heading. if it is set.</Text>
+                    </FormControlHelper>
                   </FormControl>
 
                   <FormControl>
@@ -828,6 +719,9 @@ export default function PropertyDetails() {
                         }}
                       />
                     </Input>
+                    <FormControlHelper className="mt-2 block">
+                      <Text size="sm">This will override the price text. if it is set.</Text>
+                    </FormControlHelper>
                   </FormControl>
                 </VStack>
 

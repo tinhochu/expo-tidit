@@ -9,7 +9,13 @@ interface BoldTemplateProps {
   data: any
   postType: string
   template: string
-  canvas: any
+  canvas: {
+    primaryColor?: string
+    showPrice?: boolean
+    priceText?: string
+    showBrokerage?: boolean
+    showRealtor?: boolean
+  }
   userPrefs: any
   showBrokerage: boolean
   showRealtor: boolean
@@ -59,7 +65,7 @@ export default function BoldTemplate({
 
   // Use custom text or fall back to post type
   const mainHeading = customText?.mainHeading || getPostTypeLabel(postType)
-  const subHeading = customText?.subHeading || ''
+  const subHeading = customText?.subHeading || (canvas.showPrice && canvas.priceText ? canvas.priceText : '')
 
   return (
     <>
