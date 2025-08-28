@@ -406,7 +406,7 @@ export default function PropertyDetails() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.select({ ios: 64, android: 0 })}
+      keyboardVerticalOffset={Platform.select({ ios: 0, android: 0 })}
     >
       <VStack>
         <Box className="border-b border-gray-200 bg-white p-2 px-5 pt-[72px]">
@@ -738,7 +738,7 @@ export default function PropertyDetails() {
                 </VStack>
 
                 {/* Custom Image Upload Section */}
-                <VStack className="pt-5">
+                <VStack className="pb-28 pt-5">
                   <Heading size="sm">Custom Property Photo</Heading>
                   <Text className="text-gray-600">
                     {customImage ? 'Custom photo selected' : 'Use your own photo instead of the property photo'}
@@ -756,13 +756,6 @@ export default function PropertyDetails() {
                     )}
                   </Box>
                 </VStack>
-
-                {/* TODO: End of the form, don't remove this */}
-                <Grid _extra={{ className: 'grid-cols-1 gap-5' }}>
-                  <GridItem _extra={{ className: 'col-span-1' }}>
-                    <Box className="aspect-[3/2] w-full"></Box>
-                  </GridItem>
-                </Grid>
               </>
             )}
           </VStack>

@@ -631,6 +631,8 @@ export default function Profile() {
             <Button size="lg" action="negative" variant="outline" onPress={signout} className="mt-2">
               <ButtonText className="text-red-500">Sign Out</ButtonText>
             </Button>
+
+            <Image source={require('@/assets/images/icon.png')} className="mx-auto h-14 w-14" />
           </VStack>
         </VStack>
       </VStack>
