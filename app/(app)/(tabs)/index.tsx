@@ -74,6 +74,7 @@ export default function Home() {
       <Box className="border-b border-gray-200 bg-white p-2 px-5 pt-[72px]">
         <HStack className="items-center justify-between">
           <Heading size="xl">My Listings</Heading>
+
           <Pressable onPress={() => router.push('/create-post')}>
             <AntDesign size={28} name="pluscircleo" color="black" />
           </Pressable>
@@ -178,7 +179,7 @@ export default function Home() {
                           )}
                         </HStack>
                         <Heading size="md" className="leading-tight">
-                          {propInfo.line},
+                          {propInfo.line.length > 20 ? `${propInfo.line.slice(0, 20)}...` : `${propInfo.line},`}
                         </Heading>
                         <Heading size="md" className="leading-tight">
                           {propInfo.city && ` ${propInfo.city}`}
