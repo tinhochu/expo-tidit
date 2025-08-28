@@ -596,6 +596,7 @@ export default function PropertyDetails() {
                   <Heading size="sm">Select a Primary Color</Heading>
                   <HStack space="xs" className="items-end gap-4">
                     <ColorPicker
+                      key={canvas.primaryColor || 'default'} // Force re-render when color changes
                       selection={canvas.primaryColor || '#3b82f6'}
                       onValueChanged={(color) => handleCanvasChange('primaryColor', color)}
                       supportsOpacity={false}
@@ -603,9 +604,20 @@ export default function PropertyDetails() {
                     <Button
                       size="xs"
                       variant="outline"
-                      onPress={() => handleCanvasChange('primaryColor', userPrefs.globalPrimaryColor)}
+                      onPress={() => {
+                        if (userPrefs?.globalPrimaryColor) {
+                          // Update local state immediately for better UX
+                          const updatedCanvas = { ...canvas, primaryColor: userPrefs.globalPrimaryColor }
+                          setCanvas(updatedCanvas)
+                          // Then save to database
+                          handleCanvasChange('primaryColor', userPrefs.globalPrimaryColor)
+                        } else {
+                          console.log('No global primary color found in userPrefs:', userPrefs)
+                        }
+                      }}
                       className="mt-2"
                       action="negative"
+                      isDisabled={!userPrefs?.globalPrimaryColor}
                     >
                       <ButtonText className="text-red-500">Reset</ButtonText>
                     </Button>
