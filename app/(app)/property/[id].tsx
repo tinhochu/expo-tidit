@@ -748,7 +748,7 @@ export default function PropertyDetails() {
                 {/* TODO: End of the form, don't remove this */}
                 <Grid _extra={{ className: 'grid-cols-1 gap-5' }}>
                   <GridItem _extra={{ className: 'col-span-1' }}>
-                    <Box className="aspect-square w-full"></Box>
+                    <Box className="aspect-[3/2] w-full"></Box>
                   </GridItem>
                 </Grid>
               </>

@@ -129,7 +129,7 @@ export default function Home() {
       </Box>
 
       <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-        <VStack className="px-5 pb-32 pt-5">
+        <VStack className="px-5 pb-60 pt-5">
           {loading ? (
             <VStack className="items-center justify-center" space="xl">
               {Array.from({ length: 4 }).map((_, index) => (
@@ -137,12 +137,15 @@ export default function Home() {
               ))}
             </VStack>
           ) : filteredPosts.length > 0 ? (
-            filteredPosts.map((post: any) => {
+            filteredPosts.map((post: any, index: number) => {
               const propInfo = post.propInformation
+              const isLastItem = index === filteredPosts.length - 1
 
               return (
                 <Pressable key={post.id} onPress={() => router.push(`/property/${post.id}`)}>
-                  <Box className="mb-5 overflow-hidden rounded-xl border border-gray-300 bg-white">
+                  <Box
+                    className={`${isLastItem ? 'mb-8' : 'mb-5'} overflow-hidden rounded-xl border border-gray-300 bg-white`}
+                  >
                     <Grid _extra={{ className: 'grid-cols-5 items-start' }}>
                       <GridItem _extra={{ className: 'col-span-2' }} className="relative p-0">
                         {propInfo.photos === null ? (
