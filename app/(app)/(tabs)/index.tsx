@@ -75,7 +75,7 @@ export default function Home() {
         <HStack className="items-center justify-between">
           <Heading size="xl">My Listings</Heading>
 
-          <Pressable onPress={() => router.push('/subscription')}>
+          <Pressable onPress={() => router.push('/create-post')}>
             <AntDesign size={28} name="pluscircleo" color="black" />
           </Pressable>
         </HStack>
