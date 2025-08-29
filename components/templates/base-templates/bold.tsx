@@ -69,6 +69,26 @@ export default function BoldTemplate({
     }
   }
 
+  // Function to get font-specific size adjustments for paragraphs
+  const getParagraphFontSize = (baseSize: number, font: string) => {
+    switch (font) {
+      case 'PlayfairDisplay':
+        return baseSize * 1.0 // Playfair is well-balanced
+      case 'Inter':
+        return baseSize * 0.9 // Inter is compact, increase for readability
+      case 'MontserratExtraBold':
+        return baseSize * 1.0 // Montserrat ExtraBold is bold but readable
+      case 'CormorantGaramond':
+        return baseSize * 1.2 // Cormorant can be small, increase
+      case 'PoppinsSemiBold':
+        return baseSize * 0.85 // Poppins is balanced, slight increase
+      case 'SpaceMono':
+        return baseSize * 0.85 // SpaceMono is monospace, keep standard
+      default:
+        return baseSize
+    }
+  }
+
   const customFontMgr = useFonts({
     PlayfairDisplay: [require('@/assets/fonts/PlayfairDisplay-Regular.ttf')],
     Inter: [require('@/assets/fonts/Inter.ttf')],
@@ -84,10 +104,11 @@ export default function BoldTemplate({
     const paragraphStyle = {
       textAlign: TextAlign.Center,
     }
+    const adjustedFontSize = getParagraphFontSize(16, getFontFamily(selectedFont))
     const textStyle = {
       color: Skia.Color('white'),
       fontFamilies: [getFontFamily(selectedFont)],
-      fontSize: 16,
+      fontSize: adjustedFontSize,
     }
 
     const para = Skia.ParagraphBuilder.Make(paragraphStyle, customFontMgr)
@@ -98,7 +119,7 @@ export default function BoldTemplate({
       .build()
 
     return para
-  }, [customFontMgr, data.propInformation])
+  }, [customFontMgr, data.propInformation, selectedFont])
 
   // Use custom text or fall back to post type
   const mainHeading = customText?.mainHeading || getPostTypeLabel(postType)

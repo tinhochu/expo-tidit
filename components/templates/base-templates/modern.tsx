@@ -65,7 +65,27 @@ export default function ModernTemplate({
       case 'spacemono':
         return 'SpaceMono'
       default:
-        return 'Inter'
+        return 'PlayfairDisplay'
+    }
+  }
+
+  // Function to get font-specific size adjustments for paragraphs
+  const getParagraphFontSize = (baseSize: number, font: string) => {
+    switch (font) {
+      case 'PlayfairDisplay':
+        return baseSize * 1.0 // Playfair is well-balanced
+      case 'Inter':
+        return baseSize * 0.9 // Inter is compact, increase for readability
+      case 'MontserratExtraBold':
+        return baseSize * 0.85 // Montserrat ExtraBold is bold but readable
+      case 'CormorantGaramond':
+        return baseSize * 1.2 // Cormorant can be small, increase
+      case 'PoppinsSemiBold':
+        return baseSize * 0.85 // Poppins is balanced, slight increase
+      case 'SpaceMono':
+        return baseSize * 0.85 // SpaceMono is monospace, keep standard
+      default:
+        return baseSize
     }
   }
 
@@ -84,10 +104,11 @@ export default function ModernTemplate({
     const paragraphStyle = {
       textAlign: TextAlign.Right,
     }
+    const adjustedFontSize = getParagraphFontSize(14, getFontFamily(selectedFont))
     const textStyle = {
       color: Skia.Color('white'),
       fontFamilies: [getFontFamily(selectedFont)],
-      fontSize: 14,
+      fontSize: adjustedFontSize,
     }
 
     const para = Skia.ParagraphBuilder.Make(paragraphStyle, customFontMgr)
@@ -98,7 +119,7 @@ export default function ModernTemplate({
       .build()
 
     return para
-  }, [customFontMgr, data.propInformation])
+  }, [customFontMgr, data.propInformation, selectedFont])
 
   // Use custom text or fall back to post type
   const mainHeading = customText?.mainHeading || getPostTypeLabel(postType)

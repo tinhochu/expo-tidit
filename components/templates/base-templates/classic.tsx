@@ -101,6 +101,46 @@ export default function ClassicTemplate({
     }
   }
 
+  // Function to get font-specific size adjustments for paragraphs
+  const getParagraphFontSize = (baseSize: number, font: string) => {
+    switch (font) {
+      case 'PlayfairDisplay':
+        return baseSize * 1.0 // Playfair is well-balanced
+      case 'Inter':
+        return baseSize * 0.9 // Inter is compact, increase for readability
+      case 'MontserratExtraBold':
+        return baseSize * 0.85 // Montserrat ExtraBold is bold but readable
+      case 'CormorantGaramond':
+        return baseSize * 1.2 // Cormorant can be small, increase
+      case 'PoppinsSemiBold':
+        return baseSize * 0.85 // Poppins is balanced, slight increase
+      case 'SpaceMono':
+        return baseSize * 0.85 // SpaceMono is monospace, keep standard
+      default:
+        return baseSize
+    }
+  }
+
+  // Function to calculate icon positioning based on font size for vertical centering
+  const getIconPositioning = (baseY: number, fontSize: number, groupTranslateY: number) => {
+    const fontFamily = getFontFamily(selectedFont)
+    const adjustedFontSize = getParagraphFontSize(fontSize, fontFamily)
+
+    // Calculate the center point of the text and align the icon with it
+    // Icon height is typically around 20-24px, so we center it with the text
+    const iconHeight = 22 // Approximate icon height
+
+    // Apply the group translation to the base Y position
+    const adjustedBaseY = baseY + groupTranslateY
+    const textCenterY = adjustedBaseY + adjustedFontSize / 2
+    const iconCenterY = textCenterY - iconHeight / 2
+
+    return {
+      iconY: iconCenterY,
+      textY: adjustedBaseY,
+    }
+  }
+
   const createParagraph = useMemo(() => {
     if (!customFontMgr) return null
 
@@ -109,10 +149,11 @@ export default function ClassicTemplate({
     }
 
     const createTextParagraph = (text: string, fontSize: number = 14) => {
+      const adjustedFontSize = getParagraphFontSize(fontSize, getFontFamily(selectedFont))
       const textStyle = {
         color: Skia.Color(getContrastColor(canvas.primaryColor || '#fafafa')),
         fontFamilies: [getFontFamily(selectedFont)],
-        fontSize,
+        fontSize: adjustedFontSize,
       }
 
       return Skia.ParagraphBuilder.Make(baseParagraphStyle, customFontMgr).pushStyle(textStyle).addText(text).build()
@@ -132,11 +173,12 @@ export default function ClassicTemplate({
         15
       ),
       address: (() => {
+        const adjustedFontSize = getParagraphFontSize(14, getFontFamily(selectedFont))
         const para = Skia.ParagraphBuilder.Make({ textAlign: TextAlign.Right }, customFontMgr!)
           .pushStyle({
             color: Skia.Color(getContrastColor(canvas.primaryColor || '#fafafa')),
             fontFamilies: [getFontFamily(selectedFont)],
-            fontSize: 14,
+            fontSize: adjustedFontSize,
           })
           .addText(`${data.propInformation.line}`)
           .addText(`\n${data.propInformation.city}, ${data.propInformation.state}`)
@@ -166,7 +208,7 @@ export default function ClassicTemplate({
 
   // Adjust positioning for beds, baths, sqft when property line is long
   const isLongPropertyLine = data.propInformation.line && data.propInformation.line.length > 20
-  const bedsBathsSqftOffset = isLongPropertyLine ? screenWidth * 0 : screenWidth * 0.05
+  const bedsBathsSqftOffset = isLongPropertyLine ? screenWidth * 0 : screenWidth * 0.02
 
   return (
     <>
@@ -223,38 +265,50 @@ export default function ClassicTemplate({
         />
       )}
 
-      {data.propInformation.description.beds && (
-        <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: -screenWidth * 0.017 }]}>
-          <ImageSVG
-            svg={bedIcon(getContrastColor(primaryColor || '#fafafa'))}
-            x={screenWidth * 0.4}
-            y={screenWidth * 1.1}
-          />
-          <Paragraph paragraph={paragraphs.beds} x={screenWidth * 0.305} y={screenWidth * 1.09} width={100} />
-        </Group>
-      )}
+      {data.propInformation.description.beds &&
+        (() => {
+          const positioning = getIconPositioning(screenWidth * 1.09, 14, -screenWidth * 0.005)
+          return (
+            <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: -screenWidth * 0.01 }]}>
+              <ImageSVG
+                svg={bedIcon(getContrastColor(primaryColor || '#fafafa'))}
+                x={screenWidth * 0.4}
+                y={positioning.iconY + screenWidth * 0.01}
+              />
+              <Paragraph paragraph={paragraphs.beds} x={screenWidth * 0.31} y={positioning.textY} width={100} />
+            </Group>
+          )
+        })()}
 
-      {data.propInformation.description.baths && (
-        <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.03 }]}>
-          <ImageSVG
-            svg={bathIcon(getContrastColor(primaryColor || '#fafafa'))}
-            x={screenWidth * 0.4}
-            y={screenWidth * 1.1}
-          />
-          <Paragraph paragraph={paragraphs.baths} x={screenWidth * 0.315} y={screenWidth * 1.09} width={100} />
-        </Group>
-      )}
+      {data.propInformation.description.baths &&
+        (() => {
+          const positioning = getIconPositioning(screenWidth * 1.09, 14, screenWidth * 0.012)
+          return (
+            <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.03 }]}>
+              <ImageSVG
+                svg={bathIcon(getContrastColor(primaryColor || '#fafafa'))}
+                x={screenWidth * 0.4}
+                y={positioning.iconY + screenWidth * 0.01}
+              />
+              <Paragraph paragraph={paragraphs.baths} x={screenWidth * 0.3225} y={positioning.textY} width={100} />
+            </Group>
+          )
+        })()}
 
-      {data.propInformation.description.sqft && (
-        <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.08 }]}>
-          <ImageSVG
-            svg={sqftIcon(getContrastColor(primaryColor || '#fafafa'))}
-            x={screenWidth * 0.4}
-            y={screenWidth * 1.1}
-          />
-          <Paragraph paragraph={paragraphs.sqft} x={screenWidth * 0.36} y={screenWidth * 1.09} width={100} />
-        </Group>
-      )}
+      {data.propInformation.description.sqft &&
+        (() => {
+          const positioning = getIconPositioning(screenWidth * 1.09, 15, screenWidth * 0.0175)
+          return (
+            <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.075 }]}>
+              <ImageSVG
+                svg={sqftIcon(getContrastColor(primaryColor || '#fafafa'))}
+                x={screenWidth * 0.4}
+                y={positioning.iconY + screenWidth * 0.01}
+              />
+              <Paragraph paragraph={paragraphs.sqft} x={screenWidth * 0.36} y={positioning.textY} width={100} />
+            </Group>
+          )
+        })()}
 
       <Paragraph paragraph={paragraphs.address} x={-screenWidth * 0.025} y={screenWidth * 1.075} width={screenWidth} />
 
