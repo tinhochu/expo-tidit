@@ -98,7 +98,12 @@ export default function ClassicTemplate({
     if (!createParagraph) return {}
 
     return {
-      sqft: createParagraph(`${data.propInformation.description.sqft.toLocaleString()} sqft`, 15),
+      sqft: createParagraph(
+        data.propInformation.description.sqft
+          ? `${data?.propInformation?.description?.sqft?.toLocaleString()} sqft`
+          : 'N/A',
+        15
+      ),
       address: (() => {
         const para = Skia.ParagraphBuilder.Make({ textAlign: TextAlign.Right }, customFontMgr!)
           .pushStyle({
@@ -177,6 +182,7 @@ export default function ClassicTemplate({
           height={screenWidth * 0.27}
         />
       )}
+
       {hasRealtorPicture && showRealtor && realtorPicture && (
         <Image
           image={realtorPicture}
@@ -188,32 +194,38 @@ export default function ClassicTemplate({
         />
       )}
 
-      <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: -screenWidth * 0.017 }]}>
-        <ImageSVG
-          svg={bedIcon(getContrastColor(primaryColor || '#fafafa'))}
-          x={screenWidth * 0.4}
-          y={screenWidth * 1.1}
-        />
-        <Paragraph paragraph={paragraphs.beds} x={screenWidth * 0.305} y={screenWidth * 1.09} width={100} />
-      </Group>
+      {data.propInformation.description.beds && (
+        <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: -screenWidth * 0.017 }]}>
+          <ImageSVG
+            svg={bedIcon(getContrastColor(primaryColor || '#fafafa'))}
+            x={screenWidth * 0.4}
+            y={screenWidth * 1.1}
+          />
+          <Paragraph paragraph={paragraphs.beds} x={screenWidth * 0.305} y={screenWidth * 1.09} width={100} />
+        </Group>
+      )}
 
-      <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.03 }]}>
-        <ImageSVG
-          svg={bathIcon(getContrastColor(primaryColor || '#fafafa'))}
-          x={screenWidth * 0.4}
-          y={screenWidth * 1.1}
-        />
-        <Paragraph paragraph={paragraphs.baths} x={screenWidth * 0.315} y={screenWidth * 1.09} width={100} />
-      </Group>
+      {data.propInformation.description.baths && (
+        <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.03 }]}>
+          <ImageSVG
+            svg={bathIcon(getContrastColor(primaryColor || '#fafafa'))}
+            x={screenWidth * 0.4}
+            y={screenWidth * 1.1}
+          />
+          <Paragraph paragraph={paragraphs.baths} x={screenWidth * 0.315} y={screenWidth * 1.09} width={100} />
+        </Group>
+      )}
 
-      <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.08 }]}>
-        <ImageSVG
-          svg={sqftIcon(getContrastColor(primaryColor || '#fafafa'))}
-          x={screenWidth * 0.4}
-          y={screenWidth * 1.1}
-        />
-        <Paragraph paragraph={paragraphs.sqft} x={screenWidth * 0.36} y={screenWidth * 1.09} width={100} />
-      </Group>
+      {data.propInformation.description.sqft && (
+        <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.08 }]}>
+          <ImageSVG
+            svg={sqftIcon(getContrastColor(primaryColor || '#fafafa'))}
+            x={screenWidth * 0.4}
+            y={screenWidth * 1.1}
+          />
+          <Paragraph paragraph={paragraphs.sqft} x={screenWidth * 0.36} y={screenWidth * 1.09} width={100} />
+        </Group>
+      )}
 
       <Paragraph paragraph={paragraphs.address} x={-screenWidth * 0.025} y={screenWidth * 1.075} width={screenWidth} />
 

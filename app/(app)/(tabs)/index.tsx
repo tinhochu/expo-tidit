@@ -174,7 +174,9 @@ export default function Home() {
                               {propInfo.description?.baths || 'N/A'}
                               {' • '}
                               <FontAwesome name="home" size={14} color="inherit" />{' '}
-                              {`${propInfo.description?.sqft.toLocaleString()} sqft` || 'N/A'}
+                              {propInfo.description?.sqft
+                                ? `${propInfo.description?.sqft.toLocaleString()} sqft`
+                                : 'N/A'}
                             </Text>
                           )}
                         </HStack>
