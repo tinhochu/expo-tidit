@@ -13,7 +13,6 @@ import {
   cleanupTempImages,
   formatFileSize,
   getCompressionStats,
-  getFileExtension,
   getMimeType,
   processProfileImage,
 } from '@/lib/imageProcessor'
@@ -23,6 +22,7 @@ import * as ImagePicker from 'expo-image-picker'
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView } from 'react-native'
 import { ID } from 'react-native-appwrite'
+import RevenueCatUI from 'react-native-purchases-ui'
 
 export default function Profile() {
   const toast = useToast()
@@ -625,6 +625,40 @@ export default function Profile() {
             {/* Submit Button */}
             <Button size="lg" onPress={handleSubmit} disabled={isLoading} className="mt-4">
               <ButtonText>{isLoading ? 'Updating...' : 'Update Profile'}</ButtonText>
+            </Button>
+
+            {/* Customer Center Button */}
+            <Button
+              size="lg"
+              variant="outline"
+              onPress={async () => {
+                try {
+                  if (!RevenueCatUI || typeof RevenueCatUI.presentCustomerCenter !== 'function') {
+                    throw new Error(
+                      'RevenueCatUI is not properly imported or presentCustomerCenter method is not available'
+                    )
+                  }
+                  await RevenueCatUI.presentCustomerCenter()
+                } catch (error) {
+                  console.error('Error presenting customer center:', error)
+                  toast.show({
+                    id: ID.unique(),
+                    placement: 'top',
+                    duration: 3000,
+                    render: ({ id }) => {
+                      const uniqueToastId = 'toast-' + id
+                      return (
+                        <Toast nativeID={uniqueToastId} action="error" variant="solid">
+                          <ToastTitle>Failed to open customer center</ToastTitle>
+                        </Toast>
+                      )
+                    },
+                  })
+                }
+              }}
+              className="mt-2"
+            >
+              <ButtonText>Customer Center</ButtonText>
             </Button>
 
             {/* Sign Out Button */}
