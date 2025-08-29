@@ -1,5 +1,6 @@
 import { bathIcon, bedIcon, sqftIcon } from '@/components/template-icons'
 import TemplateHeading from '@/components/template-parts/heading'
+import Signature from '@/components/template-parts/signature'
 import { hexToRgba } from '@/helpers/colorUtils'
 import {
   Circle,
@@ -97,6 +98,7 @@ export default function ClassicTemplate({
       })(),
       beds: createParagraph(`${data.propInformation.description.beds} beds`),
       baths: createParagraph(`${data.propInformation.description.baths} baths`),
+      signature: createParagraph('Powered By', 10),
     }
   }, [createParagraph, customFontMgr, data.propInformation])
 
@@ -176,6 +178,9 @@ export default function ClassicTemplate({
       </Group>
 
       <Paragraph paragraph={paragraphs.address} x={-screenWidth * 0.025} y={screenWidth * 1.075} width={screenWidth} />
+
+      {/* Tidit Signature */}
+      <Signature screenWidth={screenWidth} poweredBy={paragraphs.signature} />
     </>
   )
 }

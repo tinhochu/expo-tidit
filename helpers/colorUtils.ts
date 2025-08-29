@@ -56,3 +56,30 @@ export function hexToRgba(hex: string, alpha: number = 1): string | null {
 
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`
 }
+
+/**
+ * Determines if a hex color is light or dark
+ * @param hex - Hex color string (e.g., '#fafafa' or 'fafafa')
+ * @returns 'white' for dark backgrounds, 'black' for light backgrounds
+ */
+export function getContrastColor(hex: string): 'white' | 'black' {
+  const rgb = hexToRgb(hex)
+  if (!rgb) return 'black' // Default fallback
+
+  // Calculate relative luminance using the sRGB formula
+  // This is the standard formula used by WCAG guidelines
+  const { r, g, b } = rgb
+
+  // Convert sRGB values to linear RGB
+  const linearR = r / 255 <= 0.03928 ? r / 255 / 12.92 : Math.pow((r / 255 + 0.055) / 1.055, 2.4)
+  const linearG = g / 255 <= 0.03928 ? g / 255 / 12.92 : Math.pow((g / 255 + 0.055) / 1.055, 2.4)
+  const linearB = b / 255 <= 0.03928 ? b / 255 / 12.92 : Math.pow((b / 255 + 0.055) / 1.055, 2.4)
+
+  // Calculate relative luminance
+  const luminance = 0.2126 * linearR + 0.7152 * linearG + 0.0722 * linearB
+
+  // Use a threshold of 0.5 to determine if color is light or dark
+  // Colors with luminance > 0.5 are considered light and should use black text
+  // Colors with luminance <= 0.5 are considered dark and should use white text
+  return luminance > 0.5 ? 'black' : 'white'
+}

@@ -1,4 +1,5 @@
 import TemplateHeading from '@/components/template-parts/heading'
+import Signature from '@/components/template-parts/signature'
 import { hexToRgba } from '@/helpers/colorUtils'
 import { Circle, Paragraph, Rect, Skia, TextAlign, useFonts } from '@shopify/react-native-skia'
 import { LinearGradient, vec } from '@shopify/react-native-skia'
@@ -83,6 +84,9 @@ export default function JustListedTemplateOne({
       />
 
       <Paragraph paragraph={paragraph} x={-screenWidth * 0.025} y={screenWidth * 0.85} width={screenWidth} />
+
+      {/* Tidit Signature */}
+      <Signature screenWidth={screenWidth} y={screenWidth * 0.95} />
     </>
   )
 }

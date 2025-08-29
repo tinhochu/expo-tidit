@@ -22,7 +22,7 @@ import { Switch } from '@/components/ui/switch'
 import { Text } from '@/components/ui/text'
 import { VStack } from '@/components/ui/vstack'
 import { useAuth } from '@/context/AuthContext'
-import { formatFileSize, getCompressionStats, processImage } from '@/lib/imageProcessor'
+import { getCompressionStats, processImage } from '@/lib/imageProcessor'
 import { deletePost, getPostById, updatePost } from '@/lib/postService'
 import { saveSkiaImageToPhotos } from '@/lib/saveSkiaImage'
 import { getUserPrefs } from '@/lib/userService'
@@ -331,7 +331,6 @@ export default function PropertyDetails() {
   useEffect(() => {
     if (isValidPostType(postType)) {
       const availableTemplates = getTemplates()
-      console.log('Post type changed to:', postType, 'Available templates:', availableTemplates)
 
       if (availableTemplates.length > 0) {
         // Only update if current templateStyle is not valid for the new postType
@@ -738,7 +737,7 @@ export default function PropertyDetails() {
                 </VStack>
 
                 {/* Custom Image Upload Section */}
-                <VStack className="pb-28 pt-5">
+                <VStack className="pb-40 pt-5">
                   <Heading size="sm">Custom Property Photo</Heading>
                   <Text className="text-gray-600">
                     {customImage ? 'Custom photo selected' : 'Use your own photo instead of the property photo'}
@@ -756,6 +755,13 @@ export default function PropertyDetails() {
                     )}
                   </Box>
                 </VStack>
+
+                {/* TODO: End of the form, don't remove this */}
+                <Grid _extra={{ className: 'grid-cols-1 gap-5' }}>
+                  <GridItem _extra={{ className: 'col-span-1' }}>
+                    <Box className="aspect-video w-full"></Box>
+                  </GridItem>
+                </Grid>
               </>
             )}
           </VStack>

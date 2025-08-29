@@ -1,4 +1,5 @@
 import TemplateHeading from '@/components/template-parts/heading'
+import Signature from '@/components/template-parts/signature'
 import { hexToRgba } from '@/helpers/colorUtils'
 import { Circle, Paragraph, Rect, Skia, TextAlign, useFonts } from '@shopify/react-native-skia'
 import { LinearGradient, vec } from '@shopify/react-native-skia'
@@ -127,6 +128,9 @@ export default function ElegantTemplate({
 
       {/* Address text positioned elegantly */}
       <Paragraph paragraph={paragraph} x={screenWidth * 0.05} y={screenWidth * 0.8} width={screenWidth * 0.6} />
+
+      {/* Tidit Signature */}
+      <Signature screenWidth={screenWidth} y={screenWidth * 0.95} />
     </>
   )
 }

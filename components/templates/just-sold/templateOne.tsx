@@ -1,5 +1,6 @@
 import { bathIcon, bedIcon, sqftIcon } from '@/components/template-icons'
 import TemplateHeading from '@/components/template-parts/heading'
+import Signature from '@/components/template-parts/signature'
 import { hexToRgba } from '@/helpers/colorUtils'
 import {
   Circle,
@@ -199,6 +200,9 @@ export default function JustSoldTemplateOne({
       </Group>
 
       <Paragraph paragraph={paragraphs.address} x={-screenWidth * 0.025} y={screenWidth * 1.075} width={screenWidth} />
+
+      {/* Tidit Signature */}
+      <Signature screenWidth={screenWidth} />
     </>
   )
 }
