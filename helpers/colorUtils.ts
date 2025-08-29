@@ -57,29 +57,30 @@ export function hexToRgba(hex: string, alpha: number = 1): string | null {
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`
 }
 
-/**
- * Determines if a hex color is light or dark
- * @param hex - Hex color string (e.g., '#fafafa' or 'fafafa')
- * @returns 'white' for dark backgrounds, 'black' for light backgrounds
- */
-export function getContrastColor(hex: string): 'white' | 'black' {
-  const rgb = hexToRgb(hex)
-  if (!rgb) return 'black' // Default fallback
+// Function to calculate relative luminance of a color
+function getLuminance(hexColor: string): number {
+  // Remove # if present
+  const hex = hexColor.replace('#', '')
 
-  // Calculate relative luminance using the sRGB formula
-  // This is the standard formula used by WCAG guidelines
-  const { r, g, b } = rgb
+  // Convert hex to RGB
+  const r = parseInt(hex.substring(0, 2), 16) / 255
+  const g = parseInt(hex.substring(2, 4), 16) / 255
+  const b = parseInt(hex.substring(4, 6), 16) / 255
 
-  // Convert sRGB values to linear RGB
-  const linearR = r / 255 <= 0.03928 ? r / 255 / 12.92 : Math.pow((r / 255 + 0.055) / 1.055, 2.4)
-  const linearG = g / 255 <= 0.03928 ? g / 255 / 12.92 : Math.pow((g / 255 + 0.055) / 1.055, 2.4)
-  const linearB = b / 255 <= 0.03928 ? b / 255 / 12.92 : Math.pow((b / 255 + 0.055) / 1.055, 2.4)
+  // Apply gamma correction
+  const rGamma = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4)
+  const gGamma = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4)
+  const bGamma = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4)
 
   // Calculate relative luminance
-  const luminance = 0.2126 * linearR + 0.7152 * linearG + 0.0722 * linearB
+  return 0.2126 * rGamma + 0.7152 * gGamma + 0.0722 * bGamma
+}
 
-  // Use a threshold of 0.5 to determine if color is light or dark
-  // Colors with luminance > 0.5 are considered light and should use black text
-  // Colors with luminance <= 0.5 are considered dark and should use white text
-  return luminance > 0.5 ? 'black' : 'white'
+// Function to determine best contrast color
+export function getContrastColor(backgroundColor: string): string {
+  const luminance = getLuminance(backgroundColor)
+
+  // If background is light (luminance > 0.5), use dark text
+  // If background is dark (luminance <= 0.5), use light text
+  return luminance > 0.5 ? '#000000' : '#ffffff'
 }

@@ -1,3 +1,4 @@
+import { hexToRgba } from '@/helpers/colorUtils'
 import { Paragraph, Skia, TextAlign, useFonts } from '@shopify/react-native-skia'
 import { useMemo } from 'react'
 
@@ -7,12 +8,14 @@ export default function TemplateHeading({
   x = 0,
   y = 0,
   size = 1,
+  color = '#ffffff',
 }: {
   screenWidth: number
   text: string
   x: number
   y: number
   size?: number
+  color?: string
 }) {
   const customFontMgr = useFonts({
     PlayfairDisplay: [require('@/assets/fonts/PlayfairDisplay-Regular.ttf')],
@@ -26,7 +29,7 @@ export default function TemplateHeading({
       textAlign: TextAlign.Center,
     }
     const textStyle = {
-      color: Skia.Color('white'),
+      color: Skia.Color(color),
       fontFamilies: ['PlayfairDisplay'],
       fontSize: 55 * size,
     }
@@ -37,7 +40,7 @@ export default function TemplateHeading({
       .pushStyle({ ...textStyle, fontStyle: { weight: 500 } })
       .pop()
       .build()
-  }, [customFontMgr, text, size])
+  }, [customFontMgr, text, size, color])
 
   // Create shadow paragraph with dark color
   const ShadowParagraph = useMemo(() => {
@@ -47,7 +50,7 @@ export default function TemplateHeading({
       textAlign: TextAlign.Center,
     }
     const textStyle = {
-      color: Skia.Color('rgba(0, 0, 0, 0.5)'),
+      color: Skia.Color(color === '#ffffff' ? '#000000' : '#ffffff'),
       fontFamilies: ['PlayfairDisplay'],
       fontSize: 55 * size,
     }
@@ -58,7 +61,7 @@ export default function TemplateHeading({
       .pushStyle({ ...textStyle, fontStyle: { weight: 500 } })
       .pop()
       .build()
-  }, [customFontMgr, text])
+  }, [customFontMgr, text, color, size])
 
   return (
     <>

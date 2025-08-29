@@ -1,7 +1,7 @@
 import { bathIcon, bedIcon, sqftIcon } from '@/components/template-icons'
 import TemplateHeading from '@/components/template-parts/heading'
 import Signature from '@/components/template-parts/signature'
-import { hexToRgba } from '@/helpers/colorUtils'
+import { getContrastColor, hexToRgba } from '@/helpers/colorUtils'
 import {
   Circle,
   Group,
@@ -32,6 +32,7 @@ interface ClassicTemplateProps {
   userPrefs: any
   showBrokerage: boolean
   showRealtor: boolean
+  showSignature: boolean
   customText?: {
     mainHeading?: string
     subHeading?: string
@@ -47,6 +48,7 @@ export default function ClassicTemplate({
   userPrefs,
   showBrokerage,
   showRealtor,
+  showSignature,
   customText,
 }: ClassicTemplateProps) {
   const { width: screenWidth } = useWindowDimensions()
@@ -67,7 +69,7 @@ export default function ClassicTemplate({
 
     const createTextParagraph = (text: string, fontSize: number = 14) => {
       const textStyle = {
-        color: Skia.Color('white'),
+        color: Skia.Color(getContrastColor(canvas.primaryColor || '#fafafa')),
         fontFamilies: ['PlayfairDisplay'],
         fontSize,
       }
@@ -76,7 +78,7 @@ export default function ClassicTemplate({
     }
 
     return createTextParagraph
-  }, [customFontMgr])
+  }, [customFontMgr, canvas.primaryColor])
 
   const paragraphs = useMemo(() => {
     if (!createParagraph) return {}
@@ -86,7 +88,7 @@ export default function ClassicTemplate({
       address: (() => {
         const para = Skia.ParagraphBuilder.Make({ textAlign: TextAlign.Right }, customFontMgr!)
           .pushStyle({
-            color: Skia.Color('white'),
+            color: Skia.Color(getContrastColor(canvas.primaryColor || '#fafafa')),
             fontFamilies: ['PlayfairDisplay'],
             fontSize: 14,
           })
@@ -100,7 +102,7 @@ export default function ClassicTemplate({
       baths: createParagraph(`${data.propInformation.description.baths} baths`),
       signature: createParagraph('Powered By', 10),
     }
-  }, [createParagraph, customFontMgr, data.propInformation])
+  }, [createParagraph, customFontMgr, data.propInformation, canvas.primaryColor])
 
   if (!customFontMgr || !paragraphs.sqft || !paragraphs.beds || !paragraphs.baths) {
     return null
@@ -126,10 +128,17 @@ export default function ClassicTemplate({
         <LinearGradient start={vec(0, 0)} end={vec(0, screenWidth)} positions={[0, 0.9]} colors={gradientColors} />
       </Rect>
 
-      <TemplateHeading screenWidth={screenWidth} text={mainHeading} x={screenWidth * 0} y={screenWidth * 0.15} />
+      <TemplateHeading
+        color={getContrastColor(primaryColor || '#fafafa')}
+        screenWidth={screenWidth}
+        text={mainHeading}
+        x={screenWidth * 0}
+        y={screenWidth * 0.15}
+      />
 
       {subHeading && (
         <TemplateHeading
+          color={getContrastColor(primaryColor || '#fafafa')}
           screenWidth={screenWidth}
           text={subHeading}
           x={screenWidth * 0}
@@ -138,7 +147,10 @@ export default function ClassicTemplate({
         />
       )}
 
-      <Circle cx={screenWidth * 0.01} cy={screenWidth * 1.15} r={screenWidth * 0.3} color={primaryColor} />
+      {userPrefs.realtorPicture && userPrefs.realtorPicture.trim() !== '' && showRealtor && (
+        <Circle cx={screenWidth * 0.01} cy={screenWidth * 1.15} r={screenWidth * 0.3} color={primaryColor} />
+      )}
+
       <Rect x={0} y={screenWidth * 1.05} width={screenWidth} height={screenWidth * 0.2} color={primaryColor} />
 
       {userPrefs?.brokerageLogo && userPrefs.brokerageLogo.trim() !== '' && showBrokerage && (
@@ -163,24 +175,38 @@ export default function ClassicTemplate({
       )}
 
       <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: -screenWidth * 0.017 }]}>
-        <ImageSVG svg={bedIcon('#ffffff')} x={screenWidth * 0.4} y={screenWidth * 1.1} />
+        <ImageSVG
+          svg={bedIcon(getContrastColor(primaryColor || '#fafafa'))}
+          x={screenWidth * 0.4}
+          y={screenWidth * 1.1}
+        />
         <Paragraph paragraph={paragraphs.beds} x={screenWidth * 0.305} y={screenWidth * 1.09} width={100} />
       </Group>
 
       <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.03 }]}>
-        <ImageSVG svg={bathIcon('#ffffff')} x={screenWidth * 0.4} y={screenWidth * 1.1} />
+        <ImageSVG
+          svg={bathIcon(getContrastColor(primaryColor || '#fafafa'))}
+          x={screenWidth * 0.4}
+          y={screenWidth * 1.1}
+        />
         <Paragraph paragraph={paragraphs.baths} x={screenWidth * 0.315} y={screenWidth * 1.09} width={100} />
       </Group>
 
       <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.08 }]}>
-        <ImageSVG svg={sqftIcon('#ffffff')} x={screenWidth * 0.4} y={screenWidth * 1.1} />
+        <ImageSVG
+          svg={sqftIcon(getContrastColor(primaryColor || '#fafafa'))}
+          x={screenWidth * 0.4}
+          y={screenWidth * 1.1}
+        />
         <Paragraph paragraph={paragraphs.sqft} x={screenWidth * 0.36} y={screenWidth * 1.09} width={100} />
       </Group>
 
       <Paragraph paragraph={paragraphs.address} x={-screenWidth * 0.025} y={screenWidth * 1.075} width={screenWidth} />
 
-      {/* Tidit Signature */}
-      <Signature screenWidth={screenWidth} poweredBy={paragraphs.signature} />
+      {/* Tidit Signature - Only show if enabled */}
+      {showSignature && (
+        <Signature screenWidth={screenWidth} poweredBy={paragraphs.signature} primaryColor={primaryColor} />
+      )}
     </>
   )
 }

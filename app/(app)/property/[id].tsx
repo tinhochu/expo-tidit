@@ -1,3 +1,4 @@
+import ProBadge from '@/components/pro-badge'
 import { TemplateRenderer, getTemplates } from '@/components/template-renderer'
 import { Box } from '@/components/ui/box'
 import { Button, ButtonText } from '@/components/ui/button'
@@ -34,6 +35,7 @@ import * as MediaLibrary from 'expo-media-library'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, useWindowDimensions } from 'react-native'
+import Purchases from 'react-native-purchases'
 
 // Simple slugify function to convert title to safe filename
 const slugify = (text: string): string => {
@@ -54,9 +56,11 @@ export default function PropertyDetails() {
   const [imageUrl, setImageUrl] = useState<string>('')
   const [status, requestPermission] = MediaLibrary.usePermissions()
   const [templateStyle, setTemplateStyle] = useState<string>('classic')
+  const [parsedCanvasData, setParsedCanvasData] = useState<any>(null)
   const [postType, setPostType] = useState<
     'JUST_SOLD' | 'JUST_LISTED' | 'JUST_RENTED' | 'OPEN_HOUSE' | 'UNDER_CONTRACT' | 'BACK_ON_MARKET' | 'LOADING'
   >('LOADING')
+  const [isPremiumUser, setIsPremiumUser] = useState<boolean>(false)
 
   // Helper function to check if postType is in a valid state
   const isValidPostType = (
@@ -67,6 +71,26 @@ export default function PropertyDetails() {
 
   // Image picker function for custom photos
   const pickImage = async () => {
+    // Check if user has premium access
+    if (!isPremiumUser) {
+      Alert.alert(
+        'Premium Feature',
+        'Custom photo uploads are a premium feature. Upgrade to unlock this and other premium features!',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Upgrade Now',
+            style: 'default',
+            onPress: () => router.push(`/subscription?returnRoute=${encodeURIComponent(`/property/${id}`)}`),
+          },
+        ]
+      )
+      return
+    }
+
     try {
       // Request permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -95,17 +119,6 @@ export default function PropertyDetails() {
             format: 'auto',
             maintainAspectRatio: true,
           })
-
-          // Get compression statistics
-          const compressionStats = await getCompressionStats(originalImageUri, processedImage.uri)
-
-          // Show optimization results
-          // Alert.alert(
-          //   'Image Optimized!',
-          //   `Original: ${formatFileSize(compressionStats.originalSize)}\n` +
-          //     `Optimized: ${formatFileSize(compressionStats.processedSize)}\n` +
-          //     `Size reduction: ${compressionStats.sizeReduction} (${compressionStats.compressionRatio.toFixed(1)}%)`
-          // )
 
           // Use the optimized image
           setCustomImage(processedImage.uri)
@@ -169,6 +182,36 @@ export default function PropertyDetails() {
     }
   }
 
+  // Wrapper function to set custom text with premium check
+  const setCustomTextWithPremiumCheck = (
+    updater:
+      | { mainHeading?: string; subHeading?: string; description?: string }
+      | undefined
+      | ((
+          prev: { mainHeading?: string; subHeading?: string; description?: string } | undefined
+        ) => { mainHeading?: string; subHeading?: string; description?: string } | undefined)
+  ) => {
+    if (!isPremiumUser) {
+      Alert.alert(
+        'Premium Feature',
+        'Custom text personalization is a premium feature. Upgrade to unlock this and other premium features!',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Upgrade Now',
+            style: 'default',
+            onPress: () => router.push(`/subscription?returnRoute=${encodeURIComponent(`/property/${id}`)}`),
+          },
+        ]
+      )
+      return
+    }
+    setCustomText(updater)
+  }
+
   // Simplified post type options for the dropdown
   const postTypeOptions = [
     { value: 'JUST_SOLD', label: 'Just Sold' },
@@ -186,6 +229,7 @@ export default function PropertyDetails() {
     showPrice?: boolean
     priceText?: string
     customImage?: string | null
+    showSignature?: boolean
   } | null>(null)
   const [userPrefs, setUserPrefs] = useState<any>(null)
   const [showBrokerage, setShowBrokerage] = useState<boolean>(true) // Default to true (enabled)
@@ -193,6 +237,7 @@ export default function PropertyDetails() {
   const [showPrice, setShowPrice] = useState<boolean>(false) // Default to false (disabled)
   const [priceText, setPriceText] = useState<string>('') // Default to empty string
   const [customImage, setCustomImage] = useState<string | null>(null)
+  const [showSignature, setShowSignature] = useState<boolean>(false) // Default to false (logo visible, switch OFF)
   const [customText, setCustomText] = useState<
     { mainHeading?: string; subHeading?: string; description?: string } | undefined
   >(undefined)
@@ -205,6 +250,40 @@ export default function PropertyDetails() {
       requestPermission()
     }
   }, [status])
+
+  // Check subscription status
+  useEffect(() => {
+    const checkSubscriptionStatus = async () => {
+      try {
+        const customerInfo = await Purchases.getCustomerInfo()
+        const hasPremium = typeof customerInfo.entitlements.active['Premium Cats'] !== 'undefined'
+        setIsPremiumUser(hasPremium)
+      } catch (error) {
+        console.error('Error checking subscription status:', error)
+        setIsPremiumUser(false)
+      }
+    }
+
+    checkSubscriptionStatus()
+  }, [])
+
+  // Load custom data after premium status is determined
+  useEffect(() => {
+    if (isPremiumUser && parsedCanvasData) {
+      // Load custom image if it exists
+      if (parsedCanvasData.customImage) {
+        setCustomImage(parsedCanvasData.customImage)
+      }
+      // Load custom text if it exists
+      if (parsedCanvasData.customText) {
+        setCustomText(parsedCanvasData.customText)
+      }
+    } else if (!isPremiumUser) {
+      // Clear custom data for non-premium users
+      setCustomImage(null)
+      setCustomText(undefined)
+    }
+  }, [isPremiumUser, parsedCanvasData])
 
   // Removed the useEffect that was causing circular updates
 
@@ -228,22 +307,26 @@ export default function PropertyDetails() {
         setShowPrice(parsedCanvas.showPrice !== undefined ? parsedCanvas.showPrice : false)
         // Load priceText from canvas if it exists, otherwise default to empty string
         setPriceText(parsedCanvas.priceText || '')
-        // Load custom image from canvas if it exists
-        if (parsedCanvas.customImage) {
-          setCustomImage(parsedCanvas.customImage)
-        }
-        // Load custom text from canvas if it exists
-        if (parsedCanvas.customText) {
-          setCustomText(parsedCanvas.customText)
-        }
+        // Store parsed canvas data for later loading (after premium status is determined)
+        setParsedCanvasData(parsedCanvas)
+        // Load showSignature from canvas if it exists, otherwise default to false
+        setShowSignature(parsedCanvas.showSignature !== undefined ? parsedCanvas.showSignature : false)
       } else {
         // Set default canvas state if none exists
         // We'll set the primary color after fetching user preferences
-        setCanvas({ primaryColor: '#000000', showBrokerage: true, showRealtor: true, showPrice: false, priceText: '' })
+        setCanvas({
+          primaryColor: '#000000',
+          showBrokerage: true,
+          showRealtor: true,
+          showPrice: false,
+          priceText: '',
+          showSignature: false, // Default to false (logo visible)
+        })
         setShowBrokerage(true)
         setShowRealtor(true)
         setShowPrice(false)
         setPriceText('')
+        setShowSignature(false) // Default to false (logo visible)
         setCustomText(undefined)
       }
 
@@ -308,7 +391,7 @@ export default function PropertyDetails() {
 
   // Save custom text to canvas when it changes
   useEffect(() => {
-    if (customText && canvas) {
+    if (customText && canvas && isPremiumUser) {
       const updatedCanvas = { ...canvas, customText }
       setCanvas(updatedCanvas)
 
@@ -325,7 +408,7 @@ export default function PropertyDetails() {
 
       saveCustomText()
     }
-  }, [customText])
+  }, [customText, isPremiumUser])
 
   // Update templateStyle when postType changes to ensure we have a valid template
   useEffect(() => {
@@ -402,6 +485,33 @@ export default function PropertyDetails() {
     return selectedTemplate?.label || 'Select a template'
   }
 
+  // Handle signature toggle with subscription check
+  const handleSignatureToggle = async (value: boolean) => {
+    if (!value && !isPremiumUser) {
+      // User is trying to hide logo (switch OFF) but doesn't have premium
+      Alert.alert(
+        'Premium Feature',
+        'Hiding the Tidit signature is a premium feature. Upgrade to unlock this and other premium features!',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Upgrade Now',
+            style: 'default',
+            onPress: () => router.push(`/subscription?returnRoute=${encodeURIComponent(`/property/${id}`)}`),
+          },
+        ]
+      )
+      return
+    }
+
+    // If user has premium or is showing logo (switch ON), proceed normally
+    setShowSignature(value) // ON = show logo, OFF = hide logo
+    handleCanvasChange('showSignature', value)
+  }
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -470,6 +580,7 @@ export default function PropertyDetails() {
                 userPrefs={userPrefs}
                 showBrokerage={showBrokerage}
                 showRealtor={showRealtor}
+                showSignature={showSignature}
                 customText={customText}
               />
             </Canvas>
@@ -628,7 +739,7 @@ export default function PropertyDetails() {
                     <HStack space="md" className="items-center">
                       <Switch
                         size="md"
-                        isDisabled={false}
+                        isDisabled={false} // Enabled for all users
                         trackColor={{ false: '#333333', true: '#3b82f6' }}
                         ios_backgroundColor="#333333"
                         thumbColor="#fafafa"
@@ -696,65 +807,93 @@ export default function PropertyDetails() {
                   </GridItem>
                 </Grid>
 
+                {/* Signature Toggle - Premium Feature */}
+                <Grid _extra={{ className: 'grid-cols-1 mb-2' }}>
+                  <GridItem _extra={{ className: 'col-span-1' }}>
+                    <HStack space="md" className="items-center">
+                      <Switch
+                        size="md"
+                        isDisabled={false} // Enabled for all users
+                        trackColor={{ false: '#333333', true: '#3b82f6' }}
+                        ios_backgroundColor="#333333"
+                        thumbColor="#fafafa"
+                        onValueChange={handleSignatureToggle}
+                        value={showSignature} // ON = show logo, OFF = hide logo
+                      />
+                      <Text>
+                        Show tidit Logo <ProBadge />
+                      </Text>
+                    </HStack>
+                  </GridItem>
+                </Grid>
+
                 {/* Custom Text Customization */}
-                <VStack space="md">
-                  <Heading size="sm">Customize Template Text</Heading>
-                  <FormControl>
-                    <FormControlLabel>
-                      <FormControlLabelText>Main Heading (optional)</FormControlLabelText>
-                    </FormControlLabel>
-                    <Input className="bg-white">
-                      <InputField
-                        placeholder="Leave empty to use default post type text"
-                        value={customText?.mainHeading || ''}
-                        onChangeText={(text) => {
-                          setCustomText((prev) => ({ ...prev, mainHeading: text }))
-                        }}
-                      />
-                    </Input>
-                    <FormControlHelper className="mt-2 block">
-                      <Text size="sm">This will override the main heading. if it is set.</Text>
-                    </FormControlHelper>
-                  </FormControl>
+                {isPremiumUser ? (
+                  <VStack space="md" className="pb-40">
+                    <Heading size="sm">
+                      Personalize Your Post <ProBadge />
+                    </Heading>
+                    <FormControl>
+                      <FormControlLabel>
+                        <FormControlLabelText>
+                          Main Heading <Text size="xs">(optional)</Text>
+                        </FormControlLabelText>
+                      </FormControlLabel>
+                      <Input className="bg-white">
+                        <InputField
+                          placeholder="Leave empty to use default post type text"
+                          value={customText?.mainHeading || ''}
+                          onChangeText={(text) => {
+                            setCustomTextWithPremiumCheck((prev) => ({ ...prev, mainHeading: text }))
+                          }}
+                        />
+                      </Input>
+                      <FormControlHelper className="mt-2 block">
+                        <Text size="sm">This will override the main heading. if it is set.</Text>
+                      </FormControlHelper>
+                    </FormControl>
 
-                  <FormControl>
-                    <FormControlLabel>
-                      <FormControlLabelText>Sub Heading (optional)</FormControlLabelText>
-                    </FormControlLabel>
-                    <Input className="bg-white">
-                      <InputField
-                        placeholder="Add a subtitle or additional text"
-                        value={customText?.subHeading || ''}
-                        onChangeText={(text) => {
-                          setCustomText((prev) => ({ ...prev, subHeading: text }))
-                        }}
-                      />
-                    </Input>
-                    <FormControlHelper className="mt-2 block">
-                      <Text size="sm">This will override the price text. if it is set.</Text>
-                    </FormControlHelper>
-                  </FormControl>
-                </VStack>
-
-                {/* Custom Image Upload Section */}
-                <VStack className="pb-40 pt-5">
-                  <Heading size="sm">Custom Property Photo</Heading>
-                  <Text className="text-gray-600">
-                    {customImage ? 'Custom photo selected' : 'Use your own photo instead of the property photo'}
-                  </Text>
-
-                  <Box className="mt-3 rounded-md border border-2 border-dashed border-gray-600 p-5 py-6">
-                    {customImage ? (
-                      <Button size="lg" onPress={removeCustomImage} className="border-red-500">
-                        <ButtonText className="text-red-500">Remove</ButtonText>
+                    <FormControl>
+                      <FormControlLabel>
+                        <FormControlLabelText>
+                          Sub Heading <Text size="xs">(optional)</Text>
+                        </FormControlLabelText>
+                      </FormControlLabel>
+                      <Input className="bg-white">
+                        <InputField
+                          placeholder="Add a subtitle or additional text"
+                          value={customText?.subHeading || ''}
+                          onChangeText={(text) => {
+                            setCustomTextWithPremiumCheck((prev) => ({ ...prev, subHeading: text }))
+                          }}
+                        />
+                      </Input>
+                      <FormControlHelper className="mt-2 block">
+                        <Text size="sm">This will override the price text. if it is set.</Text>
+                      </FormControlHelper>
+                    </FormControl>
+                  </VStack>
+                ) : (
+                  <VStack space="md" className="pb-40">
+                    <Heading size="sm">
+                      Personalize Your Post <ProBadge />
+                    </Heading>
+                    <Box className="rounded-lg border border-gray-300 bg-gray-50 p-4">
+                      <Text className="text-center text-gray-600">
+                        Upgrade to Premium to unlock custom text personalization for your posts!
+                      </Text>
+                      <Button
+                        size="md"
+                        className="mt-3 bg-blue-500"
+                        onPress={() =>
+                          router.push(`/subscription?returnRoute=${encodeURIComponent(`/property/${id}`)}`)
+                        }
+                      >
+                        <ButtonText>Upgrade to Premium</ButtonText>
                       </Button>
-                    ) : (
-                      <Button size="lg" onPress={pickImage} className="bg-blue-500">
-                        <ButtonText>Upload Property Photo</ButtonText>
-                      </Button>
-                    )}
-                  </Box>
-                </VStack>
+                    </Box>
+                  </VStack>
+                )}
 
                 {/* TODO: End of the form, don't remove this */}
                 <Grid _extra={{ className: 'grid-cols-1 gap-5' }}>

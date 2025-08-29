@@ -20,6 +20,7 @@ interface BoldTemplateProps {
   userPrefs: any
   showBrokerage: boolean
   showRealtor: boolean
+  showSignature: boolean
   customText?: {
     mainHeading?: string
     subHeading?: string
@@ -35,6 +36,7 @@ export default function BoldTemplate({
   userPrefs,
   showBrokerage,
   showRealtor,
+  showSignature,
   customText,
 }: BoldTemplateProps) {
   const { width: screenWidth } = useWindowDimensions()
@@ -113,8 +115,10 @@ export default function BoldTemplate({
       {/* Address text centered over the circle */}
       <Paragraph paragraph={paragraph} x={0} y={screenWidth * 0.75} width={screenWidth} />
 
-      {/* Tidit Signature */}
-      <Signature screenWidth={screenWidth} y={screenWidth * 0.95} />
+      {/* Tidit Signature - Only show if enabled */}
+      {showSignature && (
+        <Signature screenWidth={screenWidth} y={screenWidth * 0.95} />
+      )}
     </>
   )
 }

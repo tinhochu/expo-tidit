@@ -20,6 +20,7 @@ interface ElegantTemplateProps {
   userPrefs: any
   showBrokerage: boolean
   showRealtor: boolean
+  showSignature: boolean
   customText?: {
     mainHeading?: string
     subHeading?: string
@@ -35,6 +36,7 @@ export default function ElegantTemplate({
   userPrefs,
   showBrokerage,
   showRealtor,
+  showSignature,
   customText,
 }: ElegantTemplateProps) {
   const { width: screenWidth } = useWindowDimensions()
@@ -129,8 +131,10 @@ export default function ElegantTemplate({
       {/* Address text positioned elegantly */}
       <Paragraph paragraph={paragraph} x={screenWidth * 0.05} y={screenWidth * 0.8} width={screenWidth * 0.6} />
 
-      {/* Tidit Signature */}
-      <Signature screenWidth={screenWidth} y={screenWidth * 0.95} />
+      {/* Tidit Signature - Only show if enabled */}
+      {showSignature && (
+        <Signature screenWidth={screenWidth} y={screenWidth * 0.95} />
+      )}
     </>
   )
 }

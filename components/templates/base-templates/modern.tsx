@@ -20,6 +20,7 @@ interface ModernTemplateProps {
   userPrefs: any
   showBrokerage: boolean
   showRealtor: boolean
+  showSignature: boolean
   customText?: {
     mainHeading?: string
     subHeading?: string
@@ -35,6 +36,7 @@ export default function ModernTemplate({
   userPrefs,
   showBrokerage,
   showRealtor,
+  showSignature,
   customText,
 }: ModernTemplateProps) {
   const { width: screenWidth } = useWindowDimensions()
@@ -111,8 +113,10 @@ export default function ModernTemplate({
 
       <Paragraph paragraph={paragraph} x={-screenWidth * 0.025} y={screenWidth * 0.85} width={screenWidth} />
 
-      {/* Tidit Signature */}
-      <Signature screenWidth={screenWidth} y={screenWidth * 0.95} />
+      {/* Tidit Signature - Only show if enabled */}
+      {showSignature && (
+        <Signature screenWidth={screenWidth} y={screenWidth * 0.95} />
+      )}
     </>
   )
 }

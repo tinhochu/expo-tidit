@@ -8,6 +8,7 @@ interface TemplateRendererProps {
   userPrefs: any
   showBrokerage: boolean
   showRealtor: boolean
+  showSignature: boolean
   customText?: {
     mainHeading?: string
     subHeading?: string
@@ -26,6 +27,7 @@ interface TemplateComponent {
     userPrefs: any
     showBrokerage: boolean
     showRealtor: boolean
+    showSignature: boolean
     customText?: {
       mainHeading?: string
       subHeading?: string
@@ -67,6 +69,7 @@ function TemplateRenderer({
   userPrefs,
   showBrokerage,
   showRealtor,
+  showSignature,
   customText,
 }: TemplateRendererProps) {
   const Template = getTemplates()?.find((t) => t.value === template)?.component
@@ -79,6 +82,7 @@ function TemplateRenderer({
       userPrefs={userPrefs}
       showBrokerage={showBrokerage}
       showRealtor={showRealtor}
+      showSignature={showSignature}
       customText={customText}
     />
   ) : null

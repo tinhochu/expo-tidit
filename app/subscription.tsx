@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
+import { useLocalSearchParams } from 'expo-router'
 import React, { useEffect, useState } from 'react'
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import Purchases, { PurchasesOfferings, PurchasesPackage } from 'react-native-purchases'
@@ -56,6 +57,7 @@ const SubscriptionPlan = ({
 )
 
 export default function SubscriptionScreen() {
+  const { returnRoute } = useLocalSearchParams<{ returnRoute?: string }>()
   const [offerings, setOfferings] = useState<PurchasesOfferings | null>(null)
 
   useEffect(() => {
@@ -66,10 +68,24 @@ export default function SubscriptionScreen() {
     try {
       const { customerInfo } = await Purchases.purchasePackage(pkg)
       if (typeof customerInfo.entitlements.active['Premium Cats'] !== 'undefined') {
-        router.push('/')
+        // If we have a return route, go back there, otherwise go to home
+        if (returnRoute) {
+          router.push(returnRoute as any)
+        } else {
+          router.push('/')
+        }
       }
     } catch (e) {
       console.log('📢 error', e)
+    }
+  }
+
+  const handleBackNavigation = () => {
+    // If we have a return route, go back there, otherwise use router.back()
+    if (returnRoute) {
+      router.push(returnRoute as any)
+    } else {
+      router.back()
     }
   }
 
@@ -85,7 +101,7 @@ export default function SubscriptionScreen() {
     <LinearGradient colors={['#1a1a2e', '#16213e', '#0f3460']} style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={handleBackNavigation} style={styles.backButton}>
             <Ionicons name="arrow-back" size={28} color="white" />
           </TouchableOpacity>
 
