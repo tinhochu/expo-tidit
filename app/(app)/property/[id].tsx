@@ -1,3 +1,4 @@
+import FontManager from '@/components/FontManager'
 import ProBadge from '@/components/pro-badge'
 import { TemplateRenderer, getTemplates } from '@/components/template-renderer'
 import { Box } from '@/components/ui/box'
@@ -229,6 +230,7 @@ export default function PropertyDetails() {
     priceText?: string
     customImage?: string | null
     showSignature?: boolean
+    font?: string
   } | null>(null)
   const [userPrefs, setUserPrefs] = useState<any>(null)
   const [isLoadingUserPrefs, setIsLoadingUserPrefs] = useState<boolean>(true)
@@ -241,6 +243,7 @@ export default function PropertyDetails() {
   const [customText, setCustomText] = useState<
     { mainHeading?: string; subHeading?: string; description?: string } | undefined
   >(undefined)
+  const [selectedFont, setSelectedFont] = useState<string>('playfair') // Default to Playfair font
   // Use the useImage hook with the actual image URL - provide fallback to prevent conditional hook calls
   const img = useImage(imageUrl || 'https://via.placeholder.com/400x300?text=Loading...')
   const customImg = useImage(customImage || '')
@@ -295,6 +298,8 @@ export default function PropertyDetails() {
         setParsedCanvasData(parsedCanvas)
         // Load showSignature from canvas if it exists, otherwise default to false
         setShowSignature(parsedCanvas.showSignature !== undefined ? parsedCanvas.showSignature : false)
+        // Load font from canvas if it exists, otherwise default to 'inter'
+        setSelectedFont(parsedCanvas.font || 'playfair')
       } else {
         // Set default canvas state if none exists
         // We'll set the primary color after fetching user preferences
@@ -305,6 +310,7 @@ export default function PropertyDetails() {
           showPrice: false,
           priceText: '',
           showSignature: false, // Default to false (logo visible)
+          font: 'playfair', // Default to Playfair font
         })
         setShowBrokerage(true)
         setShowRealtor(true)
@@ -312,6 +318,7 @@ export default function PropertyDetails() {
         setPriceText('')
         setShowSignature(false) // Default to false (logo visible)
         setCustomText(undefined)
+        setSelectedFont('playfair')
       }
 
       const newPostType = propertyDetails.postType as
@@ -480,6 +487,25 @@ export default function PropertyDetails() {
     return selectedTemplate?.label || 'Select a template'
   }
 
+  // Handle font change with subscription check
+  const handleFontChange = async (font: string) => {
+    setSelectedFont(font)
+
+    // Update canvas with new font
+    if (canvas) {
+      const updatedCanvas = { ...canvas, font }
+      setCanvas(updatedCanvas)
+
+      try {
+        await updatePost(id as string, {
+          canvas: JSON.stringify(updatedCanvas),
+        })
+      } catch (error) {
+        console.error('Error updating canvas with font:', error)
+      }
+    }
+  }
+
   // Handle signature toggle with subscription check
   const handleSignatureToggle = async (value: boolean) => {
     if (!value && !isSubscribed) {
@@ -572,7 +598,7 @@ export default function PropertyDetails() {
                 </Box>
               ) : (
                 <TemplateRenderer
-                  key={`${postType}-${templateStyle}`}
+                  key={`${postType}-${templateStyle}-${selectedFont}`}
                   postType={postType}
                   template={templateStyle}
                   data={data}
@@ -582,6 +608,7 @@ export default function PropertyDetails() {
                   showRealtor={showRealtor}
                   showSignature={showSignature}
                   customText={customText}
+                  selectedFont={selectedFont}
                 />
               )}
             </Canvas>
@@ -617,7 +644,6 @@ export default function PropertyDetails() {
                             const defaultTemplate =
                               availableTemplates.find((t) => t.value === 'classic') || availableTemplates[0]
                             const newTemplateStyle = defaultTemplate.value
-                            console.log('Setting new template style:', newTemplateStyle, 'for post type:', newPostType)
 
                             setTemplateStyle(newTemplateStyle)
 
@@ -703,6 +729,20 @@ export default function PropertyDetails() {
                   </GridItem>
                 </Grid>
 
+                {/* Font Manager - Premium Feature */}
+                <Grid _extra={{ className: 'grid-cols-1' }}>
+                  <GridItem _extra={{ className: 'col-span-1' }}>
+                    <FontManager
+                      selectedFont={selectedFont}
+                      onFontChange={handleFontChange}
+                      isPremium={isSubscribed}
+                      onUpgradeClick={() =>
+                        router.push(`/subscription?returnRoute=${encodeURIComponent(`/property/${id}`)}`)
+                      }
+                    />
+                  </GridItem>
+                </Grid>
+
                 <HStack className="flex items-center justify-between">
                   <Heading size="sm">Select a Primary Color</Heading>
                   <HStack space="xs" className="items-end gap-4">
@@ -772,39 +812,38 @@ export default function PropertyDetails() {
                   </GridItem>
                 </Grid>
 
-                <Grid _extra={{ className: 'grid-cols-2 mb-2 items-center' }}>
+                <Grid _extra={{ className: 'grid-cols-2' }}>
                   <GridItem _extra={{ className: 'col-span-1' }}>
                     <HStack space="md" className="items-center">
-                      <Switch
-                        size="md"
-                        isDisabled={false}
-                        trackColor={{ false: '#3b82f6', true: '#3b82f6' }}
-                        ios_backgroundColor="#333333"
-                        thumbColor="#fafafa"
-                        onValueChange={(value) => {
-                          setShowPrice(value)
-                          handleCanvasChange('showPrice', value)
-                        }}
-                        value={showPrice}
-                      />
-                      <Text>Show Price</Text>
+                      <HStack space="md" className="items-center">
+                        <Switch
+                          size="md"
+                          isDisabled={false}
+                          trackColor={{ false: '#3b82f6', true: '#3b82f6' }}
+                          ios_backgroundColor="#333333"
+                          thumbColor="#fafafa"
+                          onValueChange={(value) => {
+                            setShowPrice(value)
+                            handleCanvasChange('showPrice', value)
+                          }}
+                          value={showPrice}
+                        />
+                        <Text>Show Price</Text>
+                      </HStack>
                     </HStack>
                   </GridItem>
+
                   <GridItem _extra={{ className: 'col-span-1' }}>
-                    {showPrice && (
-                      <FormControl>
-                        <Input className="bg-white">
-                          <InputField
-                            placeholder="Enter Your Price"
-                            value={priceText}
-                            onChangeText={(text) => {
-                              setPriceText(text)
-                              handleCanvasChange('priceText', text)
-                            }}
-                          />
-                        </Input>
-                      </FormControl>
-                    )}
+                    <Input className="bg-white" isDisabled={!showPrice}>
+                      <InputField
+                        placeholder="Enter Your Price"
+                        value={priceText}
+                        onChangeText={(text) => {
+                          setPriceText(text)
+                          handleCanvasChange('priceText', text)
+                        }}
+                      />
+                    </Input>
                   </GridItem>
                 </Grid>
 

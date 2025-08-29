@@ -26,6 +26,7 @@ interface ElegantTemplateProps {
     subHeading?: string
     description?: string
   }
+  selectedFont?: string
 }
 
 export default function ElegantTemplate({
@@ -38,6 +39,7 @@ export default function ElegantTemplate({
   showRealtor,
   showSignature,
   customText,
+  selectedFont = 'inter',
 }: ElegantTemplateProps) {
   // Safety check for data
   if (!data || !data.propInformation) {
@@ -46,8 +48,34 @@ export default function ElegantTemplate({
   }
 
   const { width: screenWidth } = useWindowDimensions()
+
+  // Function to get font family based on selected font
+  const getFontFamily = (font: string) => {
+    switch (font) {
+      case 'inter':
+        return 'Inter'
+      case 'poppins':
+        return 'PoppinsSemiBold'
+      case 'playfair':
+        return 'PlayfairDisplay'
+      case 'cormorant':
+        return 'CormorantGaramond'
+      case 'montserrat':
+        return 'MontserratExtraBold'
+      case 'spacemono':
+        return 'SpaceMono'
+      default:
+        return 'Inter'
+    }
+  }
+
   const customFontMgr = useFonts({
     PlayfairDisplay: [require('@/assets/fonts/PlayfairDisplay-Regular.ttf')],
+    Inter: [require('@/assets/fonts/Inter.ttf')],
+    MontserratExtraBold: [require('@/assets/fonts/Montserrat-ExtraBold.ttf')],
+    CormorantGaramond: [require('@/assets/fonts/CormorantGaramond.ttf')],
+    PoppinsSemiBold: [require('@/assets/fonts/Poppins-SemiBold.ttf')],
+    SpaceMono: [require('@/assets/fonts/SpaceMono-Regular.ttf')],
   })
 
   const paragraph = useMemo(() => {
@@ -58,7 +86,7 @@ export default function ElegantTemplate({
     }
     const textStyle = {
       color: Skia.Color('white'),
-      fontFamilies: ['PlayfairDisplay'],
+      fontFamilies: [getFontFamily(selectedFont)],
       fontSize: 13,
     }
 
@@ -109,6 +137,7 @@ export default function ElegantTemplate({
         x={screenWidth * 0}
         y={screenWidth * 0.2}
         size={1.3}
+        fontFamily={getFontFamily(selectedFont)}
       />
 
       {/* Sub heading if provided */}
@@ -119,6 +148,7 @@ export default function ElegantTemplate({
           x={screenWidth * 0}
           y={screenWidth * 0.35}
           size={0.9}
+          fontFamily={getFontFamily(selectedFont)}
         />
       )}
 

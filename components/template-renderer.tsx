@@ -14,6 +14,7 @@ interface TemplateRendererProps {
     subHeading?: string
     description?: string
   }
+  selectedFont?: string
 }
 
 interface TemplateComponent {
@@ -33,6 +34,7 @@ interface TemplateComponent {
       subHeading?: string
       description?: string
     }
+    selectedFont?: string
   }>
 }
 
@@ -71,6 +73,7 @@ function TemplateRenderer({
   showRealtor,
   showSignature,
   customText,
+  selectedFont,
 }: TemplateRendererProps) {
   const Template = getTemplates()?.find((t) => t.value === template)?.component
   return Template ? (
@@ -84,6 +87,7 @@ function TemplateRenderer({
       showRealtor={showRealtor}
       showSignature={showSignature}
       customText={customText}
+      selectedFont={selectedFont}
     />
   ) : null
 }

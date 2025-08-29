@@ -26,6 +26,7 @@ interface ModernTemplateProps {
     subHeading?: string
     description?: string
   }
+  selectedFont?: string
 }
 
 export default function ModernTemplate({
@@ -38,6 +39,7 @@ export default function ModernTemplate({
   showRealtor,
   showSignature,
   customText,
+  selectedFont = 'inter',
 }: ModernTemplateProps) {
   // Safety check for data
   if (!data || !data.propInformation) {
@@ -46,8 +48,34 @@ export default function ModernTemplate({
   }
 
   const { width: screenWidth } = useWindowDimensions()
+
+  // Function to get font family based on selected font
+  const getFontFamily = (font: string) => {
+    switch (font) {
+      case 'inter':
+        return 'Inter'
+      case 'poppins':
+        return 'PoppinsSemiBold'
+      case 'playfair':
+        return 'PlayfairDisplay'
+      case 'cormorant':
+        return 'CormorantGaramond'
+      case 'montserrat':
+        return 'MontserratExtraBold'
+      case 'spacemono':
+        return 'SpaceMono'
+      default:
+        return 'Inter'
+    }
+  }
+
   const customFontMgr = useFonts({
     PlayfairDisplay: [require('@/assets/fonts/PlayfairDisplay-Regular.ttf')],
+    Inter: [require('@/assets/fonts/Inter.ttf')],
+    MontserratExtraBold: [require('@/assets/fonts/Montserrat-ExtraBold.ttf')],
+    CormorantGaramond: [require('@/assets/fonts/CormorantGaramond.ttf')],
+    PoppinsSemiBold: [require('@/assets/fonts/Poppins-SemiBold.ttf')],
+    SpaceMono: [require('@/assets/fonts/SpaceMono-Regular.ttf')],
   })
 
   const paragraph = useMemo(() => {
@@ -58,7 +86,7 @@ export default function ModernTemplate({
     }
     const textStyle = {
       color: Skia.Color('white'),
-      fontFamilies: ['PlayfairDisplay'],
+      fontFamilies: [getFontFamily(selectedFont)],
       fontSize: 14,
     }
 
@@ -91,7 +119,13 @@ export default function ModernTemplate({
         />
       </Rect>
 
-      <TemplateHeading screenWidth={screenWidth} text={mainHeading} x={screenWidth * 0} y={screenWidth * 0.1} />
+      <TemplateHeading
+        screenWidth={screenWidth}
+        text={mainHeading}
+        x={screenWidth * 0}
+        y={screenWidth * 0.1}
+        fontFamily={getFontFamily(selectedFont)}
+      />
 
       {subHeading && (
         <TemplateHeading
@@ -100,6 +134,7 @@ export default function ModernTemplate({
           x={screenWidth * 0}
           y={screenWidth * 0.25}
           size={0.8}
+          fontFamily={getFontFamily(selectedFont)}
         />
       )}
 

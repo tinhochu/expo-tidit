@@ -38,6 +38,7 @@ interface ClassicTemplateProps {
     subHeading?: string
     description?: string
   }
+  selectedFont?: string
 }
 
 export default function ClassicTemplate({
@@ -50,6 +51,7 @@ export default function ClassicTemplate({
   showRealtor,
   showSignature,
   customText,
+  selectedFont = 'inter',
 }: ClassicTemplateProps) {
   // Safety check for userPrefs and data
   if (!userPrefs || Object.keys(userPrefs).length === 0) {
@@ -72,7 +74,32 @@ export default function ClassicTemplate({
   const realtorPicture = hasRealtorPicture ? useImage(userPrefs.realtorPicture) : null
   const customFontMgr = useFonts({
     PlayfairDisplay: [require('@/assets/fonts/PlayfairDisplay-Regular.ttf')],
+    Inter: [require('@/assets/fonts/Inter.ttf')],
+    MontserratExtraBold: [require('@/assets/fonts/Montserrat-ExtraBold.ttf')],
+    CormorantGaramond: [require('@/assets/fonts/CormorantGaramond.ttf')],
+    PoppinsSemiBold: [require('@/assets/fonts/Poppins-SemiBold.ttf')],
+    SpaceMono: [require('@/assets/fonts/SpaceMono-Regular.ttf')],
   })
+
+  // Function to get font family based on selected font
+  const getFontFamily = (font: string) => {
+    switch (font) {
+      case 'inter':
+        return 'Inter'
+      case 'poppins':
+        return 'PoppinsSemiBold'
+      case 'playfair':
+        return 'PlayfairDisplay'
+      case 'cormorant':
+        return 'CormorantGaramond'
+      case 'montserrat':
+        return 'MontserratExtraBold'
+      case 'spacemono':
+        return 'SpaceMono'
+      default:
+        return 'Inter'
+    }
+  }
 
   const createParagraph = useMemo(() => {
     if (!customFontMgr) return null
@@ -84,7 +111,7 @@ export default function ClassicTemplate({
     const createTextParagraph = (text: string, fontSize: number = 14) => {
       const textStyle = {
         color: Skia.Color(getContrastColor(canvas.primaryColor || '#fafafa')),
-        fontFamilies: ['PlayfairDisplay'],
+        fontFamilies: [getFontFamily(selectedFont)],
         fontSize,
       }
 
@@ -92,7 +119,7 @@ export default function ClassicTemplate({
     }
 
     return createTextParagraph
-  }, [customFontMgr, canvas.primaryColor])
+  }, [customFontMgr, canvas.primaryColor, selectedFont])
 
   const paragraphs = useMemo(() => {
     if (!createParagraph) return {}
@@ -108,7 +135,7 @@ export default function ClassicTemplate({
         const para = Skia.ParagraphBuilder.Make({ textAlign: TextAlign.Right }, customFontMgr!)
           .pushStyle({
             color: Skia.Color(getContrastColor(canvas.primaryColor || '#fafafa')),
-            fontFamilies: ['PlayfairDisplay'],
+            fontFamilies: [getFontFamily(selectedFont)],
             fontSize: 14,
           })
           .addText(`${data.propInformation.line}`)
@@ -153,6 +180,7 @@ export default function ClassicTemplate({
         text={mainHeading}
         x={screenWidth * 0}
         y={screenWidth * 0.15}
+        fontFamily={getFontFamily(selectedFont)}
       />
 
       {subHeading && (
@@ -163,6 +191,7 @@ export default function ClassicTemplate({
           x={screenWidth * 0}
           y={screenWidth * 0.325}
           size={1.25}
+          fontFamily={getFontFamily(selectedFont)}
         />
       )}
 

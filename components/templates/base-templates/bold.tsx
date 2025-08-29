@@ -8,6 +8,7 @@ import { useWindowDimensions } from 'react-native'
 
 interface BoldTemplateProps {
   data: any
+  postType: string
   template: string
   canvas: {
     primaryColor?: string
@@ -25,6 +26,7 @@ interface BoldTemplateProps {
     subHeading?: string
     description?: string
   }
+  selectedFont?: string
 }
 
 export default function BoldTemplate({
@@ -37,6 +39,7 @@ export default function BoldTemplate({
   showRealtor,
   showSignature,
   customText,
+  selectedFont = 'inter',
 }: BoldTemplateProps) {
   // Safety check for data
   if (!data || !data.propInformation) {
@@ -45,8 +48,34 @@ export default function BoldTemplate({
   }
 
   const { width: screenWidth } = useWindowDimensions()
+
+  // Function to get font family based on selected font
+  const getFontFamily = (font: string) => {
+    switch (font) {
+      case 'inter':
+        return 'Inter'
+      case 'poppins':
+        return 'PoppinsSemiBold'
+      case 'playfair':
+        return 'PlayfairDisplay'
+      case 'cormorant':
+        return 'CormorantGaramond'
+      case 'montserrat':
+        return 'MontserratExtraBold'
+      case 'spacemono':
+        return 'SpaceMono'
+      default:
+        return 'Inter'
+    }
+  }
+
   const customFontMgr = useFonts({
     PlayfairDisplay: [require('@/assets/fonts/PlayfairDisplay-Regular.ttf')],
+    Inter: [require('@/assets/fonts/Inter.ttf')],
+    MontserratExtraBold: [require('@/assets/fonts/Montserrat-ExtraBold.ttf')],
+    CormorantGaramond: [require('@/assets/fonts/CormorantGaramond.ttf')],
+    PoppinsSemiBold: [require('@/assets/fonts/Poppins-SemiBold.ttf')],
+    SpaceMono: [require('@/assets/fonts/SpaceMono-Regular.ttf')],
   })
 
   const paragraph = useMemo(() => {
@@ -57,7 +86,7 @@ export default function BoldTemplate({
     }
     const textStyle = {
       color: Skia.Color('white'),
-      fontFamilies: ['PlayfairDisplay'],
+      fontFamilies: [getFontFamily(selectedFont)],
       fontSize: 16,
     }
 
@@ -96,6 +125,7 @@ export default function BoldTemplate({
         x={screenWidth * 0}
         y={screenWidth * 0.35}
         size={1.5}
+        fontFamily={getFontFamily(selectedFont)}
       />
 
       {/* Sub heading if provided */}
@@ -106,6 +136,7 @@ export default function BoldTemplate({
           x={screenWidth * 0}
           y={screenWidth * 0.5}
           size={1.0}
+          fontFamily={getFontFamily(selectedFont)}
         />
       )}
 
