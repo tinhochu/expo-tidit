@@ -21,6 +21,12 @@ export default function JustListedTemplateOne({
   showBrokerage: boolean
   showRealtor: boolean
 }) {
+  // Safety check for data
+  if (!data || !data.propInformation) {
+    console.warn('JustListedTemplateOne: data or data.propInformation is null or undefined')
+    return null
+  }
+
   const { width: screenWidth } = useWindowDimensions()
   const customFontMgr = useFonts({
     PlayfairDisplay: [require('@/assets/fonts/PlayfairDisplay-Regular.ttf')],

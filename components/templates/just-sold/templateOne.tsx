@@ -71,6 +71,12 @@ export default function JustSoldTemplateOne({
   showBrokerage,
   showRealtor,
 }: Props) {
+  // Safety check for data
+  if (!data || !data.propInformation || !data.propInformation.description) {
+    console.warn('JustSoldTemplateOne: data or data.propInformation is null or undefined')
+    return null
+  }
+
   const { width: screenWidth } = useWindowDimensions()
   // Always call useImage with valid URLs to prevent CoreUI errors and follow React hooks rules
   const brokerageLogo = useImage(userPrefs?.brokerageLogo || 'https://via.placeholder.com/1x1/00000000/00000000?text=')

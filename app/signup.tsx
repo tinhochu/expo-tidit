@@ -237,7 +237,7 @@ export default function Signup() {
   }, [error])
 
   return (
-    <SafeAreaView>
+    <SafeAreaView style={{ backgroundColor: 'white' }}>
       <Box className="min-h-screen justify-start px-5">
         <VStack space="lg">
           <HStack className="items-center justify-between">
@@ -256,9 +256,13 @@ export default function Signup() {
           </HStack>
 
           <VStack className="mt-5" space="lg">
-            <Heading size="xl" className="text-black">
-              Welcome to Tidit
-            </Heading>
+            <HStack space="sm" className="items-end">
+              <Heading size="xl" className="text-black">
+                Welcome to
+              </Heading>
+              <Image source={require('@/assets/images/icon.png')} alt="Tidit" size="xl" className="h-10 w-10" />
+            </HStack>
+
             <Text size="lg">Create a account to access personalized wellness insights and track your progress.</Text>
 
             <Grid

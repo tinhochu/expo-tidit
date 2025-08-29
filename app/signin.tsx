@@ -120,79 +120,81 @@ const signin = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined} // iOS needs 'padding'
       keyboardVerticalOffset={Platform.select({ ios: 64, android: 0 })} // tweak if you have a header
     >
-      <ScrollView ref={scrollRef} contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-        <SafeAreaView>
-          <Box className="min-h-screen justify-end pb-10">
-            <VStack space="lg">
-              <Image
-                source={require('@/assets/images/icon.png')}
-                alt="Tidit"
-                size="2xl"
-                className="self-center shadow-lg"
-              />
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={{ flexGrow: 1, backgroundColor: 'white' }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Box className="relative min-h-screen justify-center bg-white pb-10">
+          <VStack space="lg">
+            <Box className="flex items-center justify-center px-10">
+              <Image source={require('@/assets/images/icon.png')} alt="Tidit" size="2xl" />
+            </Box>
 
-              <Box className="rounded-t-3xl bg-white pb-20 pt-10 shadow-xl">
-                <VStack space="md" className="mb-10">
-                  <Heading size="3xl" className="text-center text-black">
-                    Create. Post. Done.
-                  </Heading>
-                </VStack>
+            <Box className="bg-white pb-20 pt-10">
+              <VStack space="md" className="mb-10">
+                <Heading size="3xl" className="text-center text-black">
+                  Create. Post. Done.
+                </Heading>
+              </VStack>
 
-                <VStack space="md" className="mx-auto w-3/4">
-                  {!showInputs && (
-                    <>
-                      <Button size="lg" onPress={() => router.push('/signup')}>
-                        <ButtonText>Create Account</ButtonText>
-                      </Button>
-                      <Button size="lg" variant="outline" onPress={handleLoginClick}>
-                        <ButtonText>Login</ButtonText>
-                      </Button>
-                    </>
-                  )}
+              <VStack space="md" className="mx-auto w-3/4">
+                {!showInputs && (
+                  <>
+                    <Button size="lg" variant="outline" onPress={handleLoginClick}>
+                      <ButtonText>Login</ButtonText>
+                    </Button>
+                    <Button size="lg" className="bg-black" onPress={() => router.push('/signup')}>
+                      <ButtonText className="text-white">Create Account</ButtonText>
+                    </Button>
+                  </>
+                )}
 
-                  {showInputs && (
-                    <Animated.View style={animatedStyle}>
-                      <VStack space="md">
-                        <Text size="lg">Email:</Text>
-                        <Input className="bg-white" size="xl">
-                          <InputField
-                            placeholder="Enter your email..."
-                            value={email.toLowerCase()}
-                            onChangeText={handleEmailChange}
-                          />
-                        </Input>
+                {showInputs && (
+                  <Animated.View style={animatedStyle}>
+                    <VStack space="md">
+                      <Text size="lg">Email:</Text>
+                      <Input className="bg-white" size="xl">
+                        <InputField
+                          placeholder="Enter your email..."
+                          value={email.toLowerCase()}
+                          onChangeText={handleEmailChange}
+                        />
+                      </Input>
 
-                        <Text size="lg">Password:</Text>
-                        <Input className="bg-white" size="xl">
-                          <InputField
-                            placeholder="Password"
-                            value={password}
-                            onChangeText={handlePasswordChange}
-                            secureTextEntry
-                          />
-                        </Input>
+                      <Text size="lg">Password:</Text>
+                      <Input className="bg-white" size="xl">
+                        <InputField
+                          placeholder="Password"
+                          value={password}
+                          onChangeText={handlePasswordChange}
+                          secureTextEntry
+                        />
+                      </Input>
 
-                        {/* Display error message */}
-                        {error && error.page === 'signin' && (
-                          <Text size="md" className="text-center font-medium text-red-600">
-                            {error.message}
-                          </Text>
-                        )}
+                      {/* Display error message */}
+                      {error && error.page === 'signin' && (
+                        <Text size="md" className="text-center font-medium text-red-600">
+                          {error.message}
+                        </Text>
+                      )}
 
+                      <VStack space="xl">
                         <Button size="xl" onPress={handleSubmit} disabled={loading}>
                           <ButtonText>{loading ? 'Signing in...' : 'Login'}</ButtonText>
                         </Button>
+
                         <Button size="lg" variant="outline" onPress={handleBackClick}>
                           <ButtonText>Back</ButtonText>
                         </Button>
                       </VStack>
-                    </Animated.View>
-                  )}
-                </VStack>
-              </Box>
-            </VStack>
-          </Box>
-        </SafeAreaView>
+                    </VStack>
+                  </Animated.View>
+                )}
+              </VStack>
+            </Box>
+          </VStack>
+        </Box>
       </ScrollView>
     </KeyboardAvoidingView>
   )

@@ -5,7 +5,7 @@ interface TemplateRendererProps {
   data: any
   template: string
   canvas: any
-  userPrefs: any
+  userPrefs: any | null
   showBrokerage: boolean
   showRealtor: boolean
   showSignature: boolean
@@ -24,7 +24,7 @@ interface TemplateComponent {
     postType: string
     template: string
     canvas: any
-    userPrefs: any
+    userPrefs: any | null
     showBrokerage: boolean
     showRealtor: boolean
     showSignature: boolean

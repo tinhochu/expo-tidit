@@ -23,6 +23,7 @@ import { Switch } from '@/components/ui/switch'
 import { Text } from '@/components/ui/text'
 import { VStack } from '@/components/ui/vstack'
 import { useAuth } from '@/context/AuthContext'
+import { useSubscription } from '@/context/SubscriptionContext'
 import { getCompressionStats, processImage } from '@/lib/imageProcessor'
 import { deletePost, getPostById, updatePost } from '@/lib/postService'
 import { saveSkiaImageToPhotos } from '@/lib/saveSkiaImage'
@@ -50,6 +51,7 @@ const slugify = (text: string): string => {
 export default function PropertyDetails() {
   const { id } = useLocalSearchParams()
   const { user } = useAuth()
+  const { isSubscribed } = useSubscription()
   const { width: screenWidth } = useWindowDimensions()
   const ref = useCanvasRef()
   const [data, setData] = useState<any>(null)
@@ -60,7 +62,6 @@ export default function PropertyDetails() {
   const [postType, setPostType] = useState<
     'JUST_SOLD' | 'JUST_LISTED' | 'JUST_RENTED' | 'OPEN_HOUSE' | 'UNDER_CONTRACT' | 'BACK_ON_MARKET' | 'LOADING'
   >('LOADING')
-  const [isPremiumUser, setIsPremiumUser] = useState<boolean>(false)
 
   // Helper function to check if postType is in a valid state
   const isValidPostType = (
@@ -72,7 +73,7 @@ export default function PropertyDetails() {
   // Image picker function for custom photos
   const pickImage = async () => {
     // Check if user has premium access
-    if (!isPremiumUser) {
+    if (!isSubscribed) {
       Alert.alert(
         'Premium Feature',
         'Custom photo uploads are a premium feature. Upgrade to unlock this and other premium features!',
@@ -191,7 +192,7 @@ export default function PropertyDetails() {
           prev: { mainHeading?: string; subHeading?: string; description?: string } | undefined
         ) => { mainHeading?: string; subHeading?: string; description?: string } | undefined)
   ) => {
-    if (!isPremiumUser) {
+    if (!isSubscribed) {
       Alert.alert(
         'Premium Feature',
         'Custom text personalization is a premium feature. Upgrade to unlock this and other premium features!',
@@ -251,25 +252,9 @@ export default function PropertyDetails() {
     }
   }, [status])
 
-  // Check subscription status
-  useEffect(() => {
-    const checkSubscriptionStatus = async () => {
-      try {
-        const customerInfo = await Purchases.getCustomerInfo()
-        const hasPremium = typeof customerInfo.entitlements.active['Premium Cats'] !== 'undefined'
-        setIsPremiumUser(hasPremium)
-      } catch (error) {
-        console.error('Error checking subscription status:', error)
-        setIsPremiumUser(false)
-      }
-    }
-
-    checkSubscriptionStatus()
-  }, [])
-
   // Load custom data after premium status is determined
   useEffect(() => {
-    if (isPremiumUser && parsedCanvasData) {
+    if (isSubscribed && parsedCanvasData) {
       // Load custom image if it exists
       if (parsedCanvasData.customImage) {
         setCustomImage(parsedCanvasData.customImage)
@@ -278,12 +263,12 @@ export default function PropertyDetails() {
       if (parsedCanvasData.customText) {
         setCustomText(parsedCanvasData.customText)
       }
-    } else if (!isPremiumUser) {
+    } else if (!isSubscribed) {
       // Clear custom data for non-premium users
       setCustomImage(null)
       setCustomText(undefined)
     }
-  }, [isPremiumUser, parsedCanvasData])
+  }, [isSubscribed, parsedCanvasData])
 
   // Removed the useEffect that was causing circular updates
 
@@ -391,7 +376,7 @@ export default function PropertyDetails() {
 
   // Save custom text to canvas when it changes
   useEffect(() => {
-    if (customText && canvas && isPremiumUser) {
+    if (customText && canvas && isSubscribed) {
       const updatedCanvas = { ...canvas, customText }
       setCanvas(updatedCanvas)
 
@@ -408,7 +393,7 @@ export default function PropertyDetails() {
 
       saveCustomText()
     }
-  }, [customText, isPremiumUser])
+  }, [customText, isSubscribed])
 
   // Update templateStyle when postType changes to ensure we have a valid template
   useEffect(() => {
@@ -487,7 +472,7 @@ export default function PropertyDetails() {
 
   // Handle signature toggle with subscription check
   const handleSignatureToggle = async (value: boolean) => {
-    if (!value && !isPremiumUser) {
+    if (!value && !isSubscribed) {
       // User is trying to hide logo (switch OFF) but doesn't have premium
       Alert.alert(
         'Premium Feature',
@@ -520,7 +505,7 @@ export default function PropertyDetails() {
       <VStack>
         <Box className="border-b border-gray-200 bg-white p-2 px-5 pt-[72px]">
           <HStack className="items-center justify-between gap-5">
-            <Pressable onPress={() => router.back()}>
+            <Pressable onPress={() => router.push('/')}>
               <AntDesign size={24} name="back" color="black" />
             </Pressable>
             <Heading size="sm">{data?.title ? data.title.slice(0, 25) + '...' : 'Fetching...'}</Heading>
@@ -827,8 +812,53 @@ export default function PropertyDetails() {
                   </GridItem>
                 </Grid>
 
+                {/* Custom Image Upload Section */}
+                {isSubscribed ? (
+                  <VStack className="pt-5">
+                    <Heading size="sm">
+                      Custom Property Photo <ProBadge />
+                    </Heading>
+                    <Text className="text-gray-600">
+                      {customImage ? 'Custom photo selected' : 'Use your own photo instead of the property photo'}
+                    </Text>
+
+                    <Box className="mt-3 rounded-md border border-2 border-dashed border-gray-600 p-5 py-6">
+                      {customImage ? (
+                        <Button size="lg" onPress={removeCustomImage} className="border-red-500">
+                          <ButtonText className="text-red-500">Remove</ButtonText>
+                        </Button>
+                      ) : (
+                        <Button size="lg" onPress={pickImage} className="bg-blue-500">
+                          <ButtonText>Upload Property Photo</ButtonText>
+                        </Button>
+                      )}
+                    </Box>
+                  </VStack>
+                ) : (
+                  <VStack className="pt-5">
+                    <Heading size="sm">
+                      Custom Property Photo <ProBadge />
+                    </Heading>
+                    <Text className="text-gray-600">Use your own photo instead of the property photo</Text>
+                    <Box className="mt-3 rounded-lg border border-gray-300 bg-gray-50 p-4">
+                      <Text className="text-center text-gray-600">
+                        Upgrade to Premium to unlock custom photo uploads for your posts!
+                      </Text>
+                      <Button
+                        size="md"
+                        className="mt-3 bg-blue-500"
+                        onPress={() =>
+                          router.push(`/subscription?returnRoute=${encodeURIComponent(`/property/${id}`)}`)
+                        }
+                      >
+                        <ButtonText>Upgrade to Premium</ButtonText>
+                      </Button>
+                    </Box>
+                  </VStack>
+                )}
+
                 {/* Custom Text Customization */}
-                {isPremiumUser ? (
+                {isSubscribed ? (
                   <VStack space="md" className="pb-40">
                     <Heading size="sm">
                       Personalize Your Post <ProBadge />

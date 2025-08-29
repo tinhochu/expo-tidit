@@ -8,7 +8,6 @@ import { useWindowDimensions } from 'react-native'
 
 interface BoldTemplateProps {
   data: any
-  postType: string
   template: string
   canvas: {
     primaryColor?: string
@@ -17,7 +16,7 @@ interface BoldTemplateProps {
     showBrokerage?: boolean
     showRealtor?: boolean
   }
-  userPrefs: any
+  userPrefs: any | null
   showBrokerage: boolean
   showRealtor: boolean
   showSignature: boolean
@@ -39,6 +38,12 @@ export default function BoldTemplate({
   showSignature,
   customText,
 }: BoldTemplateProps) {
+  // Safety check for data
+  if (!data || !data.propInformation) {
+    console.warn('BoldTemplate: data or data.propInformation is null or undefined')
+    return null
+  }
+
   const { width: screenWidth } = useWindowDimensions()
   const customFontMgr = useFonts({
     PlayfairDisplay: [require('@/assets/fonts/PlayfairDisplay-Regular.ttf')],
@@ -116,9 +121,7 @@ export default function BoldTemplate({
       <Paragraph paragraph={paragraph} x={0} y={screenWidth * 0.75} width={screenWidth} />
 
       {/* Tidit Signature - Only show if enabled */}
-      {showSignature && (
-        <Signature screenWidth={screenWidth} y={screenWidth * 0.95} />
-      )}
+      {showSignature && <Signature screenWidth={screenWidth} y={screenWidth * 0.95} />}
     </>
   )
 }

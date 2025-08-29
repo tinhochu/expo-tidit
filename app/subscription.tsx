@@ -1,11 +1,12 @@
 import { HStack } from '@/components/ui/hstack'
 import { Image } from '@/components/ui/image'
+import { useSubscription } from '@/context/SubscriptionContext'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import { useLocalSearchParams } from 'expo-router'
 import React, { useEffect, useState } from 'react'
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import Purchases, { PurchasesOfferings, PurchasesPackage } from 'react-native-purchases'
 
 const SubscriptionPlan = ({
@@ -15,6 +16,8 @@ const SubscriptionPlan = ({
   features,
   isPopular,
   onPress,
+  isLoading = false,
+  isAlreadyPro = false,
 }: {
   title: string
   price: string
@@ -22,8 +25,10 @@ const SubscriptionPlan = ({
   features: string[]
   isPopular?: boolean
   onPress: () => void
+  isLoading?: boolean
+  isAlreadyPro?: boolean
 }) => (
-  <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+  <TouchableOpacity onPress={onPress} activeOpacity={0.8} disabled={isLoading || isAlreadyPro}>
     <View style={[styles.planCard, isPopular && styles.popularCard]}>
       {isPopular && (
         <View style={styles.popularBadge}>
@@ -50,9 +55,21 @@ const SubscriptionPlan = ({
         colors={isPopular ? ['#ff6b35', '#f7931e', '#ffd700'] : ['#ff6b35', '#f7931e', '#ffd700']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
-        style={styles.selectButton}
+        style={[styles.selectButton, (isLoading || isAlreadyPro) && styles.selectButtonDisabled]}
       >
-        <Text style={styles.selectButtonText}>Get Pro Now</Text>
+        {isLoading ? (
+          <HStack className="items-center gap-2">
+            <ActivityIndicator size="small" color="white" />
+            <Text style={styles.selectButtonText}>Processing...</Text>
+          </HStack>
+        ) : isAlreadyPro ? (
+          <HStack className="items-center gap-2">
+            <Ionicons name="checkmark-circle" size={20} color="white" />
+            <Text style={styles.selectButtonText}>Already Subscribed</Text>
+          </HStack>
+        ) : (
+          <Text style={styles.selectButtonText}>Get Pro Now</Text>
+        )}
       </LinearGradient>
     </View>
   </TouchableOpacity>
@@ -60,16 +77,21 @@ const SubscriptionPlan = ({
 
 export default function SubscriptionScreen() {
   const { returnRoute } = useLocalSearchParams<{ returnRoute?: string }>()
-  const [offerings, setOfferings] = useState<PurchasesOfferings | null>(null)
+  const { offerings, isSubscribed, checkSubscriptionStatus } = useSubscription()
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    getOfferings()
-  }, [])
+    checkSubscriptionStatus()
+  }, [checkSubscriptionStatus])
 
   const handleSubscribe = async (pkg: PurchasesPackage) => {
+    setIsLoading(true)
     try {
       const { customerInfo } = await Purchases.purchasePackage(pkg)
+
       if (typeof customerInfo.entitlements.active['tidit Pro'] !== 'undefined') {
+        // Refresh subscription status after successful purchase
+        await checkSubscriptionStatus()
         // If we have a return route, go back there, otherwise go to home
         if (returnRoute) {
           router.push(returnRoute as any)
@@ -79,6 +101,8 @@ export default function SubscriptionScreen() {
       }
     } catch (e) {
       console.log('📢 error', e)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -91,14 +115,6 @@ export default function SubscriptionScreen() {
     }
   }
 
-  async function getOfferings() {
-    const offerings = await Purchases.getOfferings()
-    if (offerings.current !== null && offerings.current.availablePackages.length !== 0) {
-      setOfferings(offerings)
-    }
-    console.log('📢 offerings', JSON.stringify(offerings, null, 2))
-  }
-
   return (
     <LinearGradient colors={['#000000', '#1a1a1a', '#404040']} style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -109,7 +125,11 @@ export default function SubscriptionScreen() {
 
           <HStack className="items-center justify-center gap-2">
             <Text style={styles.title}>Unlock</Text>
-            <Image source={require('@/assets/images/splash-icon-light.png')} className="h-16 w-16 pb-6" />
+            <Image
+              source={require('@/assets/images/splash-icon-light.png')}
+              className="h-16 w-16 pb-6"
+              alt="Tidit Logo"
+            />
             <Text style={styles.title}>Pro</Text>
           </HStack>
 
@@ -138,8 +158,18 @@ export default function SubscriptionScreen() {
           </View>
         </View>
 
+        {isSubscribed && (
+          <View style={styles.alreadyProContainer}>
+            <View style={styles.alreadyProBadge}>
+              <Ionicons name="checkmark-circle" size={24} color="#4ade80" />
+              <Text style={styles.alreadyProText}>You already have Pro access!</Text>
+            </View>
+            <Text style={styles.alreadyProSubtext}>Enjoy all the premium features</Text>
+          </View>
+        )}
+
         <View style={styles.plansContainer}>
-          {offerings?.current?.availablePackages.map((pkg) => (
+          {offerings?.availablePackages?.map((pkg: any) => (
             <SubscriptionPlan
               key={pkg.identifier}
               title={pkg.product.title}
@@ -152,6 +182,8 @@ export default function SubscriptionScreen() {
                 'Remove Our Logo from your posts',
               ]}
               onPress={() => handleSubscribe(pkg)}
+              isLoading={isLoading}
+              isAlreadyPro={isSubscribed}
             />
           ))}
         </View>
@@ -288,6 +320,9 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
+  selectButtonDisabled: {
+    opacity: 0.7,
+  },
   selectButtonText: {
     color: 'white',
     fontSize: 18,
@@ -303,5 +338,29 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.5)',
+  },
+  alreadyProContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 30,
+    alignItems: 'center',
+  },
+  alreadyProBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(74, 222, 128, 0.1)',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    marginBottom: 10,
+  },
+  alreadyProText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  alreadyProSubtext: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
   },
 })

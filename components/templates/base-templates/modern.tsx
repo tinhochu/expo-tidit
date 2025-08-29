@@ -17,7 +17,7 @@ interface ModernTemplateProps {
     showBrokerage?: boolean
     showRealtor?: boolean
   }
-  userPrefs: any
+  userPrefs: any | null
   showBrokerage: boolean
   showRealtor: boolean
   showSignature: boolean
@@ -39,6 +39,12 @@ export default function ModernTemplate({
   showSignature,
   customText,
 }: ModernTemplateProps) {
+  // Safety check for data
+  if (!data || !data.propInformation) {
+    console.warn('ModernTemplate: data or data.propInformation is null or undefined')
+    return null
+  }
+
   const { width: screenWidth } = useWindowDimensions()
   const customFontMgr = useFonts({
     PlayfairDisplay: [require('@/assets/fonts/PlayfairDisplay-Regular.ttf')],
@@ -114,9 +120,7 @@ export default function ModernTemplate({
       <Paragraph paragraph={paragraph} x={-screenWidth * 0.025} y={screenWidth * 0.85} width={screenWidth} />
 
       {/* Tidit Signature - Only show if enabled */}
-      {showSignature && (
-        <Signature screenWidth={screenWidth} y={screenWidth * 0.95} />
-      )}
+      {showSignature && <Signature screenWidth={screenWidth} y={screenWidth * 0.95} />}
     </>
   )
 }

@@ -29,7 +29,7 @@ interface ClassicTemplateProps {
     showBrokerage?: boolean
     showRealtor?: boolean
   }
-  userPrefs: any
+  userPrefs: any | null
   showBrokerage: boolean
   showRealtor: boolean
   showSignature: boolean
@@ -51,6 +51,17 @@ export default function ClassicTemplate({
   showSignature,
   customText,
 }: ClassicTemplateProps) {
+  // Safety check for userPrefs and data
+  if (!userPrefs) {
+    console.warn('ClassicTemplate: userPrefs is null or undefined')
+    return null
+  }
+
+  if (!data || !data.propInformation || !data.propInformation.description) {
+    console.warn('ClassicTemplate: data or data.propInformation is null or undefined')
+    return null
+  }
+
   const { width: screenWidth } = useWindowDimensions()
   const brokerageLogo = useImage(userPrefs?.brokerageLogo || 'https://via.placeholder.com/1x1/00000000/00000000?text=')
   const realtorPicture = useImage(
@@ -147,7 +158,7 @@ export default function ClassicTemplate({
         />
       )}
 
-      {userPrefs.realtorPicture && userPrefs.realtorPicture.trim() !== '' && showRealtor && (
+      {userPrefs?.realtorPicture && userPrefs.realtorPicture.trim() !== '' && showRealtor && (
         <Circle cx={screenWidth * 0.01} cy={screenWidth * 1.15} r={screenWidth * 0.3} color={primaryColor} />
       )}
 
