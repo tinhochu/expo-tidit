@@ -52,8 +52,8 @@ export default function ClassicTemplate({
   customText,
 }: ClassicTemplateProps) {
   // Safety check for userPrefs and data
-  if (!userPrefs) {
-    console.warn('ClassicTemplate: userPrefs is null or undefined')
+  if (!userPrefs || Object.keys(userPrefs).length === 0) {
+    console.warn('ClassicTemplate: userPrefs is null, undefined, or empty')
     return null
   }
 
@@ -63,10 +63,13 @@ export default function ClassicTemplate({
   }
 
   const { width: screenWidth } = useWindowDimensions()
-  const brokerageLogo = useImage(userPrefs?.brokerageLogo || 'https://via.placeholder.com/1x1/00000000/00000000?text=')
-  const realtorPicture = useImage(
-    userPrefs?.realtorPicture || 'https://via.placeholder.com/1x1/00000000/00000000?text='
-  )
+
+  // Only create image objects if we have valid URLs
+  const hasBrokerageLogo = userPrefs?.brokerageLogo && userPrefs.brokerageLogo.trim() !== ''
+  const hasRealtorPicture = userPrefs?.realtorPicture && userPrefs.realtorPicture.trim() !== ''
+
+  const brokerageLogo = hasBrokerageLogo ? useImage(userPrefs.brokerageLogo) : null
+  const realtorPicture = hasRealtorPicture ? useImage(userPrefs.realtorPicture) : null
   const customFontMgr = useFonts({
     PlayfairDisplay: [require('@/assets/fonts/PlayfairDisplay-Regular.ttf')],
   })
@@ -158,13 +161,13 @@ export default function ClassicTemplate({
         />
       )}
 
-      {userPrefs?.realtorPicture && userPrefs.realtorPicture.trim() !== '' && showRealtor && (
+      {hasRealtorPicture && showRealtor && (
         <Circle cx={screenWidth * 0.01} cy={screenWidth * 1.15} r={screenWidth * 0.3} color={primaryColor} />
       )}
 
       <Rect x={0} y={screenWidth * 1.05} width={screenWidth} height={screenWidth * 0.2} color={primaryColor} />
 
-      {userPrefs?.brokerageLogo && userPrefs.brokerageLogo.trim() !== '' && showBrokerage && (
+      {hasBrokerageLogo && showBrokerage && brokerageLogo && (
         <Image
           image={brokerageLogo}
           fit="contain"
@@ -174,7 +177,7 @@ export default function ClassicTemplate({
           height={screenWidth * 0.27}
         />
       )}
-      {userPrefs?.realtorPicture && userPrefs.realtorPicture.trim() !== '' && showRealtor && (
+      {hasRealtorPicture && showRealtor && realtorPicture && (
         <Image
           image={realtorPicture}
           fit="contain"

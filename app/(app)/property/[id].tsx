@@ -18,13 +18,12 @@ import {
   SelectPortal,
   SelectTrigger,
 } from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Text } from '@/components/ui/text'
 import { VStack } from '@/components/ui/vstack'
 import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/context/SubscriptionContext'
-import { getCompressionStats, processImage } from '@/lib/imageProcessor'
+import { processImage } from '@/lib/imageProcessor'
 import { deletePost, getPostById, updatePost } from '@/lib/postService'
 import { saveSkiaImageToPhotos } from '@/lib/saveSkiaImage'
 import { getUserPrefs } from '@/lib/userService'
@@ -34,9 +33,8 @@ import { Canvas, Image as SkImage, useCanvasRef, useImage } from '@shopify/react
 import * as ImagePicker from 'expo-image-picker'
 import * as MediaLibrary from 'expo-media-library'
 import { router, useLocalSearchParams } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, useWindowDimensions } from 'react-native'
-import Purchases from 'react-native-purchases'
 
 // Simple slugify function to convert title to safe filename
 const slugify = (text: string): string => {
@@ -233,6 +231,7 @@ export default function PropertyDetails() {
     showSignature?: boolean
   } | null>(null)
   const [userPrefs, setUserPrefs] = useState<any>(null)
+  const [isLoadingUserPrefs, setIsLoadingUserPrefs] = useState<boolean>(true)
   const [showBrokerage, setShowBrokerage] = useState<boolean>(true) // Default to true (enabled)
   const [showRealtor, setShowRealtor] = useState<boolean>(true) // Default to true (enabled)
   const [showPrice, setShowPrice] = useState<boolean>(false) // Default to false (disabled)
@@ -350,9 +349,12 @@ export default function PropertyDetails() {
     fetchPropertyDetails()
   }, [])
 
-  useEffect(() => {
-    const fetchUserPrefs = async () => {
-      const userPrefs = await getUserPrefs(user?.$id as string)
+  const fetchUserPrefs = useCallback(async () => {
+    if (!user?.$id) return
+
+    setIsLoadingUserPrefs(true)
+    try {
+      const userPrefs = await getUserPrefs(user.$id)
       setUserPrefs(userPrefs)
 
       // If we have user preferences with global primary color and no primary color is set in canvas, use the global primary color
@@ -369,10 +371,18 @@ export default function PropertyDetails() {
           console.error('Error updating canvas with global primary color:', error)
         }
       }
+    } catch (error) {
+      console.warn('Failed to fetch user preferences:', error)
+      // Set empty object as fallback to prevent template errors
+      setUserPrefs({})
+    } finally {
+      setIsLoadingUserPrefs(false)
     }
+  }, [user?.$id, canvas, id])
 
+  useEffect(() => {
     fetchUserPrefs()
-  }, [user?.$id, canvas])
+  }, [fetchUserPrefs])
 
   // Save custom text to canvas when it changes
   useEffect(() => {
@@ -529,7 +539,7 @@ export default function PropertyDetails() {
         <ScrollView>
           {!img && !isValidPostType(postType) ? (
             <Box className="relative" style={{ width: screenWidth, height: screenWidth * 1.25 }}>
-              <Skeleton className="absolute inset-0 h-full w-full" />
+              <Box className="absolute inset-0 h-full w-full bg-gray-200" />
 
               <AntDesign
                 name="loading1"
@@ -556,18 +566,24 @@ export default function PropertyDetails() {
                 // Show loading skeleton when no image is available
                 <Box className="absolute inset-0 bg-gray-200" />
               )}
-              <TemplateRenderer
-                key={`${postType}-${templateStyle}`}
-                postType={postType}
-                template={templateStyle}
-                data={data}
-                canvas={canvas}
-                userPrefs={userPrefs}
-                showBrokerage={showBrokerage}
-                showRealtor={showRealtor}
-                showSignature={showSignature}
-                customText={customText}
-              />
+              {isLoadingUserPrefs || !data ? (
+                <Box className="absolute inset-0 flex items-center justify-center bg-white">
+                  <Box className="h-10 w-32 rounded bg-gray-200" />
+                </Box>
+              ) : (
+                <TemplateRenderer
+                  key={`${postType}-${templateStyle}`}
+                  postType={postType}
+                  template={templateStyle}
+                  data={data}
+                  canvas={canvas}
+                  userPrefs={userPrefs || {}}
+                  showBrokerage={showBrokerage}
+                  showRealtor={showRealtor}
+                  showSignature={showSignature}
+                  customText={customText}
+                />
+              )}
             </Canvas>
           )}
 
