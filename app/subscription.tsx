@@ -1,3 +1,5 @@
+import { HStack } from '@/components/ui/hstack'
+import { Image } from '@/components/ui/image'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
@@ -45,12 +47,12 @@ const SubscriptionPlan = ({
       </View>
 
       <LinearGradient
-        colors={isPopular ? ['#e94560', '#f27121'] : ['#4a5568', '#2d3748']}
+        colors={isPopular ? ['#ff6b35', '#f7931e', '#ffd700'] : ['#ff6b35', '#f7931e', '#ffd700']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.selectButton}
       >
-        <Text style={styles.selectButtonText}>Select Plan</Text>
+        <Text style={styles.selectButtonText}>Get Pro Now</Text>
       </LinearGradient>
     </View>
   </TouchableOpacity>
@@ -67,7 +69,7 @@ export default function SubscriptionScreen() {
   const handleSubscribe = async (pkg: PurchasesPackage) => {
     try {
       const { customerInfo } = await Purchases.purchasePackage(pkg)
-      if (typeof customerInfo.entitlements.active['Premium Cats'] !== 'undefined') {
+      if (typeof customerInfo.entitlements.active['tidit Pro'] !== 'undefined') {
         // If we have a return route, go back there, otherwise go to home
         if (returnRoute) {
           router.push(returnRoute as any)
@@ -98,35 +100,40 @@ export default function SubscriptionScreen() {
   }
 
   return (
-    <LinearGradient colors={['#1a1a2e', '#16213e', '#0f3460']} style={styles.container}>
+    <LinearGradient colors={['#000000', '#1a1a1a', '#404040']} style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBackNavigation} style={styles.backButton}>
             <Ionicons name="arrow-back" size={28} color="white" />
           </TouchableOpacity>
 
-          <Text style={styles.title}>Unlock Premium Cats</Text>
-          <Text style={styles.subtitle}>Choose the perfect plan for your feline obsession</Text>
+          <HStack className="items-center justify-center gap-2">
+            <Text style={styles.title}>Unlock</Text>
+            <Image source={require('@/assets/images/splash-icon-light.png')} className="h-16 w-16 pb-6" />
+            <Text style={styles.title}>Pro</Text>
+          </HStack>
+
+          <Text style={styles.subtitle}>Unlock premium features for your real estate success</Text>
         </View>
 
         <View style={styles.benefitsContainer}>
           <Text style={styles.benefitsTitle}>What You&apos;ll Get:</Text>
           <View style={styles.benefitsList}>
             <View style={styles.benefitItem}>
-              <Ionicons name="infinite" size={24} color="#4ade80" />
-              <Text style={styles.benefitText}>Unlimited cat photos</Text>
+              <Ionicons name="infinite" size={24} color="#ffffff" />
+              <Text style={styles.benefitText}>Unlimited Posts Creation</Text>
             </View>
             <View style={styles.benefitItem}>
-              <Ionicons name="sparkles" size={24} color="#4ade80" />
-              <Text style={styles.benefitText}>Daily exclusive cats</Text>
+              <Ionicons name="sparkles" size={24} color="#ffffff" />
+              <Text style={styles.benefitText}>Customize your posts</Text>
             </View>
             <View style={styles.benefitItem}>
-              <Ionicons name="heart" size={24} color="#4ade80" />
-              <Text style={styles.benefitText}>Save your favorites</Text>
+              <Ionicons name="heart" size={24} color="#ffffff" />
+              <Text style={styles.benefitText}>Remove Our Logo from your posts</Text>
             </View>
             <View style={styles.benefitItem}>
-              <Ionicons name="ban" size={24} color="#4ade80" />
-              <Text style={styles.benefitText}>No ads, ever</Text>
+              <Ionicons name="lock-open" size={24} color="#ffffff" />
+              <Text style={styles.benefitText}>Unlock all templates</Text>
             </View>
           </View>
         </View>
@@ -138,7 +145,12 @@ export default function SubscriptionScreen() {
               title={pkg.product.title}
               price={pkg.product.priceString}
               period={pkg.packageType.toLowerCase()}
-              features={['Unlock all cats', 'Remove blur effect', 'Monthly new cats', 'Basic support']}
+              features={[
+                'Unlock all templates',
+                'Customize your posts',
+                'Unlimited Templates',
+                'Remove Our Logo from your posts',
+              ]}
               onPress={() => handleSubscribe(pkg)}
             />
           ))}
@@ -263,14 +275,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   selectButton: {
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 32,
+    borderRadius: 25,
     alignItems: 'center',
+    shadowColor: '#ff6b35',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
   selectButtonText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '800',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   footer: {
     paddingVertical: 30,
