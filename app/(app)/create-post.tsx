@@ -27,8 +27,9 @@ import {
 import { Text } from '@/components/ui/text'
 import { VStack } from '@/components/ui/vstack'
 import { useAuth } from '@/context/AuthContext'
+import { useSubscription } from '@/context/SubscriptionContext'
 import { AddressSuggestion, getPropertyDetails, searchAddresses } from '@/lib/addressService'
-import { checkForDuplicatePost, createPost } from '@/lib/postService'
+import { checkForDuplicatePost, createPost, getPostCountByUserId } from '@/lib/postService'
 import AntDesign from '@expo/vector-icons/AntDesign'
 import { router } from 'expo-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -56,9 +57,9 @@ interface PropertyFormData {
 }
 
 export default function CreatePost() {
-  const scrollRef = useRef<ScrollView>(null)
   const addressInputRef = useRef<any>(null)
   const { user } = useAuth()
+  const { isSubscribed } = useSubscription()
 
   const [formData, setFormData] = useState<PropertyFormData>({
     fullAddress: '',
@@ -84,6 +85,34 @@ export default function CreatePost() {
   const [errors, setErrors] = useState<Partial<PropertyFormData>>({})
   const [duplicateStatus, setDuplicateStatus] = useState<Record<string, boolean>>({})
   const [checkingDuplicates, setCheckingDuplicates] = useState(false)
+  const [currentPostCount, setCurrentPostCount] = useState<number>(0)
+
+  // Fetch current post count when component mounts
+  useEffect(() => {
+    const fetchPostCount = async () => {
+      if (user?.$id) {
+        try {
+          const count = await getPostCountByUserId(user.$id)
+          setCurrentPostCount(count)
+        } catch (error) {
+          console.error('Error fetching post count:', error)
+        }
+      }
+    }
+
+    fetchPostCount()
+  }, [user?.$id])
+
+  const refreshPostCount = async () => {
+    if (user?.$id) {
+      try {
+        const count = await getPostCountByUserId(user.$id)
+        setCurrentPostCount(count)
+      } catch (error) {
+        console.error('Error refreshing post count:', error)
+      }
+    }
+  }
 
   // *Debounced address search
   const searchAddress = useCallback(async (query: string) => {
@@ -242,6 +271,25 @@ export default function CreatePost() {
       return
     }
 
+    // Check post limit before proceeding
+    if (!isSubscribed && currentPostCount >= 3) {
+      Alert.alert(
+        'Post Limit Reached',
+        'You have reached the maximum limit of 3 posts for free users. Please upgrade to Pro to create more posts.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Upgrade to Pro',
+            onPress: () => router.push('/subscription?returnRoute=/create-post'),
+          },
+        ]
+      )
+      return
+    }
+
     setLoading(true)
     try {
       // Check for duplicate posts before creating
@@ -266,7 +314,10 @@ export default function CreatePost() {
       Alert.alert('Success', 'Post created successfully!', [
         {
           text: 'OK',
-          onPress: () => router.back(),
+          onPress: () => {
+            router.back()
+            refreshPostCount()
+          },
         },
       ])
     } catch (error) {
@@ -302,7 +353,7 @@ export default function CreatePost() {
       <VStack className="min-h-screen">
         <Box className="border-b border-gray-200 bg-white p-2 px-5 pt-[72px]">
           <HStack className="items-center justify-start gap-5">
-            <Pressable onPress={() => router.back()}>
+            <Pressable onPress={() => router.push('/')}>
               <AntDesign size={24} name="back" color="black" />
             </Pressable>
             <Heading size="xl">Create Post</Heading>
@@ -311,6 +362,32 @@ export default function CreatePost() {
 
         <SafeAreaView>
           <VStack className="px-5 pt-8" space="xl">
+            {/* Post Count Indicator for Non-Subscribed Users */}
+            {!isSubscribed && (
+              <VStack space="sm" className="items-center">
+                <Box className="w-full max-w-md rounded-lg border border-blue-200 bg-blue-50 p-4">
+                  <HStack className="mb-2 items-center justify-center gap-2">
+                    <AntDesign name="infocirlce" size={16} color="#1E40AF" />
+                    <Text className="font-medium text-blue-800">Free Plan Post Limit</Text>
+                  </HStack>
+                  <Text className="text-center text-sm text-blue-700">
+                    You have created {currentPostCount} of 3 posts.{' '}
+                    {currentPostCount >= 3
+                      ? 'Upgrade to Pro for unlimited posts!'
+                      : 'You can create ' + (3 - currentPostCount) + ' more posts.'}
+                  </Text>
+                  {currentPostCount >= 3 && (
+                    <TouchableOpacity
+                      onPress={() => router.push('/subscription?returnRoute=/create-post')}
+                      className="mt-3 rounded-lg bg-blue-600 px-4 py-2"
+                    >
+                      <Text className="text-center font-medium text-white">Upgrade to Pro</Text>
+                    </TouchableOpacity>
+                  )}
+                </Box>
+              </VStack>
+            )}
+
             {/* Address Search Section */}
             {!selectedAddress && (
               <VStack space="lg" className="items-center">
@@ -322,10 +399,18 @@ export default function CreatePost() {
 
                   {/* Address Search Input */}
                   <Box className="relative">
-                    <Input size="lg" className="border-2 border-gray-200 bg-white pr-2">
+                    <Input
+                      size="lg"
+                      className={`border-2 border-gray-200 bg-white pr-2 ${!isSubscribed && currentPostCount >= 3 ? 'opacity-50' : ''}`}
+                      isDisabled={!isSubscribed && currentPostCount >= 3}
+                    >
                       <InputField
                         ref={addressInputRef}
-                        placeholder="Enter property address..."
+                        placeholder={
+                          !isSubscribed && currentPostCount >= 3
+                            ? 'Post limit reached - Upgrade to Pro'
+                            : 'Enter property address...'
+                        }
                         value={addressQuery}
                         onChangeText={setAddressQuery}
                         onFocus={() => {
@@ -333,6 +418,7 @@ export default function CreatePost() {
                             setShowSuggestions(true)
                           }
                         }}
+                        editable={isSubscribed || currentPostCount < 3}
                       />
                       <InputSlot className="mr-2">
                         {searching && !selectedAddress ? (
@@ -478,126 +564,175 @@ export default function CreatePost() {
                   <Heading size="lg">{selectedAddress.full_address[0]}</Heading>
                 </VStack>
 
-                {/* Loading State for Property Details */}
-                {fetchingPropertyDetails && (
-                  <VStack space="md" className="items-center py-8">
-                    <Box className="animate-spin">
-                      <AntDesign name="loading2" size={24} color="#1E40AF" />
+                {/* Post Limit Reached Message */}
+                {!isSubscribed && currentPostCount >= 3 ? (
+                  <VStack space="lg" className="items-center py-8">
+                    <Box className="w-full max-w-md rounded-lg border border-red-200 bg-red-50 p-6">
+                      <HStack className="mb-3 items-center justify-center gap-2">
+                        <AntDesign name="exclamationcircle" size={24} color="#DC2626" />
+                        <Text className="text-lg font-medium text-red-800">Post Limit Reached</Text>
+                      </HStack>
+                      <Text className="mb-4 text-center text-sm text-red-700">
+                        You have reached the maximum limit of 3 posts for free users. To create more posts, please
+                        upgrade to our Pro plan.
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => router.push('/subscription?returnRoute=/create-post')}
+                        className="rounded-lg bg-red-600 px-6 py-3"
+                      >
+                        <Text className="text-center font-medium text-white">Upgrade to Pro</Text>
+                      </TouchableOpacity>
                     </Box>
-                    <Text className="text-gray-600">Loading property details...</Text>
                   </VStack>
-                )}
+                ) : (
+                  <>
+                    {/* Loading State for Property Details */}
+                    {fetchingPropertyDetails && (
+                      <VStack space="md" className="items-center py-8">
+                        <Box className="animate-spin">
+                          <AntDesign name="loading2" size={24} color="#1E40AF" />
+                        </Box>
+                        <Text className="text-gray-600">Loading property details...</Text>
+                      </VStack>
+                    )}
 
-                {/* Basic Information - Only show when not loading */}
-                {!fetchingPropertyDetails && (
-                  <VStack space="md">
-                    <FormControl isInvalid={!!errors.price} isRequired>
-                      <FormControlLabel>
-                        <FormControlLabelText>Post Type</FormControlLabelText>
-                      </FormControlLabel>
-                      <Select className="bg-white" onValueChange={(value) => handleInputChange('postType', value)}>
-                        <SelectTrigger>
-                          <SelectInput placeholder="Select option" className="flex-1" />
-                          <SelectIcon className="mr-3" as={ChevronDownIcon} />
-                        </SelectTrigger>
-                        <SelectPortal>
-                          <SelectBackdrop />
-                          <SelectContent>
-                            <SelectDragIndicatorWrapper>
-                              <SelectDragIndicator />
-                            </SelectDragIndicatorWrapper>
-                            <SelectItem label="Just Listed" value="JUST_LISTED" />
-                            <SelectItem label="Just Sold" value="JUST_SOLD" />
-                            <SelectItem label="Just Rented" value="JUST_RENTED" />
-                            <SelectItem label="Open House" value="OPEN_HOUSE" />
-                            <SelectItem label="Under Contract" value="UNDER_CONTRACT" />
-                            <SelectItem label="Back on Market" value="BACK_ON_MARKET" />
-                          </SelectContent>
-                        </SelectPortal>
-                      </Select>
-                      {errors.price && (
-                        <FormControlError>
-                          <FormControlErrorText>{errors.price}</FormControlErrorText>
-                        </FormControlError>
-                      )}
-                    </FormControl>
+                    {/* Basic Information - Only show when not loading */}
+                    {!fetchingPropertyDetails && (
+                      <VStack space="md">
+                        <FormControl isInvalid={!!errors.price} isRequired>
+                          <FormControlLabel>
+                            <FormControlLabelText>Post Type</FormControlLabelText>
+                          </FormControlLabel>
+                          <Select className="bg-white" onValueChange={(value) => handleInputChange('postType', value)}>
+                            <SelectTrigger>
+                              <SelectInput placeholder="Select option" className="flex-1" />
+                              <SelectIcon className="mr-3" as={ChevronDownIcon} />
+                            </SelectTrigger>
+                            <SelectPortal>
+                              <SelectBackdrop />
+                              <SelectContent>
+                                <SelectDragIndicatorWrapper>
+                                  <SelectDragIndicator />
+                                </SelectDragIndicatorWrapper>
+                                <SelectItem label="Just Listed" value="JUST_LISTED" />
+                                <SelectItem label="Just Sold" value="JUST_SOLD" />
+                                <SelectItem label="Just Rented" value="JUST_RENTED" />
+                                <SelectItem label="Open House" value="OPEN_HOUSE" />
+                                <SelectItem label="Under Contract" value="UNDER_CONTRACT" />
+                                <SelectItem label="Back on Market" value="BACK_ON_MARKET" />
+                              </SelectContent>
+                            </SelectPortal>
+                          </Select>
+                          {errors.price && (
+                            <FormControlError>
+                              <FormControlErrorText>{errors.price}</FormControlErrorText>
+                            </FormControlError>
+                          )}
+                        </FormControl>
 
-                    <FormControl isInvalid={!!errors.price} isRequired>
-                      <FormControlLabel>
-                        <FormControlLabelText>Price</FormControlLabelText>
-                      </FormControlLabel>
-                      <Input className="bg-white">
-                        <InputField
-                          placeholder="Enter price..."
-                          value={formData.price}
-                          onChangeText={(value) => handleInputChange('price', value)}
-                          keyboardType="numeric"
-                        />
-                      </Input>
-                      {errors.price && (
-                        <FormControlError>
-                          <FormControlErrorText>{errors.price}</FormControlErrorText>
-                        </FormControlError>
-                      )}
-                    </FormControl>
+                        <FormControl isInvalid={!!errors.price} isRequired>
+                          <FormControlLabel>
+                            <FormControlLabelText>Price</FormControlLabelText>
+                          </FormControlLabel>
+                          <Input className="bg-white">
+                            <InputField
+                              placeholder="Enter price..."
+                              value={formData.price}
+                              onChangeText={(value) => handleInputChange('price', value)}
+                              keyboardType="numeric"
+                            />
+                          </Input>
+                          {errors.price && (
+                            <FormControlError>
+                              <FormControlErrorText>{errors.price}</FormControlErrorText>
+                            </FormControlError>
+                          )}
+                        </FormControl>
 
-                    <HStack space="md">
-                      <FormControl className="flex-1">
-                        <FormControlLabel>
-                          <FormControlLabelText>Bedrooms</FormControlLabelText>
-                        </FormControlLabel>
-                        <Input className="bg-white">
-                          <InputField
-                            placeholder="Bedrooms"
-                            value={formData.bedrooms}
-                            onChangeText={(value) => handleInputChange('bedrooms', value)}
-                            keyboardType="numeric"
-                          />
-                        </Input>
-                      </FormControl>
+                        <HStack space="md">
+                          <FormControl className="flex-1">
+                            <FormControlLabel>
+                              <FormControlLabelText>Bedrooms</FormControlLabelText>
+                            </FormControlLabel>
+                            <Input className="bg-white">
+                              <InputField
+                                placeholder="Bedrooms"
+                                value={formData.bedrooms}
+                                onChangeText={(value) => handleInputChange('bedrooms', value)}
+                                keyboardType="numeric"
+                              />
+                            </Input>
+                          </FormControl>
 
-                      <FormControl className="flex-1">
-                        <FormControlLabel>
-                          <FormControlLabelText>Bathrooms</FormControlLabelText>
-                        </FormControlLabel>
-                        <Input className="bg-white">
-                          <InputField
-                            placeholder="Bathrooms"
-                            value={formData.bathrooms}
-                            onChangeText={(value) => handleInputChange('bathrooms', value)}
-                            keyboardType="numeric"
-                          />
-                        </Input>
-                      </FormControl>
-                    </HStack>
+                          <FormControl className="flex-1">
+                            <FormControlLabel>
+                              <FormControlLabelText>Bathrooms</FormControlLabelText>
+                            </FormControlLabel>
+                            <Input className="bg-white">
+                              <InputField
+                                placeholder="Bathrooms"
+                                value={formData.bathrooms}
+                                onChangeText={(value) => handleInputChange('bathrooms', value)}
+                                keyboardType="numeric"
+                              />
+                            </Input>
+                          </FormControl>
+                        </HStack>
 
-                    <FormControl>
-                      <FormControlLabel>
-                        <FormControlLabelText>Square Feet</FormControlLabelText>
-                      </FormControlLabel>
-                      <Input className="bg-white">
-                        <InputField
-                          placeholder="Square footage"
-                          value={formData.squareFeet}
-                          onChangeText={(value) => handleInputChange('squareFeet', value)}
-                          keyboardType="numeric"
-                        />
-                      </Input>
-                    </FormControl>
-                  </VStack>
-                )}
+                        <FormControl>
+                          <FormControlLabel>
+                            <FormControlLabelText>Square Feet</FormControlLabelText>
+                          </FormControlLabel>
+                          <Input className="bg-white">
+                            <InputField
+                              placeholder="Square footage"
+                              value={formData.squareFeet}
+                              onChangeText={(value) => handleInputChange('squareFeet', value)}
+                              keyboardType="numeric"
+                            />
+                          </Input>
+                        </FormControl>
+                      </VStack>
+                    )}
 
-                {/* Submit Button - Only show when not loading */}
-                {!fetchingPropertyDetails && (
-                  <VStack className="pb-8" space="md">
-                    <Button size="xl" onPress={handleSubmit} disabled={loading} className="bg-blue-600">
-                      <ButtonText>{loading ? 'Creating Post...' : 'Create Post'}</ButtonText>
-                    </Button>
+                    {/* Submit Button - Only show when not loading */}
+                    {!fetchingPropertyDetails && (
+                      <VStack className="pb-8" space="md">
+                        <Button
+                          size="xl"
+                          onPress={handleSubmit}
+                          disabled={loading || (!isSubscribed && currentPostCount >= 3)}
+                          className={`${!isSubscribed && currentPostCount >= 3 ? 'bg-gray-400' : 'bg-blue-600'}`}
+                        >
+                          <ButtonText>
+                            {loading
+                              ? 'Creating Post...'
+                              : !isSubscribed && currentPostCount >= 3
+                                ? 'Post Limit Reached'
+                                : 'Create Post'}
+                          </ButtonText>
+                        </Button>
 
-                    <Button onPress={onChangeAddress} variant="link" action="secondary">
-                      <ButtonText>Change Address</ButtonText>
-                    </Button>
-                  </VStack>
+                        {!isSubscribed && currentPostCount >= 3 && (
+                          <Box className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+                            <Text className="text-center text-sm text-yellow-800">
+                              You've reached your free plan limit. Upgrade to Pro to create unlimited posts!
+                            </Text>
+                            <TouchableOpacity
+                              onPress={() => router.push('/subscription?returnRoute=/create-post')}
+                              className="mt-2 rounded-lg bg-yellow-600 px-4 py-2"
+                            >
+                              <Text className="text-center font-medium text-white">Upgrade to Pro</Text>
+                            </TouchableOpacity>
+                          </Box>
+                        )}
+
+                        <Button onPress={onChangeAddress} variant="link" action="secondary">
+                          <ButtonText>Change Address</ButtonText>
+                        </Button>
+                      </VStack>
+                    )}
+                  </>
                 )}
               </VStack>
             )}

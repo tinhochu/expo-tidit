@@ -77,6 +77,16 @@ export const getPostsByUserId = async (userId: string): Promise<Post[]> => {
   }
 }
 
+export const getPostCountByUserId = async (userId: string): Promise<number> => {
+  try {
+    const response = await databases.listDocuments(DATABASE_ID, POSTS_COLLECTION_ID, [Query.equal('userId', userId)])
+    return response.total
+  } catch (error) {
+    console.error('Error counting posts:', error)
+    throw new Error('Failed to count posts')
+  }
+}
+
 export const checkForDuplicatePost = async (userId: string, propertyAddress: string): Promise<boolean> => {
   try {
     // Get all posts by the user
