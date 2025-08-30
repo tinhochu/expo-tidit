@@ -145,7 +145,7 @@ export default function ClassicTemplate({
     if (!customFontMgr) return null
 
     const baseParagraphStyle = {
-      textAlign: TextAlign.Right,
+      textAlign: TextAlign.Left,
     }
 
     const createTextParagraph = (text: string, fontSize: number = 14) => {
@@ -169,8 +169,7 @@ export default function ClassicTemplate({
       sqft: createParagraph(
         data.propInformation.description.sqft
           ? `${data?.propInformation?.description?.sqft?.toLocaleString()} sqft`
-          : 'N/A',
-        15
+          : 'N/A'
       ),
       address: (() => {
         const adjustedFontSize = getParagraphFontSize(14, getFontFamily(selectedFont))
@@ -208,7 +207,7 @@ export default function ClassicTemplate({
 
   // Adjust positioning for beds, baths, sqft when property line is long
   const isLongPropertyLine = data.propInformation.line && data.propInformation.line.length > 20
-  const bedsBathsSqftOffset = isLongPropertyLine ? screenWidth * 0 : screenWidth * 0.02
+  const bedsBathsSqftOffset = isLongPropertyLine ? screenWidth * 0 : screenWidth * 0.015
 
   return (
     <>
@@ -275,7 +274,7 @@ export default function ClassicTemplate({
                 x={screenWidth * 0.4}
                 y={positioning.iconY + screenWidth * 0.01}
               />
-              <Paragraph paragraph={paragraphs.beds} x={screenWidth * 0.31} y={positioning.textY} width={100} />
+              <Paragraph paragraph={paragraphs.beds} x={screenWidth * 0.46} y={positioning.textY} width={100} />
             </Group>
           )
         })()}
@@ -290,7 +289,7 @@ export default function ClassicTemplate({
                 x={screenWidth * 0.4}
                 y={positioning.iconY + screenWidth * 0.01}
               />
-              <Paragraph paragraph={paragraphs.baths} x={screenWidth * 0.3225} y={positioning.textY} width={100} />
+              <Paragraph paragraph={paragraphs.baths} x={screenWidth * 0.46} y={positioning.textY} width={100} />
             </Group>
           )
         })()}
@@ -305,7 +304,7 @@ export default function ClassicTemplate({
                 x={screenWidth * 0.4}
                 y={positioning.iconY + screenWidth * 0.01}
               />
-              <Paragraph paragraph={paragraphs.sqft} x={screenWidth * 0.36} y={positioning.textY} width={100} />
+              <Paragraph paragraph={paragraphs.sqft} x={screenWidth * 0.46} y={positioning.textY} width={100} />
             </Group>
           )
         })()}

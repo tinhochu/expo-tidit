@@ -45,21 +45,21 @@ function getTemplates(): TemplateComponent[] {
       value: 'classic',
       component: ClassicTemplate,
     },
-    {
-      label: 'Modern',
-      value: 'modern',
-      component: ModernTemplate,
-    },
-    {
-      label: 'Bold',
-      value: 'bold',
-      component: BoldTemplate,
-    },
-    {
-      label: 'Elegant',
-      value: 'elegant',
-      component: ElegantTemplate,
-    },
+    // {
+    //   label: 'Modern',
+    //   value: 'modern',
+    //   component: ModernTemplate,
+    // },
+    // {
+    //   label: 'Bold',
+    //   value: 'bold',
+    //   component: BoldTemplate,
+    // },
+    // {
+    //   label: 'Elegant',
+    //   value: 'elegant',
+    //   component: ElegantTemplate,
+    // },
   ]
 }
 

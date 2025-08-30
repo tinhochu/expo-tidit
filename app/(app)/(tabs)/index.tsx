@@ -11,12 +11,12 @@ import { Text } from '@/components/ui/text'
 import { VStack } from '@/components/ui/vstack'
 import { POST_TYPES } from '@/constants/PostTypes'
 import { useAuth } from '@/context/AuthContext'
-import { Post, getPostsByUserId } from '@/lib/postService'
+import { Post, deletePost, getPostsByUserId } from '@/lib/postService'
 import AntDesign from '@expo/vector-icons/AntDesign'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
-import { RefreshControl, ScrollView } from 'react-native'
+import { Alert, RefreshControl, ScrollView } from 'react-native'
 
 export default function Home() {
   const { user } = useAuth()
@@ -68,6 +68,30 @@ export default function Home() {
       fetchPosts()
     }, [fetchPosts])
   )
+
+  const handleLongPress = (post: Post) => {
+    if (!post.id) {
+      Alert.alert('Error', 'Cannot delete post: missing post ID')
+      return
+    }
+
+    Alert.alert('Delete', 'Are you sure you want to delete this post?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deletePost(post.id!)
+            // Refresh the posts after deletion
+            await fetchPosts()
+          } catch (error) {
+            Alert.alert('Error', 'Failed to delete post')
+          }
+        },
+      },
+    ])
+  }
 
   return (
     <VStack>
@@ -143,7 +167,11 @@ export default function Home() {
               const isLastItem = index === filteredPosts.length - 1
 
               return (
-                <Pressable key={post.id} onPress={() => router.push(`/property/${post.id}`)}>
+                <Pressable
+                  key={post.id}
+                  onPress={() => router.push(`/property/${post.id}`)}
+                  onLongPress={() => handleLongPress(post)}
+                >
                   <Box
                     className={`${isLastItem ? 'mb-8' : 'mb-5'} overflow-hidden rounded-xl border border-gray-300 bg-white`}
                   >

@@ -108,6 +108,7 @@ export default function TemplateHeading({
     <>
       {/* Shadow text */}
       {ShadowParagraph && <Paragraph paragraph={ShadowParagraph} width={screenWidth} x={x + 1} y={y + 2} />}
+
       {/* Main text */}
       {CustomParagraph && <Paragraph paragraph={CustomParagraph} width={screenWidth} x={x} y={y} />}
     </>
