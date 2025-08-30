@@ -17,6 +17,17 @@ export const createPost = async (post: Omit<Post, 'id' | 'createdAt' | 'updatedA
   try {
     const now = new Date().toISOString()
 
+    // Create default canvas with tidit logo enabled
+    const defaultCanvas = {
+      primaryColor: '#2b7fff',
+      showPrice: false,
+      priceText: '',
+      showBrokerage: true,
+      showRealtor: true,
+      showSignature: true, // Enable tidit logo by default
+      font: 'playfair',
+    }
+
     const response = await databases.createDocument(DATABASE_ID, POSTS_COLLECTION_ID, ID.unique(), {
       title: post.title,
       userId: post.userId,
@@ -24,6 +35,7 @@ export const createPost = async (post: Omit<Post, 'id' | 'createdAt' | 'updatedA
       createdAt: now,
       updatedAt: now,
       postType: post.postType,
+      canvas: JSON.stringify(defaultCanvas), // Include default canvas with tidit logo
     })
 
     return {
@@ -34,6 +46,7 @@ export const createPost = async (post: Omit<Post, 'id' | 'createdAt' | 'updatedA
       createdAt: response.createdAt,
       updatedAt: response.updatedAt,
       postType: post.postType,
+      canvas: response.canvas, // Include canvas in returned post
     }
   } catch (error) {
     console.error('Error creating post:', error)
@@ -56,10 +69,37 @@ export const getPostsByUserId = async (userId: string): Promise<Post[]> => {
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
       postType: doc.postType,
+      canvas: doc.canvas, // Include canvas field
     }))
   } catch (error) {
     console.error('Error fetching posts:', error)
     throw new Error('Failed to fetch posts')
+  }
+}
+
+export const checkForDuplicatePost = async (userId: string, propertyAddress: string): Promise<boolean> => {
+  try {
+    // Get all posts by the user
+    const userPosts = await getPostsByUserId(userId)
+
+    // Check if any existing post has the same property address
+    const hasDuplicate = userPosts.some((post) => {
+      try {
+        const propInfo =
+          typeof post.propInformation === 'string' ? JSON.parse(post.propInformation) : post.propInformation
+
+        // Check if the address line matches
+        return propInfo?.line === propertyAddress
+      } catch (error) {
+        console.error('Error parsing post property information:', error)
+        return false
+      }
+    })
+
+    return hasDuplicate
+  } catch (error) {
+    console.error('Error checking for duplicate posts:', error)
+    throw new Error('Failed to check for duplicate posts')
   }
 }
 
@@ -99,9 +139,39 @@ export const updatePost = async (postId: string, updates: Partial<Post>): Promis
       createdAt: response.createdAt,
       updatedAt: response.updatedAt,
       postType: response.postType,
+      canvas: response.canvas, // Include canvas field
     }
   } catch (error) {
     console.error('Error updating post:', error)
     throw new Error('Failed to update post')
+  }
+}
+
+/**
+ * Ensures a post has a default canvas with tidit logo enabled
+ * This is useful for existing posts that don't have a canvas field
+ */
+export const ensureDefaultCanvas = async (postId: string): Promise<void> => {
+  try {
+    const post = await getPostById(postId)
+
+    // If post doesn't have a canvas, create one with defaults
+    if (!post.canvas) {
+      const defaultCanvas = {
+        primaryColor: '#2b7fff',
+        showPrice: false,
+        priceText: '',
+        showBrokerage: true,
+        showRealtor: true,
+        showSignature: true, // Enable tidit logo by default
+        font: 'playfair',
+      }
+
+      await updatePost(postId, {
+        canvas: JSON.stringify(defaultCanvas),
+      })
+    }
+  } catch (error) {
+    console.error('Error ensuring default canvas:', error)
   }
 }

@@ -75,7 +75,7 @@ export default function Home() {
       return
     }
 
-    Alert.alert('Delete', 'Are you sure you want to delete this post?', [
+    Alert.alert('Delete Post', 'Are you sure you want to delete this post? This action cannot be undone.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -86,7 +86,7 @@ export default function Home() {
             // Refresh the posts after deletion
             await fetchPosts()
           } catch (error) {
-            Alert.alert('Error', 'Failed to delete post')
+            Alert.alert('Error', 'Failed to delete post. Please try again.')
           }
         },
       },
@@ -97,10 +97,14 @@ export default function Home() {
     <VStack>
       <Box className="border-b border-gray-200 bg-white p-2 px-5 pt-[72px]">
         <HStack className="items-center justify-between">
-          <Heading size="xl">My Listings</Heading>
+          {filteredPosts.length > 0 ? (
+            <Heading size="xl">My Listings ({filteredPosts.length})</Heading>
+          ) : (
+            <Heading size="xl">My Listings</Heading>
+          )}
 
           <Pressable onPress={() => router.push('/create-post')}>
-            <AntDesign size={28} name="pluscircleo" color="black" />
+            <AntDesign size={28} name="pluscircle" color="#2b7fff" />
           </Pressable>
         </HStack>
       </Box>

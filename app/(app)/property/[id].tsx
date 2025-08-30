@@ -25,7 +25,7 @@ import { VStack } from '@/components/ui/vstack'
 import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/context/SubscriptionContext'
 import { processImage } from '@/lib/imageProcessor'
-import { deletePost, getPostById, updatePost } from '@/lib/postService'
+import { deletePost, ensureDefaultCanvas, getPostById, updatePost } from '@/lib/postService'
 import { saveSkiaImageToPhotos } from '@/lib/saveSkiaImage'
 import { getUserPrefs } from '@/lib/userService'
 import { ColorPicker } from '@expo/ui/swift-ui'
@@ -239,7 +239,7 @@ export default function PropertyDetails() {
   const [showPrice, setShowPrice] = useState<boolean>(false) // Default to false (disabled)
   const [priceText, setPriceText] = useState<string>('') // Default to empty string
   const [customImage, setCustomImage] = useState<string | null>(null)
-  const [showSignature, setShowSignature] = useState<boolean>(false) // Default to false (logo visible, switch OFF)
+  const [showSignature, setShowSignature] = useState<boolean>(true) // Default to true (logo visible, switch ON)
   const [customText, setCustomText] = useState<
     { mainHeading?: string; subHeading?: string; description?: string } | undefined
   >(undefined)
@@ -277,6 +277,10 @@ export default function PropertyDetails() {
   useEffect(() => {
     const fetchPropertyDetails = async () => {
       const propertyDetails = await getPostById(id as string)
+
+      // Ensure the post has a default canvas with tidit logo
+      await ensureDefaultCanvas(id as string)
+
       const parsedData = {
         ...propertyDetails,
         propInformation: JSON.parse(propertyDetails.propInformation),
@@ -296,8 +300,8 @@ export default function PropertyDetails() {
         setPriceText(parsedCanvas.priceText || '')
         // Store parsed canvas data for later loading (after premium status is determined)
         setParsedCanvasData(parsedCanvas)
-        // Load showSignature from canvas if it exists, otherwise default to false
-        setShowSignature(parsedCanvas.showSignature !== undefined ? parsedCanvas.showSignature : false)
+        // Load showSignature from canvas if it exists, otherwise default to true
+        setShowSignature(parsedCanvas.showSignature !== undefined ? parsedCanvas.showSignature : true)
         // Load font from canvas if it exists, otherwise default to 'inter'
         setSelectedFont(parsedCanvas.font || 'playfair')
       } else {
@@ -309,14 +313,14 @@ export default function PropertyDetails() {
           showRealtor: true,
           showPrice: false,
           priceText: '',
-          showSignature: false, // Default to false (logo visible)
+          showSignature: true, // Default to true (logo visible)
           font: 'playfair', // Default to Playfair font
         })
         setShowBrokerage(true)
         setShowRealtor(true)
         setShowPrice(false)
         setPriceText('')
-        setShowSignature(false) // Default to false (logo visible)
+        setShowSignature(true) // Default to true (logo visible)
         setCustomText(undefined)
         setSelectedFont('playfair')
       }
