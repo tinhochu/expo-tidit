@@ -35,7 +35,17 @@ import * as ImagePicker from 'expo-image-picker'
 import * as MediaLibrary from 'expo-media-library'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useCallback, useEffect, useState } from 'react'
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, useWindowDimensions } from 'react-native'
+import {
+  ActionSheetIOS,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  useWindowDimensions,
+} from 'react-native'
+import Share, { Social } from 'react-native-share'
 
 // Simple slugify function to convert title to safe filename
 const slugify = (text: string): string => {
@@ -61,6 +71,7 @@ export default function PropertyDetails() {
   const [postType, setPostType] = useState<
     'JUST_SOLD' | 'JUST_LISTED' | 'JUST_RENTED' | 'OPEN_HOUSE' | 'UNDER_CONTRACT' | 'BACK_ON_MARKET' | 'LOADING'
   >('LOADING')
+  const [showShareModal, setShowShareModal] = useState(false)
 
   // Helper function to check if postType is in a valid state
   const isValidPostType = (
@@ -537,6 +548,105 @@ export default function PropertyDetails() {
     handleCanvasChange('showSignature', value)
   }
 
+  // Enhanced share functionality with platform-specific options
+  const handleShare = async () => {
+    // iOS Action Sheet
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        options: [
+          'Cancel',
+          'Share to Instagram',
+          // 'Share to Facebook',
+          // 'Share to Twitter',
+          // 'Share to WhatsApp',
+          // 'General Share',
+        ],
+        cancelButtonIndex: 0,
+      },
+      (buttonIndex) => {
+        switch (buttonIndex) {
+          case 1:
+            shareToInstagram()
+            break
+          // case 2:
+          //   shareToFacebook()
+          //   break
+          // case 3:
+          //   shareToTwitter()
+          //   break
+          // case 4:
+          //   shareToWhatsApp()
+          //   break
+          // case 5:
+          //   generalShare()
+          //   break
+        }
+      }
+    )
+  }
+
+  const shareToInstagram = async () => {
+    try {
+      // For Instagram, we need to share an image
+      const image = ref.current?.makeImageSnapshot()
+      if (image) {
+        // Convert Skia image to base64
+        const imageData = image.encodeToBase64()
+
+        await Share.shareSingle({
+          social: Social.Instagram,
+          url: `data:image/png;base64,${imageData}`,
+          type: 'image/*',
+        })
+      } else {
+        // No fallback needed - just log error
+        console.error('No image available for Instagram sharing')
+      }
+    } catch (error) {
+      console.error('Error sharing to Instagram:', error)
+      // No fallback needed
+    }
+  }
+
+  const shareToFacebook = async () => {
+    try {
+      await Share.shareSingle({
+        social: Social.Facebook,
+        url: `https://tidit.app/property/${id}`,
+        message: `Check out this amazing property on Tidit! ${data?.title || 'Amazing Property'}`,
+      })
+    } catch (error) {
+      console.error('Error sharing to Facebook:', error)
+      // No fallback needed
+    }
+  }
+
+  const shareToTwitter = async () => {
+    try {
+      await Share.shareSingle({
+        social: Social.Twitter,
+        url: `https://tidit.app/property/${id}`,
+        message: `Check out this amazing property on Tidit! ${data?.title || 'Amazing Property'}`,
+      })
+    } catch (error) {
+      console.error('Error sharing to Twitter:', error)
+      // No fallback needed
+    }
+  }
+
+  const shareToWhatsApp = async () => {
+    try {
+      await Share.shareSingle({
+        social: Social.Whatsapp,
+        url: `https://tidit.app/property/${id}`,
+        message: `Check out this amazing property on Tidit! ${data?.title || 'Amazing Property'}`,
+      })
+    } catch (error) {
+      console.error('Error sharing to WhatsApp:', error)
+      // No fallback needed
+    }
+  }
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -553,6 +663,9 @@ export default function PropertyDetails() {
               <HStack className="gap-6">
                 <Pressable onPress={handleSaveCanvas}>
                   <AntDesign size={24} name="download" color="blue" />
+                </Pressable>
+                <Pressable onPress={handleShare}>
+                  <AntDesign size={24} name="sharealt" color="blue" />
                 </Pressable>
                 <Pressable onPress={handleDelete}>
                   <AntDesign size={24} name="delete" color="red" />

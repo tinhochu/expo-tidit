@@ -17,7 +17,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.tinhochu.tidit",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "This app requires access to the photo library to save and share images on Instagram",
+        "NSPhotoLibraryAddUsageDescription": "This app requires access to the photo library to save and share images on Instagram."
       },
       "icon": {
         "light": "./assets/images/ios-light.png",
@@ -92,7 +94,14 @@
           }
         }
       ],
-      "expo-secure-store"
+      [
+        "react-native-share",
+        {
+          "ios": ["fb", "instagram", "twitter", "tiktoksharesdk"]
+        }
+      ],
+      "expo-secure-store",
+      "expo-build-properties"
     ],
     "experiments": {
       "typedRoutes": true
