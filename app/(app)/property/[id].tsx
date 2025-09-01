@@ -71,7 +71,7 @@ export default function PropertyDetails() {
   const [postType, setPostType] = useState<
     'JUST_SOLD' | 'JUST_LISTED' | 'JUST_RENTED' | 'OPEN_HOUSE' | 'UNDER_CONTRACT' | 'BACK_ON_MARKET' | 'LOADING'
   >('LOADING')
-  const [showShareModal, setShowShareModal] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
 
   // Helper function to check if postType is in a valid state
   const isValidPostType = (
@@ -468,14 +468,22 @@ export default function PropertyDetails() {
   }
 
   const handleSaveCanvas = async () => {
-    const image = ref.current?.makeImageSnapshot()
-    if (image) {
-      const slugifiedTitle = data?.title ? slugify(`tidit-${data.title}`) : `tidit-${Date.now()}`
-      await saveSkiaImageToPhotos(image, { filename: slugifiedTitle, albumName: 'Tidit' })
+    setIsDownloading(true)
+    try {
+      const image = ref.current?.makeImageSnapshot()
+      if (image) {
+        const slugifiedTitle = data?.title ? slugify(`tidit-${data.title}`) : `tidit-${Date.now()}`
+        await saveSkiaImageToPhotos(image, { filename: slugifiedTitle, albumName: 'Tidit' })
 
-      Alert.alert('Success', 'Canvas saved to image!')
-    } else {
+        Alert.alert('Success', 'Canvas saved to image!')
+      } else {
+        Alert.alert('Error', 'Failed to save canvas')
+      }
+    } catch (error) {
+      console.error('Error saving canvas:', error)
       Alert.alert('Error', 'Failed to save canvas')
+    } finally {
+      setIsDownloading(false)
     }
   }
 
@@ -553,14 +561,7 @@ export default function PropertyDetails() {
     // iOS Action Sheet
     ActionSheetIOS.showActionSheetWithOptions(
       {
-        options: [
-          'Cancel',
-          'Share to Instagram',
-          // 'Share to Facebook',
-          // 'Share to Twitter',
-          // 'Share to WhatsApp',
-          // 'General Share',
-        ],
+        options: ['Cancel', 'Share to Instagram', 'Share to Facebook', 'General Share', 'Download Image'],
         cancelButtonIndex: 0,
       },
       (buttonIndex) => {
@@ -568,18 +569,15 @@ export default function PropertyDetails() {
           case 1:
             shareToInstagram()
             break
-          // case 2:
-          //   shareToFacebook()
-          //   break
-          // case 3:
-          //   shareToTwitter()
-          //   break
-          // case 4:
-          //   shareToWhatsApp()
-          //   break
-          // case 5:
-          //   generalShare()
-          //   break
+          case 2:
+            shareToFacebook()
+            break
+          case 3:
+            generalShare()
+            break
+          case 4:
+            handleSaveCanvas()
+            break
         }
       }
     )
@@ -610,39 +608,49 @@ export default function PropertyDetails() {
 
   const shareToFacebook = async () => {
     try {
-      await Share.shareSingle({
-        social: Social.Facebook,
-        url: `https://tidit.app/property/${id}`,
-        message: `Check out this amazing property on Tidit! ${data?.title || 'Amazing Property'}`,
-      })
+      // For Facebook, we need to share an image just like Instagram
+      const image = ref.current?.makeImageSnapshot()
+      if (image) {
+        // Convert Skia image to base64
+        const imageData = image.encodeToBase64()
+
+        await Share.shareSingle({
+          social: Social.Facebook,
+          url: `data:image/png;base64,${imageData}`,
+          type: 'image/*',
+        })
+      } else {
+        // No fallback needed - just log error
+        console.error('No image available for Facebook sharing')
+      }
     } catch (error) {
       console.error('Error sharing to Facebook:', error)
       // No fallback needed
     }
   }
 
-  const shareToTwitter = async () => {
+  const generalShare = async () => {
     try {
-      await Share.shareSingle({
-        social: Social.Twitter,
-        url: `https://tidit.app/property/${id}`,
-        message: `Check out this amazing property on Tidit! ${data?.title || 'Amazing Property'}`,
-      })
-    } catch (error) {
-      console.error('Error sharing to Twitter:', error)
-      // No fallback needed
-    }
-  }
+      // For general share, we always share the image with a message
+      const image = ref.current?.makeImageSnapshot()
+      if (image) {
+        // Convert Skia image to base64
+        const imageData = image.encodeToBase64()
 
-  const shareToWhatsApp = async () => {
-    try {
-      await Share.shareSingle({
-        social: Social.Whatsapp,
-        url: `https://tidit.app/property/${id}`,
-        message: `Check out this amazing property on Tidit! ${data?.title || 'Amazing Property'}`,
-      })
+        const shareOptions = {
+          title: 'Share Property',
+          message: `Check out this amazing property!\n*${data?.title || 'Amazing Property'}*\n\nI created this with *tidit*, a real estate app that lets you create stunning property posts in minutes. Download it now!`,
+          url: `data:image/png;base64,${imageData}`,
+          type: 'image/*',
+        }
+
+        await Share.open(shareOptions)
+      } else {
+        // No fallback - just log error if no image available
+        console.error('No image available for sharing')
+      }
     } catch (error) {
-      console.error('Error sharing to WhatsApp:', error)
+      console.error('Error sharing:', error)
       // No fallback needed
     }
   }
@@ -652,6 +660,16 @@ export default function PropertyDetails() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.select({ ios: 0, android: 0 })}
     >
+      {/* Download Overlay */}
+      {isDownloading && (
+        <Box className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <VStack className="items-center space-y-4 rounded-lg bg-white p-8">
+            <AntDesign name="loading1" size={40} color="#3b82f6" className="animate-spin" />
+            <Text className="text-lg font-semibold text-gray-800">Prepping your image...</Text>
+          </VStack>
+        </Box>
+      )}
+
       <VStack>
         <Box className="border-b border-gray-200 bg-white p-2 px-5 pt-[72px]">
           <HStack className="items-center justify-between gap-5">
@@ -661,9 +679,6 @@ export default function PropertyDetails() {
             <Heading size="sm">{data?.title ? data.title.slice(0, 25) + '...' : 'Fetching...'}</Heading>
             {img ? (
               <HStack className="gap-6">
-                <Pressable onPress={handleSaveCanvas}>
-                  <AntDesign size={24} name="download" color="blue" />
-                </Pressable>
                 <Pressable onPress={handleShare}>
                   <AntDesign size={24} name="sharealt" color="blue" />
                 </Pressable>
