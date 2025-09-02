@@ -14,12 +14,13 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.tinhochu.tidit",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryUsageDescription": "This app requires access to the photo library to save and share images on Instagram",
-        "NSPhotoLibraryAddUsageDescription": "This app requires access to the photo library to save and share images on Instagram."
+        "NSPhotoLibraryAddUsageDescription": "This app requires access to the photo library to save and share images on Instagram.",
+        "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"]
       },
       "icon": {
         "light": "./assets/images/ios-light.png",
