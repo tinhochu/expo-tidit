@@ -18,8 +18,8 @@
       "bundleIdentifier": "com.tinhochu.tidit",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSPhotoLibraryUsageDescription": "This app requires access to the photo library to save and share images on Instagram",
-        "NSPhotoLibraryAddUsageDescription": "This app requires access to the photo library to save and share images on Instagram.",
+        "NSPhotoLibraryUsageDescription": "Allow Tidit to access your photos so you can import listing images, logos, and brand assets into your social posts (e.g., select a property photo to create a Just Listed template).",
+        "NSPhotoLibraryAddUsageDescription": "Allow Tidit to save the images you create so you can post them to Instagram and Facebook (e.g., export a Just Sold design to your Camera Roll).",
         "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"]
       },
       "icon": {

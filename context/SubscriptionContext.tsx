@@ -10,6 +10,7 @@ interface SubscriptionContextType {
   refreshOfferings: () => Promise<void>
   hasEntitlement: (entitlementId: string) => boolean
   hasError: boolean
+  errorMessage: string | null
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType>({
@@ -21,6 +22,7 @@ const SubscriptionContext = createContext<SubscriptionContextType>({
   refreshOfferings: async () => {},
   hasEntitlement: () => false,
   hasError: false,
+  errorMessage: null,
 })
 
 export const SubscriptionProvider = ({ children }: { children: React.ReactNode }) => {
@@ -30,6 +32,7 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
   const [offerings, setOfferings] = useState<PurchasesOffering | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
   const [hasError, setHasError] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const checkSubscriptionStatus = useCallback(async () => {
     try {
@@ -37,6 +40,9 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
 
       setIsLoading(true)
       setHasError(false)
+      setErrorMessage(null)
+
+      console.log('Checking subscription status...')
       const info = await Purchases.getCustomerInfo()
       setCustomerInfo(info)
 
@@ -48,11 +54,12 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
         isSubscribed: hasActiveEntitlements,
         entitlements: info.entitlements.active,
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error checking subscription status:', error)
       setIsSubscribed(false)
       setCustomerInfo(null)
       setHasError(true)
+      setErrorMessage(error?.message || 'Failed to check subscription status')
     } finally {
       setIsLoading(false)
     }
@@ -62,13 +69,19 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
     try {
       if (!isInitialized) return
 
+      console.log('Refreshing offerings...')
       const offeringsData = await Purchases.getOfferings()
       if (offeringsData.current !== null && offeringsData.current.availablePackages.length !== 0) {
         setOfferings(offeringsData.current)
         console.log('Offerings refreshed:', offeringsData.current)
+      } else {
+        console.log('No current offerings available')
+        setOfferings(null)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error refreshing offerings:', error)
+      setOfferings(null)
+      setErrorMessage(error?.message || 'Failed to load subscription options')
     }
   }, [isInitialized])
 
@@ -115,6 +128,7 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
     refreshOfferings,
     hasEntitlement,
     hasError,
+    errorMessage,
   }
 
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>

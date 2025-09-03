@@ -6,8 +6,8 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import { useLocalSearchParams } from 'expo-router'
 import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import Purchases, { PurchasesOfferings, PurchasesPackage } from 'react-native-purchases'
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import Purchases, { PurchasesPackage } from 'react-native-purchases'
 
 const SubscriptionPlan = ({
   title,
@@ -35,6 +35,10 @@ const SubscriptionPlan = ({
           <Text style={styles.popularText}>MOST POPULAR</Text>
         </View>
       )}
+
+      <View style={styles.trialBadge}>
+        <Text style={styles.trialText}>1 WEEK TRIAL</Text>
+      </View>
 
       <Text style={styles.planTitle}>{title}</Text>
       <View style={styles.priceContainer}>
@@ -68,7 +72,7 @@ const SubscriptionPlan = ({
             <Text style={styles.selectButtonText}>Already Subscribed</Text>
           </HStack>
         ) : (
-          <Text style={styles.selectButtonText}>Get Pro Now</Text>
+          <Text style={styles.selectButtonText}>Start Free Trial</Text>
         )}
       </LinearGradient>
     </View>
@@ -79,6 +83,7 @@ export default function SubscriptionScreen() {
   const { returnRoute } = useLocalSearchParams<{ returnRoute?: string }>()
   const { offerings, isSubscribed, checkSubscriptionStatus } = useSubscription()
   const [isLoading, setIsLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
     checkSubscriptionStatus()
@@ -86,21 +91,62 @@ export default function SubscriptionScreen() {
 
   const handleSubscribe = async (pkg: PurchasesPackage) => {
     setIsLoading(true)
+    setErrorMessage(null)
+
     try {
+      console.log('Starting purchase for package:', pkg.identifier)
+
       const { customerInfo } = await Purchases.purchasePackage(pkg)
+
+      console.log('Purchase successful, customer info:', customerInfo)
 
       if (typeof customerInfo.entitlements.active['tidit Pro'] !== 'undefined') {
         // Refresh subscription status after successful purchase
         await checkSubscriptionStatus()
-        // If we have a return route, go back there, otherwise go to home
-        if (returnRoute) {
-          router.push(returnRoute as any)
-        } else {
-          router.push('/')
-        }
+
+        Alert.alert(
+          'Welcome to Pro!',
+          'Your subscription has been activated successfully. Enjoy all the premium features!',
+          [
+            {
+              text: 'Continue',
+              onPress: () => {
+                // If we have a return route, go back there, otherwise go to home
+                if (returnRoute) {
+                  router.push(returnRoute as any)
+                } else {
+                  router.push('/')
+                }
+              },
+            },
+          ]
+        )
+      } else {
+        throw new Error('Purchase completed but entitlement not found')
       }
-    } catch (e) {
-      console.log('📢 error', e)
+    } catch (error: any) {
+      console.error('Purchase error:', error)
+
+      // Handle specific error cases
+      let userMessage = 'Purchase failed. Please try again.'
+
+      if (error.code === 'USER_CANCELLED') {
+        userMessage = 'Purchase was cancelled.'
+      } else if (error.code === 'NETWORK_ERROR') {
+        userMessage = 'Network error. Please check your connection and try again.'
+      } else if (error.code === 'PURCHASE_CANCELLED') {
+        userMessage = 'Purchase was cancelled.'
+      } else if (error.code === 'STORE_PROBLEM') {
+        userMessage = 'Store error. Please try again later.'
+      } else if (error.code === 'INVALID_PURCHASE_TOKEN') {
+        userMessage = 'Invalid purchase. Please try again.'
+      } else if (error.code === 'PURCHASE_IN_PROGRESS') {
+        userMessage = 'Purchase already in progress. Please wait.'
+      }
+
+      setErrorMessage(userMessage)
+
+      Alert.alert('Purchase Failed', userMessage, [{ text: 'OK' }])
     } finally {
       setIsLoading(false)
     }
@@ -158,6 +204,15 @@ export default function SubscriptionScreen() {
           </View>
         </View>
 
+        {errorMessage && (
+          <View style={styles.errorContainer}>
+            <View style={styles.errorBadge}>
+              <Ionicons name="alert-circle" size={24} color="#ef4444" />
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          </View>
+        )}
+
         {isSubscribed && (
           <View style={styles.alreadyProContainer}>
             <View style={styles.alreadyProBadge}>
@@ -180,6 +235,8 @@ export default function SubscriptionScreen() {
                 'Customize your posts',
                 'Unlimited Templates',
                 'Remove Our Logo from your posts',
+                'Auto brand colors & logo',
+                'One-tap exports',
               ]}
               onPress={() => handleSubscribe(pkg)}
               isLoading={isLoading}
@@ -240,6 +297,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.9)',
   },
+  errorContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  errorBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#ef4444',
+    flex: 1,
+  },
   plansContainer: {
     paddingHorizontal: 20,
     gap: 20,
@@ -270,6 +347,33 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  trialBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#ff6b35',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    shadowColor: '#ff6b35',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  trialText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '900',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   planTitle: {
     fontSize: 24,
