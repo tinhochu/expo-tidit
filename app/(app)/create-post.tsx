@@ -58,7 +58,7 @@ interface PropertyFormData {
 
 export default function CreatePost() {
   const addressInputRef = useRef<any>(null)
-  const { user } = useAuth()
+  const { user, isDeletingAccount } = useAuth()
   const { isSubscribed } = useSubscription()
 
   const [formData, setFormData] = useState<PropertyFormData>({
@@ -90,7 +90,7 @@ export default function CreatePost() {
   // Fetch current post count when component mounts
   useEffect(() => {
     const fetchPostCount = async () => {
-      if (user?.$id) {
+      if (user?.$id && !isDeletingAccount) {
         try {
           const count = await getPostCountByUserId(user.$id)
           setCurrentPostCount(count)
@@ -101,10 +101,10 @@ export default function CreatePost() {
     }
 
     fetchPostCount()
-  }, [user?.$id])
+  }, [user?.$id, isDeletingAccount])
 
   const refreshPostCount = async () => {
-    if (user?.$id) {
+    if (user?.$id && !isDeletingAccount) {
       try {
         const count = await getPostCountByUserId(user.$id)
         setCurrentPostCount(count)
@@ -147,7 +147,7 @@ export default function CreatePost() {
 
   // * Check for duplicates when address suggestions change
   useEffect(() => {
-    if (!addressSuggestions.length || !user?.$id) return
+    if (!addressSuggestions.length || !user?.$id || isDeletingAccount) return
 
     const checkDuplicates = async () => {
       setCheckingDuplicates(true)
@@ -173,7 +173,7 @@ export default function CreatePost() {
     }, 500)
 
     return () => clearTimeout(timeoutId)
-  }, [addressSuggestions, user?.$id])
+  }, [addressSuggestions, user?.$id, isDeletingAccount])
 
   useEffect(() => {
     if (!selectedAddress) return

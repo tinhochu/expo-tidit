@@ -13,7 +13,7 @@ import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from '
 
 const signin = () => {
   const scrollRef = useRef<ScrollView>(null)
-  const { session, signin, error, loading, clearError } = useAuth()
+  const { session, signin, error, loading, clearError, isDeletingAccount, user } = useAuth()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -113,7 +113,9 @@ const signin = () => {
     }
   }, [error, slideUpValue, opacityValue])
 
-  if (session) return <Redirect href="/" />
+  // Only redirect to app if we have a valid session, user exists, and we're not deleting account
+  // Also ensure user has a valid ID to prevent redirect with deleted users
+  if (session && user && user.$id && !isDeletingAccount) return <Redirect href="/" />
 
   return (
     <KeyboardAvoidingView

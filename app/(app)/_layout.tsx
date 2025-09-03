@@ -1,15 +1,20 @@
 import { useAuth } from '@/context/AuthContext'
 import { useOnboarding } from '@/context/OnboardingContext'
 import { Redirect, Stack } from 'expo-router'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 
 type RedirectTarget = '/signin' | '/signup' | 'app' | null
 
 export default function AppLayout() {
-  const { session, error, redirectPage } = useAuth()
+  const { session, error, redirectPage, isDeletingAccount, setDeletingAccount } = useAuth()
   const { isOnboarded, isLoading } = useOnboarding()
 
   const redirectTarget = useMemo((): RedirectTarget => {
+    // If account is being deleted, redirect to signin immediately
+    if (isDeletingAccount) {
+      return '/signin'
+    }
+
     // If not authenticated, redirect to auth
     if (!session) {
       return redirectPage || (error?.page === 'signup' ? '/signup' : '/signin')
@@ -28,7 +33,18 @@ export default function AppLayout() {
 
     // User is authenticated, show the app
     return 'app'
-  }, [session, redirectPage, error?.page, isLoading])
+  }, [session, redirectPage, error?.page, isLoading, isDeletingAccount])
+
+  // Reset isDeletingAccount flag when we successfully redirect to signin
+  useEffect(() => {
+    if (isDeletingAccount && redirectTarget === '/signin') {
+      // Small delay to ensure redirect happens, then reset the flag
+      const timer = setTimeout(() => {
+        setDeletingAccount(false)
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [isDeletingAccount, redirectTarget, setDeletingAccount])
 
   if (redirectTarget === '/signin') {
     return <Redirect href="/signin" />

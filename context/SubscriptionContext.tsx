@@ -11,6 +11,7 @@ interface SubscriptionContextType {
   hasEntitlement: (entitlementId: string) => boolean
   hasError: boolean
   errorMessage: string | null
+  clearSubscriptionData: () => void
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType>({
@@ -23,6 +24,7 @@ const SubscriptionContext = createContext<SubscriptionContextType>({
   hasEntitlement: () => false,
   hasError: false,
   errorMessage: null,
+  clearSubscriptionData: () => {},
 })
 
 export const SubscriptionProvider = ({ children }: { children: React.ReactNode }) => {
@@ -42,7 +44,6 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
       setHasError(false)
       setErrorMessage(null)
 
-      console.log('Checking subscription status...')
       const info = await Purchases.getCustomerInfo()
       setCustomerInfo(info)
 
@@ -69,11 +70,9 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
     try {
       if (!isInitialized) return
 
-      console.log('Refreshing offerings...')
       const offeringsData = await Purchases.getOfferings()
       if (offeringsData.current !== null && offeringsData.current.availablePackages.length !== 0) {
         setOfferings(offeringsData.current)
-        console.log('Offerings refreshed:', offeringsData.current)
       } else {
         console.log('No current offerings available')
         setOfferings(null)
@@ -97,6 +96,15 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
     },
     [customerInfo]
   )
+
+  const clearSubscriptionData = useCallback(() => {
+    console.log('Clearing subscription data...')
+    setIsSubscribed(false)
+    setCustomerInfo(null)
+    setOfferings(null)
+    setHasError(false)
+    setErrorMessage(null)
+  }, [])
 
   useEffect(() => {
     // Set initialized after first render to avoid issues during initial mount
@@ -129,6 +137,7 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
     hasEntitlement,
     hasError,
     errorMessage,
+    clearSubscriptionData,
   }
 
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>

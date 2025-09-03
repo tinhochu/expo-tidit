@@ -28,7 +28,7 @@ import RevenueCatUI from 'react-native-purchases-ui'
 
 export default function Profile() {
   const toast = useToast()
-  const { signout, user, deleteAccount } = useAuth()
+  const { signout, user, deleteAccount, setDeletingAccount } = useAuth()
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -425,25 +425,20 @@ export default function Profile() {
   }
 
   const handleDeleteAccount = async () => {
+    // Set the AuthContext's isDeletingAccount flag immediately
+    setDeletingAccount(true)
     setIsDeletingAccount(true)
+
     try {
       await deleteAccount()
       setShowDeleteModal(false)
 
-      toast.show({
-        id: ID.unique(),
-        placement: 'top',
-        duration: 3000,
-        render: ({ id }) => {
-          const uniqueToastId = 'toast-' + id
-          return (
-            <Toast nativeID={uniqueToastId} action="success" variant="solid">
-              <ToastTitle>Account deleted successfully</ToastTitle>
-            </Toast>
-          )
-        },
-      })
+      // Note: No success toast needed here as the user will be redirected to signin
+      // The AuthContext will handle the redirect automatically
     } catch (error) {
+      // Reset the deletion flags on error
+      setDeletingAccount(false)
+      setIsDeletingAccount(false)
       toast.show({
         id: ID.unique(),
         placement: 'top',
@@ -457,9 +452,8 @@ export default function Profile() {
           )
         },
       })
-    } finally {
-      setIsDeletingAccount(false)
     }
+    // Note: We don't reset the flags here because the user will be redirected
   }
 
   // Show loading state while fetching initial data

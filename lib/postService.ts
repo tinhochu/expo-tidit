@@ -72,7 +72,6 @@ export const getPostsByUserId = async (userId: string): Promise<Post[]> => {
       canvas: doc.canvas, // Include canvas field
     }))
   } catch (error) {
-    console.error('Error fetching posts:', error)
     throw new Error('Failed to fetch posts')
   }
 }

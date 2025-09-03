@@ -5,6 +5,8 @@ import { account } from '@/lib/appwriteConfig'
 import { deleteAccount as deleteUserAccount } from '@/lib/userService'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
+import { useSubscription } from './SubscriptionContext'
+
 const AuthContext = createContext<{
   session: any
   user: any
@@ -14,11 +16,13 @@ const AuthContext = createContext<{
     page: string
   } | null
   loading: boolean
+  isDeletingAccount: boolean
   redirectPage: '/signin' | '/signup' | null
   signin: ({ email, password }: { email: string; password: string }) => Promise<void>
   signup: ({ email, password, name }: { email: string; password: string; name: string }) => Promise<any | null>
   signout: () => Promise<void>
   deleteAccount: () => Promise<void>
+  setDeletingAccount: (isDeleting: boolean) => void
   clearError: () => void
   setRedirectPage: (page: '/signin' | '/signup' | null) => void
 }>({
@@ -26,42 +30,61 @@ const AuthContext = createContext<{
   user: null,
   error: null,
   loading: false,
+  isDeletingAccount: false,
   redirectPage: null,
   signin: async () => {},
   signup: async () => null,
   signout: async () => {},
   deleteAccount: async () => {},
+  setDeletingAccount: () => {},
   clearError: () => {},
   setRedirectPage: () => {},
 })
 
 const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true)
-  const [session, setSession] = useState(null)
-  const [user, setUser] = useState(null)
+  const [session, setSession] = useState<any>(null)
+  const [user, setUser] = useState<any>(null)
   const [redirectPage, setRedirectPage] = useState<'/signin' | '/signup' | null>(null)
   const [error, setError] = useState<{
     message: string
     code: string
     page: string
   } | null>(null)
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+
+  // Get subscription context to clear subscription data on account deletion
+  const { clearSubscriptionData } = useSubscription()
 
   const checkAuth = useCallback(async () => {
+    // Don't check auth if we're deleting account
+    if (isDeletingAccount) {
+      setLoading(false)
+      return
+    }
+
     try {
       const response = await account.get()
-      setUser(response as any)
-      setSession(response as any)
-      // Only clear errors if authentication is successful
-      if (response) {
+
+      // Only set user and session if we have a valid response with an ID
+      if (response && response.$id) {
+        setUser(response as any)
+        setSession(response as any)
         setError(null)
+      } else {
+        // No valid response, clear user and session
+        setUser(null)
+        setSession(null)
       }
     } catch (error: any) {
-      console.log(error)
+      console.log('Auth check failed:', error)
+      // Clear user and session on any error
+      setUser(null)
+      setSession(null)
       // Don't set error for auth check failures as they're expected for unauthenticated users
-      // Also don't clear existing errors here
     }
     setLoading(false)
-  }, [])
+  }, [isDeletingAccount])
 
   useEffect(() => {
     checkAuth()
@@ -173,11 +196,28 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Delete current session
       await account.deleteSession('current')
 
+      // Clear all user data and state immediately
       setSession(null)
       setUser(null)
       setError(null)
+
+      // Clear subscription data
+      clearSubscriptionData()
+
+      // Force clear any cached session data
+      try {
+        // Delete all sessions to ensure complete cleanup
+        await account.deleteSessions()
+      } catch (sessionError) {
+        console.log('Session cleanup error (expected):', sessionError)
+      }
+
       // Set redirect page to signin after account deletion
+      // This will trigger the app layout to redirect to signin
       setRedirectPage('/signin')
+
+      // Keep isDeletingAccount true until redirect happens
+      // Don't reset it here - let the app layout handle the redirect
     } catch (error: any) {
       console.log(`AuthContext:Delete Account Error: ${error?.message}`)
       setError({
@@ -185,12 +225,20 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         code: error?.code || 'unknown',
         page: 'deleteAccount',
       })
+      // Only reset isDeletingAccount on error
+      setIsDeletingAccount(false)
+    } finally {
+      setLoading(false)
+      // Don't reset isDeletingAccount here - keep it true for successful deletion
     }
-    setLoading(false)
-  }, [user?.$id])
+  }, [user?.$id, clearSubscriptionData])
 
   const clearError = useCallback(() => {
     setError(null)
+  }, [])
+
+  const setDeletingAccount = useCallback((isDeleting: boolean) => {
+    setIsDeletingAccount(isDeleting)
   }, [])
 
   const setRedirectPageHandler = useCallback((page: '/signin' | '/signup' | null) => {
@@ -203,11 +251,13 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       user,
       error,
       loading,
+      isDeletingAccount,
       redirectPage,
       signin,
       signup,
       signout,
       deleteAccount,
+      setDeletingAccount,
       clearError,
       setRedirectPage: setRedirectPageHandler,
     }),
@@ -216,11 +266,13 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       user,
       error,
       loading,
+      isDeletingAccount,
       redirectPage,
       signin,
       signup,
       signout,
       deleteAccount,
+      setDeletingAccount,
       clearError,
       setRedirectPageHandler,
     ]

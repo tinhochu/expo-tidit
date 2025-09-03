@@ -15,11 +15,11 @@ import { Post, deletePost, getPostsByUserId } from '@/lib/postService'
 import AntDesign from '@expo/vector-icons/AntDesign'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { router, useFocusEffect } from 'expo-router'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Alert, RefreshControl, ScrollView } from 'react-native'
 
 export default function Home() {
-  const { user } = useAuth()
+  const { user, isDeletingAccount } = useAuth()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -27,17 +27,24 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState<string>('')
 
   const fetchPosts = useCallback(async () => {
-    if (!user?.$id) return
+    // Additional safety check - if user is null/undefined, don't make any API calls
+    if (!user || !user.$id || isDeletingAccount) {
+      // Clear posts if user is deleted or being deleted
+      setPosts([])
+      return
+    }
 
     try {
       setLoading(true)
-      const allPosts = await getPostsByUserId(user?.$id)
+      const allPosts = await getPostsByUserId(user.$id)
       setPosts(allPosts)
     } catch (error) {
+      // Clear posts on error
+      setPosts([])
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user, user?.$id, isDeletingAccount])
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
@@ -62,11 +69,21 @@ export default function Home() {
     return matchesType && matchesSearch
   })
 
+  // Clear posts when user is deleted or being deleted
+  useEffect(() => {
+    if (!user || !user.$id || isDeletingAccount) {
+      setPosts([])
+    }
+  }, [user, user?.$id, isDeletingAccount])
+
   // Fetch posts when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      fetchPosts()
-    }, [fetchPosts])
+      // Only fetch posts if we have a valid user and are not deleting account
+      if (user && user.$id && !isDeletingAccount) {
+        fetchPosts()
+      }
+    }, [fetchPosts, user, user?.$id, isDeletingAccount])
   )
 
   const handleLongPress = (post: Post) => {
