@@ -36,3 +36,23 @@ export const getUserPrefs = async (userId: string) => {
 
   return data
 }
+
+export const deleteAccount = async (userId: string) => {
+  const backendUrl = process.env.EXPO_PUBLIC_TIDIT_API_URL!
+
+  const response = await fetch(`${backendUrl}/api/profile/${userId}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.EXPO_PUBLIC_TIDIT_API_KEY!,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error(response.statusText)
+  }
+
+  const { data } = await response.json()
+
+  return data
+}

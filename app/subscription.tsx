@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import { useLocalSearchParams } from 'expo-router'
 import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import Purchases, { PurchasesPackage } from 'react-native-purchases'
 
 const SubscriptionPlan = ({
@@ -75,6 +75,26 @@ const SubscriptionPlan = ({
           <Text style={styles.selectButtonText}>Start Free Trial</Text>
         )}
       </LinearGradient>
+
+      {!isAlreadyPro && (
+        <View style={styles.legalTextContainer}>
+          <Text style={styles.legalText}>
+            1-week free trial, then {price}/{period}. Auto-renews until canceled. Cancel anytime in Settings {'>'} Apple
+            ID {'>'} Subscriptions. By subscribing, you agree to our{' '}
+            <Text
+              style={styles.linkText}
+              onPress={() => Linking.openURL('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/')}
+            >
+              Terms of Use
+            </Text>{' '}
+            and{' '}
+            <Text style={styles.linkText} onPress={() => Linking.openURL('https://www.apple.com/legal/privacy/en-ww/')}>
+              Privacy Policy
+            </Text>
+            .
+          </Text>
+        </View>
+      )}
     </View>
   </TouchableOpacity>
 )
@@ -466,5 +486,19 @@ const styles = StyleSheet.create({
   alreadyProSubtext: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.7)',
+  },
+  legalTextContainer: {
+    marginTop: 16,
+    paddingHorizontal: 8,
+  },
+  legalText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+    lineHeight: 16,
+    textAlign: 'center',
+  },
+  linkText: {
+    color: '#ff6b35',
+    textDecorationLine: 'underline',
   },
 })

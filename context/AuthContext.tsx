@@ -2,6 +2,7 @@ import { Box } from '@/components/ui/box'
 import { Image } from '@/components/ui/image'
 import { VStack } from '@/components/ui/vstack'
 import { account } from '@/lib/appwriteConfig'
+import { deleteAccount as deleteUserAccount } from '@/lib/userService'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 const AuthContext = createContext<{
@@ -17,6 +18,7 @@ const AuthContext = createContext<{
   signin: ({ email, password }: { email: string; password: string }) => Promise<void>
   signup: ({ email, password, name }: { email: string; password: string; name: string }) => Promise<any | null>
   signout: () => Promise<void>
+  deleteAccount: () => Promise<void>
   clearError: () => void
   setRedirectPage: (page: '/signin' | '/signup' | null) => void
 }>({
@@ -28,6 +30,7 @@ const AuthContext = createContext<{
   signin: async () => {},
   signup: async () => null,
   signout: async () => {},
+  deleteAccount: async () => {},
   clearError: () => {},
   setRedirectPage: () => {},
 })
@@ -157,6 +160,35 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setLoading(false)
   }, [])
 
+  const deleteAccount = useCallback(async () => {
+    setLoading(true)
+    try {
+      if (!user?.$id) {
+        throw new Error('User ID is not available')
+      }
+
+      // Delete user account from backend
+      await deleteUserAccount(user.$id)
+
+      // Delete current session
+      await account.deleteSession('current')
+
+      setSession(null)
+      setUser(null)
+      setError(null)
+      // Set redirect page to signin after account deletion
+      setRedirectPage('/signin')
+    } catch (error: any) {
+      console.log(`AuthContext:Delete Account Error: ${error?.message}`)
+      setError({
+        message: error?.message || 'An error occurred during account deletion',
+        code: error?.code || 'unknown',
+        page: 'deleteAccount',
+      })
+    }
+    setLoading(false)
+  }, [user?.$id])
+
   const clearError = useCallback(() => {
     setError(null)
   }, [])
@@ -175,10 +207,23 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       signin,
       signup,
       signout,
+      deleteAccount,
       clearError,
       setRedirectPage: setRedirectPageHandler,
     }),
-    [session, user, error, loading, redirectPage, signin, signup, signout, clearError, setRedirectPageHandler]
+    [
+      session,
+      user,
+      error,
+      loading,
+      redirectPage,
+      signin,
+      signup,
+      signout,
+      deleteAccount,
+      clearError,
+      setRedirectPageHandler,
+    ]
   )
 
   return (
