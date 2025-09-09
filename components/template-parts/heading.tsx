@@ -35,6 +35,22 @@ export default function TemplateHeading({
     SpaceMono: [require('@/assets/fonts/SpaceMono-Regular.ttf')],
   })
 
+  // Calculate dynamic size based on text length to prevent wrapping
+  const getDynamicSize = (baseSize: number, text: string) => {
+    const textLength = text.length
+
+    // If text is more than 11 characters, reduce the size
+    if (textLength > 11) {
+      // Calculate reduction factor based on length
+      // For every 3 characters over 11, reduce by 0.1
+      const excessChars = textLength - 11
+      const reductionFactor = Math.max(0.3, 1 - excessChars * 0.1)
+      return baseSize * reductionFactor
+    }
+
+    return baseSize
+  }
+
   // Font-specific size adjustments for optimal readability
   const getFontSize = (baseSize: number, font: string) => {
     const baseFontSize = 55 * baseSize
@@ -61,13 +77,14 @@ export default function TemplateHeading({
     // Are the font loaded already?
     if (!customFontMgr) return null
 
+    const dynamicSize = getDynamicSize(size, text)
     const paragraphStyle = {
       textAlign: TextAlign.Center,
     }
     const textStyle = {
       color: Skia.Color(color),
       fontFamilies: [fontFamily],
-      fontSize: getFontSize(size, fontFamily),
+      fontSize: getFontSize(dynamicSize, fontFamily),
     }
 
     return Skia.ParagraphBuilder.Make(paragraphStyle, customFontMgr)
@@ -82,13 +99,14 @@ export default function TemplateHeading({
   const ShadowParagraph = useMemo(() => {
     if (!customFontMgr) return null
 
+    const dynamicSize = getDynamicSize(size, text)
     const paragraphStyle = {
       textAlign: TextAlign.Center,
     }
     const textStyle = {
       color: Skia.Color(color === '#ffffff' ? '#000000' : '#ffffff'),
       fontFamilies: [fontFamily],
-      fontSize: getFontSize(size, fontFamily),
+      fontSize: getFontSize(dynamicSize, fontFamily),
     }
 
     return Skia.ParagraphBuilder.Make(paragraphStyle, customFontMgr)
