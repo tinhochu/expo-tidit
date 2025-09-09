@@ -39,7 +39,6 @@ import {
   ActionSheetIOS,
   Alert,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -69,24 +68,41 @@ export default function PropertyDetails() {
   const [templateStyle, setTemplateStyle] = useState<string>('classic')
   const [parsedCanvasData, setParsedCanvasData] = useState<any>(null)
   const [postType, setPostType] = useState<
-    'JUST_SOLD' | 'JUST_LISTED' | 'JUST_RENTED' | 'OPEN_HOUSE' | 'UNDER_CONTRACT' | 'BACK_ON_MARKET' | 'LOADING'
+    | 'JUST_SOLD'
+    | 'JUST_LISTED'
+    | 'JUST_RENTED'
+    | 'OPEN_HOUSE'
+    | 'UNDER_CONTRACT'
+    | 'BACK_ON_MARKET'
+    | 'COMING_SOON'
+    | 'PRICE_DROP'
+    | 'LOADING'
   >('LOADING')
   const [isDownloading, setIsDownloading] = useState(false)
+  const [isSharing, setIsSharing] = useState(false)
 
   // Helper function to check if postType is in a valid state
   const isValidPostType = (
     type: string
-  ): type is 'JUST_SOLD' | 'JUST_LISTED' | 'JUST_RENTED' | 'OPEN_HOUSE' | 'UNDER_CONTRACT' | 'BACK_ON_MARKET' => {
+  ): type is
+    | 'JUST_SOLD'
+    | 'JUST_LISTED'
+    | 'JUST_RENTED'
+    | 'OPEN_HOUSE'
+    | 'UNDER_CONTRACT'
+    | 'BACK_ON_MARKET'
+    | 'COMING_SOON'
+    | 'PRICE_DROP' => {
     return type !== 'LOADING'
   }
 
   // Image picker function for custom photos
   const pickImage = async () => {
-    // Check if user has premium access
+    // Check if user has Pro access
     if (!isSubscribed) {
       Alert.alert(
-        'Premium Feature',
-        'Custom photo uploads are a premium feature. Upgrade to unlock this and other premium features!',
+        'Pro Feature',
+        'Custom photo uploads are a Pro feature. Upgrade to unlock this and other Pro features!',
         [
           {
             text: 'Cancel',
@@ -193,7 +209,7 @@ export default function PropertyDetails() {
     }
   }
 
-  // Wrapper function to set custom text with premium check
+  // Wrapper function to set custom text with Pro check
   const setCustomTextWithPremiumCheck = (
     updater:
       | { mainHeading?: string; subHeading?: string; description?: string }
@@ -204,8 +220,8 @@ export default function PropertyDetails() {
   ) => {
     if (!isSubscribed) {
       Alert.alert(
-        'Premium Feature',
-        'Custom text personalization is a premium feature. Upgrade to unlock this and other premium features!',
+        'Pro Feature',
+        'Custom text personalization is a Pro feature. Upgrade to unlock this and other Pro features!',
         [
           {
             text: 'Cancel',
@@ -231,6 +247,8 @@ export default function PropertyDetails() {
     { value: 'OPEN_HOUSE', label: 'Open House' },
     { value: 'UNDER_CONTRACT', label: 'Under Contract' },
     { value: 'BACK_ON_MARKET', label: 'Back on Market' },
+    { value: 'COMING_SOON', label: 'Coming Soon' },
+    { value: 'PRICE_DROP', label: 'Price Drop' },
   ]
   const [canvas, setCanvas] = useState<{
     primaryColor?: string
@@ -309,7 +327,7 @@ export default function PropertyDetails() {
         setShowPrice(parsedCanvas.showPrice !== undefined ? parsedCanvas.showPrice : false)
         // Load priceText from canvas if it exists, otherwise default to empty string
         setPriceText(parsedCanvas.priceText || '')
-        // Store parsed canvas data for later loading (after premium status is determined)
+        // Store parsed canvas data for later loading (after pro status is determined)
         setParsedCanvasData(parsedCanvas)
         // Load showSignature from canvas if it exists, otherwise default to true
         setShowSignature(parsedCanvas.showSignature !== undefined ? parsedCanvas.showSignature : true)
@@ -343,6 +361,8 @@ export default function PropertyDetails() {
         | 'OPEN_HOUSE'
         | 'UNDER_CONTRACT'
         | 'BACK_ON_MARKET'
+        | 'COMING_SOON'
+        | 'PRICE_DROP'
 
       setPostType(newPostType)
 
@@ -532,9 +552,9 @@ export default function PropertyDetails() {
   // Handle signature toggle with subscription check
   const handleSignatureToggle = async (value: boolean) => {
     if (!value && !isSubscribed) {
-      // User is trying to hide logo (switch OFF) but doesn't have premium
+      // User is trying to hide logo (switch OFF) but doesn't have Pro
       Alert.alert(
-        'Premium Feature',
+        'Pro Feature',
         'Hiding the Tidit signature is a premium feature. Upgrade to unlock this and other premium features!',
         [
           {
@@ -551,7 +571,7 @@ export default function PropertyDetails() {
       return
     }
 
-    // If user has premium or is showing logo (switch ON), proceed normally
+    // If user has Pro or is showing logo (switch ON), proceed normally
     setShowSignature(value) // ON = show logo, OFF = hide logo
     handleCanvasChange('showSignature', value)
   }
@@ -585,6 +605,7 @@ export default function PropertyDetails() {
 
   const shareToInstagram = async () => {
     try {
+      setIsSharing(true)
       // For Instagram, we need to share an image
       const image = ref.current?.makeImageSnapshot()
       if (image) {
@@ -603,11 +624,14 @@ export default function PropertyDetails() {
     } catch (error) {
       console.error('Error sharing to Instagram:', error)
       // No fallback needed
+    } finally {
+      setIsSharing(false)
     }
   }
 
   const shareToFacebook = async () => {
     try {
+      setIsSharing(true)
       // For Facebook, we need to share an image just like Instagram
       const image = ref.current?.makeImageSnapshot()
       if (image) {
@@ -626,11 +650,14 @@ export default function PropertyDetails() {
     } catch (error) {
       console.error('Error sharing to Facebook:', error)
       // No fallback needed
+    } finally {
+      setIsSharing(false)
     }
   }
 
   const generalShare = async () => {
     try {
+      setIsSharing(true)
       // For general share, we always share the image with a message
       const image = ref.current?.makeImageSnapshot()
       if (image) {
@@ -652,6 +679,8 @@ export default function PropertyDetails() {
     } catch (error) {
       console.error('Error sharing:', error)
       // No fallback needed
+    } finally {
+      setIsSharing(false)
     }
   }
 
@@ -749,6 +778,21 @@ export default function PropertyDetails() {
           <VStack className="px-5 pb-8 pt-5" space="2xl">
             {canvas && isValidPostType(postType) && (
               <>
+                <Grid _extra={{ className: 'grid-cols-1' }}>
+                  <GridItem _extra={{ className: 'col-span-1' }}>
+                    <Button
+                      onPress={handleShare}
+                      className="bg-blue-500"
+                      size="lg"
+                      disabled={isSharing || isDownloading || isLoadingUserPrefs}
+                    >
+                      <HStack space="sm" className="items-center">
+                        <ButtonText>{isSharing ? 'Sharing...' : 'Share'}</ButtonText>
+                      </HStack>
+                    </Button>
+                  </GridItem>
+                </Grid>
+
                 <Grid _extra={{ className: 'grid-cols-2' }}>
                   <GridItem _extra={{ className: 'col-span-1' }}>
                     <FormControl className="pr-2">
@@ -765,6 +809,8 @@ export default function PropertyDetails() {
                             | 'OPEN_HOUSE'
                             | 'UNDER_CONTRACT'
                             | 'BACK_ON_MARKET'
+                            | 'COMING_SOON'
+                            | 'PRICE_DROP'
 
                           setPostType(newPostType)
 
@@ -813,7 +859,7 @@ export default function PropertyDetails() {
                         </SelectTrigger>
                         <SelectPortal>
                           <SelectBackdrop />
-                          <SelectContent className="pb-10">
+                          <SelectContent className="pb-28">
                             <SelectDragIndicatorWrapper>
                               <SelectDragIndicator />
                             </SelectDragIndicatorWrapper>
@@ -861,7 +907,7 @@ export default function PropertyDetails() {
                   </GridItem>
                 </Grid>
 
-                {/* Font Manager - Premium Feature */}
+                {/* Font Manager - Pro Feature */}
                 <Grid _extra={{ className: 'grid-cols-1' }}>
                   <GridItem _extra={{ className: 'col-span-1' }}>
                     <FontManager
@@ -979,7 +1025,7 @@ export default function PropertyDetails() {
                   </GridItem>
                 </Grid>
 
-                {/* Signature Toggle - Premium Feature */}
+                {/* Signature Toggle - Pro Feature */}
                 <Grid _extra={{ className: 'grid-cols-1 mb-2' }}>
                   <GridItem _extra={{ className: 'col-span-1' }}>
                     <HStack space="md" className="items-center">
@@ -1029,7 +1075,7 @@ export default function PropertyDetails() {
                     <Text className="text-gray-600">Use your own photo instead of the property photo</Text>
                     <Box className="mt-3 rounded-lg border border-gray-300 bg-gray-50 p-4">
                       <Text className="text-center text-gray-600">
-                        Upgrade to Premium to unlock custom photo uploads for your posts!
+                        Upgrade to Pro to unlock custom photo uploads for your posts!
                       </Text>
                       <Button
                         size="md"
@@ -1038,7 +1084,7 @@ export default function PropertyDetails() {
                           router.push(`/subscription?returnRoute=${encodeURIComponent(`/property/${id}`)}`)
                         }
                       >
-                        <ButtonText>Upgrade to Premium</ButtonText>
+                        <ButtonText>Upgrade to Pro</ButtonText>
                       </Button>
                     </Box>
                   </VStack>
@@ -1097,7 +1143,7 @@ export default function PropertyDetails() {
                     </Heading>
                     <Box className="rounded-lg border border-gray-300 bg-gray-50 p-4">
                       <Text className="text-center text-gray-600">
-                        Upgrade to Premium to unlock custom text personalization for your posts!
+                        Upgrade to Pro to unlock custom text personalization for your posts!
                       </Text>
                       <Button
                         size="md"
@@ -1106,7 +1152,7 @@ export default function PropertyDetails() {
                           router.push(`/subscription?returnRoute=${encodeURIComponent(`/property/${id}`)}`)
                         }
                       >
-                        <ButtonText>Upgrade to Premium</ButtonText>
+                        <ButtonText>Upgrade to Pro</ButtonText>
                       </Button>
                     </Box>
                   </VStack>

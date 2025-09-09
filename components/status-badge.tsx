@@ -8,6 +8,8 @@ const statusMap = {
   BACK_ON_MARKET: 'Back on Market',
   OPEN_HOUSE: 'Open House',
   UNDER_CONTRACT: 'Under Contract',
+  COMING_SOON: 'Coming Soon',
+  PRICE_DROP: 'Price Drop',
 }
 
 export default function StatusBadge({ status }: { status: string }) {

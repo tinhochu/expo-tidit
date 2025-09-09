@@ -203,6 +203,8 @@ function getPostTypeLabel(postType: string): string {
     OPEN_HOUSE: 'Open House',
     UNDER_CONTRACT: 'Under Contract',
     BACK_ON_MARKET: 'Back on Market',
+    COMING_SOON: 'Coming Soon',
+    PRICE_DROP: 'Price Drop',
   }
   return labels[postType] || postType
 }

@@ -5,6 +5,8 @@ export const POST_TYPES = {
   OPEN_HOUSE: 'Open House',
   UNDER_CONTRACT: 'Under Contract',
   BACK_ON_MARKET: 'Back on Market',
+  COMING_SOON: 'Coming Soon',
+  PRICE_DROP: 'Price Drop',
 }
 
 export const getPostTypeLabel = (postType: string) => {

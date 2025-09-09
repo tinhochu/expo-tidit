@@ -72,6 +72,112 @@ export default function ClassicTemplate({
 
   const brokerageLogo = hasBrokerageLogo ? useImage(userPrefs.brokerageLogo) : null
   const realtorPicture = hasRealtorPicture ? useImage(userPrefs.realtorPicture) : null
+
+  // Calculate brokerage logo dimensions and positioning
+  const getBrokerageLogoDimensions = () => {
+    if (!brokerageLogo) return null
+
+    const imageWidth = brokerageLogo.width()
+    const imageHeight = brokerageLogo.height()
+    const aspectRatio = imageWidth / imageHeight
+
+    // Determine if logo is square (aspect ratio close to 1) or rectangle
+    const isSquare = Math.abs(aspectRatio - 1) < 0.2 // Allow 20% tolerance for "square"
+    const isWideRectangle = aspectRatio > 1.5
+    const isTallRectangle = aspectRatio < 0.7
+
+    // Base dimensions
+    const baseWidth = screenWidth * 0.27
+    const baseHeight = screenWidth * 0.27
+
+    // Adjust dimensions based on aspect ratio
+    let logoWidth = baseWidth
+    let logoHeight = baseHeight
+
+    if (isWideRectangle) {
+      // Wide rectangle: maintain width, reduce height
+      logoHeight = baseHeight * 0.7
+    } else if (isTallRectangle) {
+      // Tall rectangle: maintain height, reduce width
+      logoWidth = baseWidth * 0.7
+    }
+
+    return {
+      width: logoWidth,
+      height: logoHeight,
+      aspectRatio,
+      isSquare,
+      isWideRectangle,
+      isTallRectangle,
+    }
+  }
+
+  const logoDimensions = getBrokerageLogoDimensions()
+
+  // Calculate optimal logo positioning to avoid overlap with property description
+  const getOptimalLogoPosition = () => {
+    if (!logoDimensions) return { x: screenWidth * 0.175, y: screenWidth * 1.0 }
+
+    const { width: logoWidth, height: logoHeight } = logoDimensions
+
+    // Property description area starts at y = screenWidth * 1.09
+    // But we need to account for the actual text positioning which includes transforms
+    const propertyDescriptionStartY = screenWidth * 1.09
+    const propertyDescriptionBuffer = screenWidth * 0.08 // Additional buffer for text area
+
+    // Calculate where the logo bottom would be at default position
+    const defaultLogoY = screenWidth * 1.0
+    const logoBottomY = defaultLogoY + logoHeight
+
+    // Check if logo overlaps with property description area
+    const hasOverlap = logoBottomY > propertyDescriptionStartY - propertyDescriptionBuffer
+
+    // Adjust Y position if there's overlap
+    let logoY = defaultLogoY
+    if (hasOverlap) {
+      // Move logo up significantly to avoid overlap
+      logoY = propertyDescriptionStartY - logoHeight - propertyDescriptionBuffer
+    }
+
+    // Ensure logo doesn't go above the colored rectangle (starts at y = screenWidth * 1.05)
+    const rectangleTopY = screenWidth * 1.05
+    const rectangleBottomY = rectangleTopY + screenWidth * 0.2 // Rectangle height
+    if (logoY < rectangleTopY) {
+      logoY = rectangleTopY + screenWidth * 0.01 // Small margin from rectangle top
+    }
+
+    // Also ensure logo doesn't go below the rectangle
+    if (logoY + logoHeight > rectangleBottomY) {
+      logoY = rectangleBottomY - logoHeight - screenWidth * 0.01
+    }
+
+    // Check for horizontal overlap with property information
+    const propertyInfoStartX = screenWidth * 0.4
+    const logoRightX = screenWidth * 0.175 + logoWidth
+    const hasHorizontalOverlap = logoRightX > propertyInfoStartX
+
+    // Adjust X position if there's horizontal overlap
+    let logoX = screenWidth * 0.175
+    if (hasHorizontalOverlap) {
+      // Move logo left to avoid horizontal overlap
+      logoX = propertyInfoStartX - logoWidth - screenWidth * 0.02 // 2% buffer
+    }
+
+    // Ensure logo doesn't go too far left
+    const minLogoX = screenWidth * 0.05 // 5% margin from left edge
+    if (logoX < minLogoX) {
+      logoX = minLogoX
+    }
+
+    return {
+      x: logoX,
+      y: logoY,
+      hasOverlap: hasOverlap || hasHorizontalOverlap,
+      adjustedForOverlap: hasOverlap || hasHorizontalOverlap,
+    }
+  }
+
+  const logoPosition = getOptimalLogoPosition()
   const customFontMgr = useFonts({
     PlayfairDisplay: [require('@/assets/fonts/PlayfairDisplay-Regular.ttf')],
     Inter: [require('@/assets/fonts/Inter.ttf')],
@@ -242,17 +348,6 @@ export default function ClassicTemplate({
 
       <Rect x={0} y={screenWidth * 1.05} width={screenWidth} height={screenWidth * 0.2} color={primaryColor} />
 
-      {hasBrokerageLogo && showBrokerage && brokerageLogo && (
-        <Image
-          image={brokerageLogo}
-          fit="contain"
-          x={screenWidth * 0.175}
-          y={screenWidth * 1.0}
-          width={screenWidth * 0.27}
-          height={screenWidth * 0.27}
-        />
-      )}
-
       {hasRealtorPicture && showRealtor && realtorPicture && (
         <Image
           image={realtorPicture}
@@ -261,6 +356,17 @@ export default function ClassicTemplate({
           y={screenWidth * 0.9}
           width={screenWidth * 0.35}
           height={screenWidth * 0.35}
+        />
+      )}
+
+      {hasBrokerageLogo && showBrokerage && brokerageLogo && logoDimensions && (
+        <Image
+          image={brokerageLogo}
+          fit="contain"
+          x={logoPosition.x}
+          y={logoPosition.y}
+          width={logoDimensions.width}
+          height={logoDimensions.height}
         />
       )}
 
@@ -328,6 +434,8 @@ function getPostTypeLabel(postType: string): string {
     OPEN_HOUSE: 'Open House',
     UNDER_CONTRACT: 'Under Contract',
     BACK_ON_MARKET: 'Back on Market',
+    COMING_SOON: 'Coming Soon',
+    PRICE_DROP: 'Price Drop',
   }
   return labels[postType] || postType
 }

@@ -53,7 +53,15 @@ interface PropertyFormData {
   bathrooms: string
   squareFeet: string
   price: string
-  postType: 'JUST_LISTED' | 'JUST_SOLD' | 'JUST_RENTED' | 'OPEN_HOUSE' | 'UNDER_CONTRACT' | 'BACK_ON_MARKET'
+  postType:
+    | 'JUST_LISTED'
+    | 'JUST_SOLD'
+    | 'JUST_RENTED'
+    | 'OPEN_HOUSE'
+    | 'UNDER_CONTRACT'
+    | 'BACK_ON_MARKET'
+    | 'COMING_SOON'
+    | 'PRICE_DROP'
 }
 
 export default function CreatePost() {
@@ -620,6 +628,8 @@ export default function CreatePost() {
                                 <SelectItem label="Open House" value="OPEN_HOUSE" />
                                 <SelectItem label="Under Contract" value="UNDER_CONTRACT" />
                                 <SelectItem label="Back on Market" value="BACK_ON_MARKET" />
+                                <SelectItem label="Coming Soon" value="COMING_SOON" />
+                                <SelectItem label="Price Drop" value="PRICE_DROP" />
                               </SelectContent>
                             </SelectPortal>
                           </Select>

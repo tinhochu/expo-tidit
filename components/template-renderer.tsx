@@ -1,7 +1,16 @@
 import { BoldTemplate, ClassicTemplate, ElegantTemplate, ModernTemplate } from './templates/base-templates'
 
 interface TemplateRendererProps {
-  postType: 'JUST_SOLD' | 'JUST_LISTED' | 'JUST_RENTED' | 'OPEN_HOUSE' | 'UNDER_CONTRACT' | 'BACK_ON_MARKET' | 'LOADING'
+  postType:
+    | 'JUST_SOLD'
+    | 'JUST_LISTED'
+    | 'JUST_RENTED'
+    | 'OPEN_HOUSE'
+    | 'UNDER_CONTRACT'
+    | 'BACK_ON_MARKET'
+    | 'COMING_SOON'
+    | 'PRICE_DROP'
+    | 'LOADING'
   data: any
   template: string
   canvas: any
