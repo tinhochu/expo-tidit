@@ -260,16 +260,17 @@ export default function Profile() {
 
       // Now upload the processed image to storage
       try {
-        const file = await fetch(processedImage.uri).then((r) => r.blob())
+        // Remove blob conversion - React Native doesn't support fetching local file URIs
 
         // Determine file extension and MIME type based on processed format
-        const fileExtension = processedImage.format
+        // Convert 'jpeg' to 'jpg' for Appwrite compatibility
+        const fileExtension = processedImage.format === 'jpeg' ? 'jpg' : processedImage.format
         const mimeType = getMimeType(fileExtension)
 
         const response = await storage.createFile(BUCKET_ID, ID.unique(), {
           name: `${user?.$id}-${type}.${fileExtension}`,
           type: mimeType,
-          size: file.size,
+          size: processedImage.size,
           uri: processedImage.uri,
         })
 
@@ -342,8 +343,16 @@ export default function Profile() {
           `Image compression stats: Original: ${formatFileSize(compressionStats.originalSize)}, Processed: ${formatFileSize(compressionStats.processedSize)}, Reduction: ${compressionStats.compressionRatio.toFixed(1)}%`
         )
       } catch (uploadError) {
-        console.log('Upload error:', uploadError)
-        Alert.alert('Error', `Failed to upload ${type === 'brokerageLogo' ? 'brokerage logo' : 'profile picture'}`)
+        console.error('Upload error details:', uploadError)
+        console.error('Upload error message:', uploadError instanceof Error ? uploadError.message : 'Unknown error')
+        console.error('Upload error stack:', uploadError instanceof Error ? uploadError.stack : 'No stack trace')
+
+        // Show detailed error in alert for debugging
+        const errorMessage = uploadError instanceof Error ? uploadError.message : 'Unknown error'
+        Alert.alert(
+          'Upload Error',
+          `Failed to upload ${type === 'brokerageLogo' ? 'brokerage logo' : 'profile picture'}. Error: ${errorMessage}`
+        )
       } finally {
         setUploadingImage(null)
       }
