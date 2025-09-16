@@ -187,6 +187,17 @@ export default function Home() {
               const propInfo = post.propInformation
               const isLastItem = index === filteredPosts.length - 1
 
+              // Check for custom image in canvas
+              let customImageUrl = null
+              try {
+                if (post.canvas) {
+                  const canvas = JSON.parse(post.canvas)
+                  customImageUrl = canvas.customImage || null
+                }
+              } catch (error) {
+                console.error('Error parsing canvas:', error)
+              }
+
               return (
                 <Pressable
                   key={post.id}
@@ -202,7 +213,7 @@ export default function Home() {
                           <Skeleton variant="sharp" className="aspect-square h-44 w-full" />
                         ) : (
                           <PropertyImage
-                            imageUrl={propInfo?.photos[0]?.href || ''}
+                            imageUrl={customImageUrl || propInfo?.photos[0]?.href || ''}
                             alt={post.title}
                             className="aspect-video h-44 object-fill"
                           />

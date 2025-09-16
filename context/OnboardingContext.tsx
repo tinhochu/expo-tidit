@@ -19,6 +19,7 @@ interface UserPreferences {
   phone?: string
   brokerageLogo?: string
   realtorPicture?: string
+  customPhotosCount?: number
 }
 
 const OnboardingContext = createContext<OnboardingContextType>({

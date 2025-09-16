@@ -205,9 +205,6 @@ export default function CreatePost() {
   useEffect(() => {
     if (!propertyDetails) return
 
-    // Check if list_price exists, if not, look for other possible price fields
-    const price = propertyDetails?.list_price || propertyDetails?.price || propertyDetails?.listing_price || ''
-
     // Check for bedrooms - try multiple possible field names
     const bedrooms = propertyDetails?.description?.beds || ''
 
@@ -220,7 +217,6 @@ export default function CreatePost() {
     setFormData((prev) => {
       const updated = {
         ...prev,
-        price: price?.toString() || '',
         bedrooms: bedrooms?.toString() || '',
         bathrooms: bathrooms?.toString() || '',
         squareFeet: squareFeet?.toString() || '',
@@ -618,7 +614,7 @@ export default function CreatePost() {
                             </SelectTrigger>
                             <SelectPortal>
                               <SelectBackdrop />
-                              <SelectContent>
+                              <SelectContent className="pb-28">
                                 <SelectDragIndicatorWrapper>
                                   <SelectDragIndicator />
                                 </SelectDragIndicatorWrapper>
@@ -633,25 +629,6 @@ export default function CreatePost() {
                               </SelectContent>
                             </SelectPortal>
                           </Select>
-                          {errors.price && (
-                            <FormControlError>
-                              <FormControlErrorText>{errors.price}</FormControlErrorText>
-                            </FormControlError>
-                          )}
-                        </FormControl>
-
-                        <FormControl isInvalid={!!errors.price} isRequired>
-                          <FormControlLabel>
-                            <FormControlLabelText>Price</FormControlLabelText>
-                          </FormControlLabel>
-                          <Input className="bg-white">
-                            <InputField
-                              placeholder="Enter price..."
-                              value={formData.price}
-                              onChangeText={(value) => handleInputChange('price', value)}
-                              keyboardType="numeric"
-                            />
-                          </Input>
                           {errors.price && (
                             <FormControlError>
                               <FormControlErrorText>{errors.price}</FormControlErrorText>

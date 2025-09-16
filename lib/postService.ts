@@ -20,6 +20,8 @@ export const createPost = async (post: Omit<Post, 'id' | 'createdAt' | 'updatedA
     // Create default canvas with tidit logo enabled
     const defaultCanvas = {
       primaryColor: '#2b7fff',
+      secondaryColor: '#ffffff',
+      textColor: '#2b7fff',
       showPrice: false,
       priceText: '',
       showBrokerage: true,
@@ -168,6 +170,8 @@ export const ensureDefaultCanvas = async (postId: string): Promise<void> => {
     if (!post.canvas) {
       const defaultCanvas = {
         primaryColor: '#2b7fff',
+        secondaryColor: '#ffffff',
+        textColor: '#2b7fff',
         showPrice: false,
         priceText: '',
         showBrokerage: true,

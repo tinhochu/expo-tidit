@@ -24,10 +24,11 @@ import { Text } from '@/components/ui/text'
 import { VStack } from '@/components/ui/vstack'
 import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/context/SubscriptionContext'
+import { BUCKET_ID, storage } from '@/lib/appwriteConfig'
 import { processImage } from '@/lib/imageProcessor'
 import { deletePost, ensureDefaultCanvas, getPostById, updatePost } from '@/lib/postService'
 import { saveSkiaImageToPhotos } from '@/lib/saveSkiaImage'
-import { getUserPrefs } from '@/lib/userService'
+import { getUserPrefs, updateUserPrefs } from '@/lib/userService'
 import { ColorPicker } from '@expo/ui/swift-ui'
 import AntDesign from '@expo/vector-icons/AntDesign'
 import { Canvas, Image as SkImage, useCanvasRef, useImage } from '@shopify/react-native-skia'
@@ -44,6 +45,7 @@ import {
   ScrollView,
   useWindowDimensions,
 } from 'react-native'
+import { ID } from 'react-native-appwrite'
 import Share, { Social } from 'react-native-share'
 
 // Simple slugify function to convert title to safe filename
@@ -80,6 +82,7 @@ export default function PropertyDetails() {
   >('LOADING')
   const [isDownloading, setIsDownloading] = useState(false)
   const [isSharing, setIsSharing] = useState(false)
+  const [isCanvasLoading, setIsCanvasLoading] = useState(false)
 
   // Helper function to check if postType is in a valid state
   const isValidPostType = (
@@ -98,27 +101,30 @@ export default function PropertyDetails() {
 
   // Image picker function for custom photos
   const pickImage = async () => {
-    // Check if user has Pro access
-    if (!isSubscribed) {
-      Alert.alert(
-        'Pro Feature',
-        'Custom photo uploads are a Pro feature. Upgrade to unlock this and other Pro features!',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Upgrade Now',
-            style: 'default',
-            onPress: () => router.push(`/subscription?returnRoute=${encodeURIComponent(`/property/${id}`)}`),
-          },
-        ]
-      )
-      return
-    }
-
     try {
+      // Check photo limit for free users
+      if (!isSubscribed) {
+        try {
+          const userPrefs = await getUserPrefs(user?.$id)
+          const currentCount = userPrefs?.customPhotosCount || 0
+
+          if (currentCount >= 5) {
+            Alert.alert(
+              'Photo Limit Reached',
+              'You have reached the limit of 5 custom photos. Upgrade to Pro to upload unlimited photos!',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Upgrade', onPress: () => router.push('/subscription') },
+              ]
+            )
+            return
+          }
+        } catch (error) {
+          console.error('Error checking photo limit:', error)
+          // Continue with upload if we can't check the limit
+        }
+      }
+
       // Request permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
       if (status !== 'granted') {
@@ -147,40 +153,106 @@ export default function PropertyDetails() {
             maintainAspectRatio: true,
           })
 
-          // Use the optimized image
-          setCustomImage(processedImage.uri)
-
-          // Save optimized image to canvas in database
+          // Upload processed image to Appwrite storage
           try {
+            // Determine file extension and MIME type based on processed format
+            const fileExtension = processedImage.format === 'jpeg' ? 'jpg' : processedImage.format
+            const mimeType = fileExtension === 'jpg' ? 'image/jpeg' : `image/${fileExtension}`
+
+            const response = await storage.createFile(BUCKET_ID, ID.unique(), {
+              name: `${user?.$id}-custom-${id}-${Date.now()}.${fileExtension}`,
+              type: mimeType,
+              size: processedImage.size,
+              uri: processedImage.uri,
+            })
+
+            // Get the uploaded image URL
+            const uploadedImageUrl = `${process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT!}/storage/buckets/${BUCKET_ID}/files/${response.$id}/view?project=${process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID}`
+
+            // Use the uploaded image URL
+            setCustomImage(uploadedImageUrl)
+
+            // Save uploaded image URL to canvas in database
             const updatedCanvas = {
               ...canvas,
-              customImage: processedImage.uri,
+              customImage: uploadedImageUrl,
             }
             await updatePost(id as string, {
               canvas: JSON.stringify(updatedCanvas),
             })
             setCanvas(updatedCanvas)
-          } catch (error) {
-            console.error('Error saving custom image:', error)
+
+            // Increment custom photos counter
+            try {
+              const userPrefs = await getUserPrefs(user?.$id)
+              const currentCount = userPrefs?.customPhotosCount || 0
+              const newCount = currentCount + 1
+              await updateUserPrefs(user?.$id, {
+                ...userPrefs,
+                customPhotosCount: newCount,
+              })
+              // Update local state
+              setCustomPhotosCount(newCount)
+            } catch (counterError) {
+              console.error('Error updating photo counter:', counterError)
+              // Don't fail the image upload if counter update fails
+            }
+          } catch (uploadError) {
+            console.error('Error uploading custom image:', uploadError)
+            Alert.alert('Upload Failed', 'Failed to upload image. Please try again.')
           }
         } catch (processingError) {
           console.error('Error processing image:', processingError)
           // Fallback to original image if processing fails
           Alert.alert('Processing Failed', 'Using original image. Please try again.')
-          setCustomImage(originalImageUri)
 
-          // Save original image to canvas in database
+          // Upload original image to Appwrite storage
           try {
+            // Determine file extension and MIME type for original image
+            const fileExtension = 'jpg' // Default to jpg for original images
+            const mimeType = 'image/jpeg'
+
+            const response = await storage.createFile(BUCKET_ID, ID.unique(), {
+              name: `${user?.$id}-custom-${id}-${Date.now()}.${fileExtension}`,
+              type: mimeType,
+              size: 0,
+              uri: originalImageUri,
+            })
+
+            // Get the uploaded image URL
+            const uploadedImageUrl = `${process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT!}/storage/buckets/${BUCKET_ID}/files/${response.$id}/view?project=${process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID}`
+
+            // Use the uploaded image URL
+            setCustomImage(uploadedImageUrl)
+
+            // Save uploaded image URL to canvas in database
             const updatedCanvas = {
               ...canvas,
-              customImage: originalImageUri,
+              customImage: uploadedImageUrl,
             }
             await updatePost(id as string, {
               canvas: JSON.stringify(updatedCanvas),
             })
             setCanvas(updatedCanvas)
-          } catch (error) {
-            console.error('Error saving custom image:', error)
+
+            // Increment custom photos counter
+            try {
+              const userPrefs = await getUserPrefs(user?.$id)
+              const currentCount = userPrefs?.customPhotosCount || 0
+              const newCount = currentCount + 1
+              await updateUserPrefs(user?.$id, {
+                ...userPrefs,
+                customPhotosCount: newCount,
+              })
+              // Update local state
+              setCustomPhotosCount(newCount)
+            } catch (counterError) {
+              console.error('Error updating photo counter:', counterError)
+              // Don't fail the image upload if counter update fails
+            }
+          } catch (uploadError) {
+            console.error('Error uploading original image:', uploadError)
+            Alert.alert('Upload Failed', 'Failed to upload image. Please try again.')
           }
         }
       }
@@ -192,6 +264,9 @@ export default function PropertyDetails() {
 
   // Function to remove custom image
   const removeCustomImage = async () => {
+    // Get the current custom image URL before removing it
+    const currentCustomImageUrl = customImage
+
     setCustomImage(null)
 
     // Remove custom image from canvas in database
@@ -204,6 +279,35 @@ export default function PropertyDetails() {
         canvas: JSON.stringify(updatedCanvas),
       })
       setCanvas(updatedCanvas)
+
+      // Delete the file from Appwrite storage if it exists
+      if (currentCustomImageUrl && currentCustomImageUrl.includes('/storage/buckets/')) {
+        try {
+          // Extract file ID from the URL
+          const urlParts = currentCustomImageUrl.split('/')
+          const fileId = urlParts[urlParts.length - 2] // File ID is before the 'view' part
+
+          await storage.deleteFile(BUCKET_ID, fileId)
+          console.log('Custom image deleted from storage:', fileId)
+        } catch (deleteError) {
+          console.error('Error deleting custom image from storage:', deleteError)
+          // Don't fail the removal if storage deletion fails
+        }
+      }
+
+      // // Decrement custom photos counter
+      // try {
+      //   const userPrefs = await getUserPrefs(user?.$id)
+      //   const currentCount = userPrefs?.customPhotosCount || 0
+      //   const newCount = Math.max(0, currentCount - 1) // Ensure counter doesn't go below 0
+      //   await updateUserPrefs(user?.$id, {
+      //     ...userPrefs,
+      //     customPhotosCount: newCount,
+      //   })
+      // } catch (counterError) {
+      //   console.error('Error updating photo counter:', counterError)
+      //   // Don't fail the image removal if counter update fails
+      // }
     } catch (error) {
       console.error('Error removing custom image:', error)
     }
@@ -252,6 +356,8 @@ export default function PropertyDetails() {
   ]
   const [canvas, setCanvas] = useState<{
     primaryColor?: string
+    secondaryColor?: string
+    textColor?: string
     template?: string
     showBrokerage?: boolean
     showRealtor?: boolean
@@ -268,6 +374,7 @@ export default function PropertyDetails() {
   const [showPrice, setShowPrice] = useState<boolean>(false) // Default to false (disabled)
   const [priceText, setPriceText] = useState<string>('') // Default to empty string
   const [customImage, setCustomImage] = useState<string | null>(null)
+  const [customPhotosCount, setCustomPhotosCount] = useState<number>(0)
   const [showSignature, setShowSignature] = useState<boolean>(true) // Default to true (logo visible, switch ON)
   const [customText, setCustomText] = useState<
     { mainHeading?: string; subHeading?: string; description?: string } | undefined
@@ -283,23 +390,19 @@ export default function PropertyDetails() {
     }
   }, [status])
 
-  // Load custom data after premium status is determined
+  // Load custom data after canvas data is available
   useEffect(() => {
-    if (isSubscribed && parsedCanvasData) {
-      // Load custom image if it exists
+    if (parsedCanvasData) {
+      // Load custom image if it exists (available for all users)
       if (parsedCanvasData.customImage) {
         setCustomImage(parsedCanvasData.customImage)
       }
-      // Load custom text if it exists
-      if (parsedCanvasData.customText) {
+      // Load custom text if it exists (Pro feature)
+      if (parsedCanvasData.customText && isSubscribed) {
         setCustomText(parsedCanvasData.customText)
       }
-    } else if (!isSubscribed) {
-      // Clear custom data for non-premium users
-      setCustomImage(null)
-      setCustomText(undefined)
     }
-  }, [isSubscribed, parsedCanvasData])
+  }, [parsedCanvasData, isSubscribed])
 
   // Removed the useEffect that was causing circular updates
 
@@ -338,6 +441,8 @@ export default function PropertyDetails() {
         // We'll set the primary color after fetching user preferences
         setCanvas({
           primaryColor: '#000000',
+          secondaryColor: '#ffffff',
+          textColor: '#000000', // Default same as primary color
           showBrokerage: true,
           showRealtor: true,
           showPrice: false,
@@ -398,6 +503,9 @@ export default function PropertyDetails() {
     try {
       const userPrefs = await getUserPrefs(user.$id)
       setUserPrefs(userPrefs)
+
+      // Load custom photos count
+      setCustomPhotosCount(userPrefs?.customPhotosCount || 0)
 
       // If we have user preferences with global primary color and no primary color is set in canvas, use the global primary color
       if (userPrefs?.globalPrimaryColor && canvas && !canvas.primaryColor) {
@@ -508,6 +616,8 @@ export default function PropertyDetails() {
   }
 
   const handleCanvasChange = async (key: string, value: string | boolean) => {
+    setIsCanvasLoading(true)
+
     const updatedCanvas = {
       ...canvas,
       [key]: value,
@@ -520,6 +630,8 @@ export default function PropertyDetails() {
       setCanvas(updatedCanvas)
     } catch (error) {
       console.error('Error updating canvas:', error)
+    } finally {
+      setIsCanvasLoading(false)
     }
   }
 
@@ -532,6 +644,7 @@ export default function PropertyDetails() {
 
   // Handle font change with subscription check
   const handleFontChange = async (font: string) => {
+    setIsCanvasLoading(true)
     setSelectedFont(font)
 
     // Update canvas with new font
@@ -545,6 +658,8 @@ export default function PropertyDetails() {
         })
       } catch (error) {
         console.error('Error updating canvas with font:', error)
+      } finally {
+        setIsCanvasLoading(false)
       }
     }
   }
@@ -573,7 +688,7 @@ export default function PropertyDetails() {
 
     // If user has Pro or is showing logo (switch ON), proceed normally
     setShowSignature(value) // ON = show logo, OFF = hide logo
-    handleCanvasChange('showSignature', value)
+    await handleCanvasChange('showSignature', value)
   }
 
   // Enhanced share functionality with platform-specific options
@@ -708,9 +823,6 @@ export default function PropertyDetails() {
             <Heading size="sm">{data?.title ? data.title.slice(0, 25) + '...' : 'Fetching...'}</Heading>
             {img ? (
               <HStack className="gap-6">
-                <Pressable onPress={handleShare}>
-                  <AntDesign size={24} name="sharealt" color="blue" />
-                </Pressable>
                 <Pressable onPress={handleDelete}>
                   <AntDesign size={24} name="delete" color="red" />
                 </Pressable>
@@ -784,7 +896,7 @@ export default function PropertyDetails() {
                       onPress={handleShare}
                       className="bg-blue-500"
                       size="lg"
-                      disabled={isSharing || isDownloading || isLoadingUserPrefs}
+                      disabled={isSharing || isDownloading || isLoadingUserPrefs || isCanvasLoading}
                     >
                       <HStack space="sm" className="items-center">
                         <ButtonText>{isSharing ? 'Sharing...' : 'Share'}</ButtonText>
@@ -793,6 +905,7 @@ export default function PropertyDetails() {
                   </GridItem>
                 </Grid>
 
+                {/* Post Type and Template Select */}
                 <Grid _extra={{ className: 'grid-cols-2' }}>
                   <GridItem _extra={{ className: 'col-span-1' }}>
                     <FormControl className="pr-2">
@@ -802,6 +915,8 @@ export default function PropertyDetails() {
                       <Select
                         className="bg-white"
                         onValueChange={async (value) => {
+                          setIsCanvasLoading(true)
+
                           const newPostType = value as
                             | 'JUST_SOLD'
                             | 'JUST_LISTED'
@@ -817,16 +932,16 @@ export default function PropertyDetails() {
                           // Update templateStyle to match the first available template
                           const availableTemplates = getTemplates()
 
-                          if (availableTemplates.length > 0) {
-                            // Prefer 'classic' template if available, otherwise use first available
-                            const defaultTemplate =
-                              availableTemplates.find((t) => t.value === 'classic') || availableTemplates[0]
-                            const newTemplateStyle = defaultTemplate.value
+                          try {
+                            if (availableTemplates.length > 0) {
+                              // Prefer 'classic' template if available, otherwise use first available
+                              const defaultTemplate =
+                                availableTemplates.find((t) => t.value === 'classic') || availableTemplates[0]
+                              const newTemplateStyle = defaultTemplate.value
 
-                            setTemplateStyle(newTemplateStyle)
+                              setTemplateStyle(newTemplateStyle)
 
-                            // Update the post type and template in the database
-                            try {
+                              // Update the post type and template in the database
                               await updatePost(id as string, {
                                 postType: newPostType,
                                 canvas: JSON.stringify({
@@ -834,18 +949,16 @@ export default function PropertyDetails() {
                                   template: newTemplateStyle,
                                 }),
                               })
-                            } catch (error) {
-                              console.error('Error updating post type and template:', error)
-                            }
-                          } else {
-                            // Update just the post type in the database
-                            try {
+                            } else {
+                              // Update just the post type in the database
                               await updatePost(id as string, {
                                 postType: newPostType,
                               })
-                            } catch (error) {
-                              console.error('Error updating post type:', error)
                             }
+                          } catch (error) {
+                            console.error('Error updating post type and template:', error)
+                          } finally {
+                            setIsCanvasLoading(false)
                           }
                         }}
                         defaultValue={postType}
@@ -880,9 +993,9 @@ export default function PropertyDetails() {
                         <Select
                           key={`template-select-${postType}`}
                           className="bg-white"
-                          onValueChange={(value) => {
+                          onValueChange={async (value) => {
                             setTemplateStyle(value)
-                            handleCanvasChange('template', value)
+                            await handleCanvasChange('template', value)
                           }}
                           defaultValue={templateStyle}
                         >
@@ -892,7 +1005,7 @@ export default function PropertyDetails() {
                           </SelectTrigger>
                           <SelectPortal>
                             <SelectBackdrop />
-                            <SelectContent className="pb-10">
+                            <SelectContent className="pb-28">
                               <SelectDragIndicatorWrapper>
                                 <SelectDragIndicator />
                               </SelectDragIndicatorWrapper>
@@ -906,6 +1019,43 @@ export default function PropertyDetails() {
                     )}
                   </GridItem>
                 </Grid>
+
+                <VStack space="md">
+                  <Heading size="sm" className="mb-0 leading-none">
+                    Post Type Options
+                  </Heading>
+                  <Grid _extra={{ className: 'grid-cols-3' }}>
+                    <GridItem _extra={{ className: 'col-span-1' }}>
+                      <HStack space="md" className="items-center">
+                        <Switch
+                          size="md"
+                          isDisabled={false}
+                          trackColor={{ false: '#3b82f6', true: '#3b82f6' }}
+                          ios_backgroundColor="#333333"
+                          thumbColor="#fafafa"
+                          onValueChange={async (value) => {
+                            setShowPrice(value)
+                            await handleCanvasChange('showPrice', value)
+                          }}
+                          value={showPrice}
+                        />
+                        <Text>Price</Text>
+                      </HStack>
+                    </GridItem>
+                    <GridItem _extra={{ className: 'col-span-2' }}>
+                      <Input className="bg-white" isDisabled={!showPrice}>
+                        <InputField
+                          placeholder="Enter Your Price"
+                          value={priceText}
+                          onChangeText={async (text) => {
+                            setPriceText(text)
+                            await handleCanvasChange('priceText', text)
+                          }}
+                        />
+                      </Input>
+                    </GridItem>
+                  </Grid>
+                </VStack>
 
                 {/* Font Manager - Pro Feature */}
                 <Grid _extra={{ className: 'grid-cols-1' }}>
@@ -921,107 +1071,204 @@ export default function PropertyDetails() {
                   </GridItem>
                 </Grid>
 
-                <HStack className="flex items-center justify-between">
-                  <Heading size="sm">Select a Primary Color</Heading>
-                  <HStack space="xs" className="items-end gap-4">
-                    <ColorPicker
-                      key={canvas.primaryColor || 'default'} // Force re-render when color changes
-                      selection={canvas.primaryColor || '#3b82f6'}
-                      onValueChanged={(color) => handleCanvasChange('primaryColor', color)}
-                      supportsOpacity={false}
-                    />
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      onPress={() => {
-                        if (userPrefs?.globalPrimaryColor) {
-                          // Update local state immediately for better UX
-                          const updatedCanvas = { ...canvas, primaryColor: userPrefs.globalPrimaryColor }
-                          setCanvas(updatedCanvas)
-                          // Then save to database
-                          handleCanvasChange('primaryColor', userPrefs.globalPrimaryColor)
-                        } else {
-                          console.log('No global primary color found in userPrefs:', userPrefs)
-                        }
-                      }}
-                      className="mt-2"
-                      action="negative"
-                      isDisabled={!userPrefs?.globalPrimaryColor}
-                    >
-                      <ButtonText className="text-red-500">Reset</ButtonText>
-                    </Button>
-                  </HStack>
-                </HStack>
+                {/* Primary, Secondary, and Text Colors */}
+                <VStack space="md">
+                  <Grid _extra={{ className: 'grid-cols-3' }}>
+                    <GridItem _extra={{ className: 'col-span-2 items-center justify-between' }}>
+                      <VStack space="sm">
+                        <Heading size="sm" className="mb-0 leading-none">
+                          Select a Primary Color
+                        </Heading>
+                        <Text className="mt-0 leading-none text-gray-600" size="xs">
+                          This color will be used as the default primary color for all new posts
+                        </Text>
+                      </VStack>
+                    </GridItem>
+                    <GridItem _extra={{ className: 'col-span-1 self-end' }}>
+                      <HStack space="xs" className="items-end justify-end gap-4">
+                        <ColorPicker
+                          key={canvas.primaryColor || 'default'} // Force re-render when color changes
+                          selection={canvas.primaryColor || '#3b82f6'}
+                          onValueChanged={async (color) => await handleCanvasChange('primaryColor', color)}
+                          supportsOpacity={false}
+                        />
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          onPress={async () => {
+                            if (userPrefs?.globalPrimaryColor) {
+                              // Update local state immediately for better UX
+                              const updatedCanvas = { ...canvas, primaryColor: userPrefs.globalPrimaryColor }
+                              setCanvas(updatedCanvas)
+                              // Then save to database
+                              await handleCanvasChange('primaryColor', userPrefs.globalPrimaryColor)
+                            } else {
+                              console.log('No global primary color found in userPrefs:', userPrefs)
+                            }
+                          }}
+                          className="mt-2"
+                          action="negative"
+                        >
+                          <ButtonText className="text-red-500">Reset</ButtonText>
+                        </Button>
+                      </HStack>
+                    </GridItem>
+                  </Grid>
 
-                <Grid _extra={{ className: 'grid-cols-2 mb-2' }}>
+                  <Grid _extra={{ className: 'grid-cols-3' }}>
+                    <GridItem _extra={{ className: 'col-span-2 items-center justify-between' }}>
+                      <VStack space="sm">
+                        <Heading size="sm" className="mb-0 leading-none">
+                          Select a Secondary Color
+                        </Heading>
+                        <Text className="mt-0 leading-none text-gray-600" size="xs">
+                          This color will be used as the default secondary color for all new posts
+                        </Text>
+                      </VStack>
+                    </GridItem>
+                    <GridItem _extra={{ className: 'col-span-1 self-end' }}>
+                      <HStack space="xs" className="items-end justify-end gap-4">
+                        <ColorPicker
+                          key={canvas.secondaryColor || 'default-secondary'} // Force re-render when color changes
+                          selection={canvas.secondaryColor || '#ffffff'}
+                          onValueChanged={async (color) => await handleCanvasChange('secondaryColor', color)}
+                          supportsOpacity={false}
+                        />
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          onPress={async () => {
+                            if (userPrefs?.globalSecondaryColor) {
+                              // Update local state immediately for better UX
+                              const updatedCanvas = { ...canvas, secondaryColor: userPrefs.globalSecondaryColor }
+                              setCanvas(updatedCanvas)
+                              // Then save to database
+                              await handleCanvasChange('secondaryColor', userPrefs.globalSecondaryColor)
+                            } else {
+                              // Reset to default white color
+                              const updatedCanvas = { ...canvas, secondaryColor: '#ffffff' }
+                              setCanvas(updatedCanvas)
+                              await handleCanvasChange('secondaryColor', '#ffffff')
+                            }
+                          }}
+                          className="mt-2"
+                          action="negative"
+                        >
+                          <ButtonText className="text-red-500">Reset</ButtonText>
+                        </Button>
+                      </HStack>
+                    </GridItem>
+                  </Grid>
+
+                  <Grid _extra={{ className: 'grid-cols-3' }}>
+                    <GridItem _extra={{ className: 'col-span-2 items-center justify-between' }}>
+                      <VStack space="sm">
+                        <Heading size="sm" className="mb-0 leading-none">
+                          Select a Text Color
+                        </Heading>
+                        <Text className="mt-0 leading-none text-gray-600" size="xs">
+                          This color will be used as the default text color for all new posts
+                        </Text>
+                      </VStack>
+                    </GridItem>
+                    <GridItem _extra={{ className: 'col-span-1 self-end' }}>
+                      <HStack space="xs" className="items-end justify-end gap-4">
+                        <ColorPicker
+                          key={canvas.textColor || 'default-text'} // Force re-render when color changes
+                          selection={canvas.textColor || canvas.primaryColor || '#000000'}
+                          onValueChanged={async (color) => await handleCanvasChange('textColor', color)}
+                          supportsOpacity={false}
+                        />
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          onPress={async () => {
+                            if (userPrefs?.globalTextColor) {
+                              // Update local state immediately for better UX
+                              const updatedCanvas = { ...canvas, textColor: userPrefs.globalTextColor }
+                              setCanvas(updatedCanvas)
+                              // Then save to database
+                              await handleCanvasChange('textColor', userPrefs.globalTextColor)
+                            } else {
+                              // Reset to same as primary color
+                              const resetColor = canvas.primaryColor || '#000000'
+                              const updatedCanvas = { ...canvas, textColor: resetColor }
+                              setCanvas(updatedCanvas)
+                              await handleCanvasChange('textColor', resetColor)
+                            }
+                          }}
+                          className="mt-2"
+                          action="negative"
+                        >
+                          <ButtonText className="text-red-500">Reset</ButtonText>
+                        </Button>
+                      </HStack>
+                    </GridItem>
+                  </Grid>
+                </VStack>
+
+                {/* Show Brokerage, Show Realtor, Show Price */}
+                <Grid _extra={{ className: 'grid-cols-2 mb-2' }} gap={4}>
                   <GridItem _extra={{ className: 'col-span-1' }}>
                     <HStack space="md" className="items-center">
                       <Switch
                         size="md"
-                        isDisabled={false} // Enabled for all users
                         trackColor={{ false: '#333333', true: '#3b82f6' }}
                         ios_backgroundColor="#333333"
                         thumbColor="#fafafa"
-                        onValueChange={(value) => {
+                        onValueChange={async (value) => {
+                          // Check if brokerage logo exists before allowing toggle
+                          if (value && (!userPrefs?.brokerageLogo || userPrefs.brokerageLogo.trim() === '')) {
+                            Alert.alert(
+                              'Brokerage Logo Required',
+                              'Please upload a brokerage logo in your profile to enable this feature.',
+                              [
+                                { text: 'Cancel', style: 'cancel' },
+                                { text: 'Go to Profile', onPress: () => router.push('/(app)/(tabs)/profile') },
+                              ]
+                            )
+                            return
+                          }
                           setShowBrokerage(value)
-                          handleCanvasChange('showBrokerage', value)
+                          await handleCanvasChange('showBrokerage', value)
                         }}
-                        value={showBrokerage}
+                        value={
+                          !userPrefs?.brokerageLogo || userPrefs.brokerageLogo.trim() === '' ? false : showBrokerage
+                        }
                       />
                       <Text>Show Brokerage</Text>
                     </HStack>
                   </GridItem>
+
                   <GridItem _extra={{ className: 'col-span-1' }}>
                     <HStack space="md" className="items-center">
                       <Switch
                         size="md"
-                        isDisabled={false}
                         trackColor={{ false: '#3b82f6', true: '#3b82f6' }}
                         ios_backgroundColor="#333333"
                         thumbColor="#fafafa"
-                        onValueChange={(value) => {
+                        onValueChange={async (value) => {
+                          // Check if realtor picture exists before allowing toggle
+                          if (value && (!userPrefs?.realtorPicture || userPrefs.realtorPicture.trim() === '')) {
+                            Alert.alert(
+                              'Realtor Picture Required',
+                              'Please upload a realtor picture in your profile to enable this feature.',
+                              [
+                                { text: 'Cancel', style: 'cancel' },
+                                { text: 'Go to Profile', onPress: () => router.push('/(app)/(tabs)/profile') },
+                              ]
+                            )
+                            return
+                          }
                           setShowRealtor(value)
-                          handleCanvasChange('showRealtor', value)
+                          await handleCanvasChange('showRealtor', value)
                         }}
-                        value={showRealtor}
+                        value={
+                          !userPrefs?.realtorPicture || userPrefs.realtorPicture.trim() === '' ? false : showRealtor
+                        }
                       />
                       <Text>Show Realtor</Text>
                     </HStack>
-                  </GridItem>
-                </Grid>
-
-                <Grid _extra={{ className: 'grid-cols-2' }}>
-                  <GridItem _extra={{ className: 'col-span-1' }}>
-                    <HStack space="md" className="items-center">
-                      <HStack space="md" className="items-center">
-                        <Switch
-                          size="md"
-                          isDisabled={false}
-                          trackColor={{ false: '#3b82f6', true: '#3b82f6' }}
-                          ios_backgroundColor="#333333"
-                          thumbColor="#fafafa"
-                          onValueChange={(value) => {
-                            setShowPrice(value)
-                            handleCanvasChange('showPrice', value)
-                          }}
-                          value={showPrice}
-                        />
-                        <Text>Show Price</Text>
-                      </HStack>
-                    </HStack>
-                  </GridItem>
-
-                  <GridItem _extra={{ className: 'col-span-1' }}>
-                    <Input className="bg-white" isDisabled={!showPrice}>
-                      <InputField
-                        placeholder="Enter Your Price"
-                        value={priceText}
-                        onChangeText={(text) => {
-                          setPriceText(text)
-                          handleCanvasChange('priceText', text)
-                        }}
-                      />
-                    </Input>
                   </GridItem>
                 </Grid>
 
@@ -1046,49 +1293,43 @@ export default function PropertyDetails() {
                 </Grid>
 
                 {/* Custom Image Upload Section */}
-                {isSubscribed ? (
-                  <VStack className="pt-5">
-                    <Heading size="sm">
-                      Custom Property Photo <ProBadge />
-                    </Heading>
-                    <Text className="text-gray-600">
-                      {customImage ? 'Custom photo selected' : 'Use your own photo instead of the property photo'}
-                    </Text>
+                <VStack className="pt-5">
+                  <Heading size="sm">Custom Property Photo</Heading>
+                  <Text className="text-gray-600">
+                    {customImage ? 'Custom photo selected' : 'Use your own photo instead of the property photo'}
+                  </Text>
 
-                    <Box className="mt-3 rounded-md border border-2 border-dashed border-gray-600 p-5 py-6">
-                      {customImage ? (
-                        <Button size="lg" onPress={removeCustomImage} className="border-red-500">
-                          <ButtonText className="text-red-500">Remove</ButtonText>
+                  {/* Photo Limit Indicator */}
+                  {!isSubscribed && (
+                    <Box className="mt-2 rounded-lg bg-blue-50 p-3">
+                      <HStack space="sm" className="items-center justify-between">
+                        <HStack>
+                          <AntDesign name="info" size={16} color="#3b82f6" />
+                          <Text className="text-sm text-blue-700">
+                            {customPhotosCount >= 5
+                              ? 'Photo limit reached (5/5). Upgrade to Pro for unlimited photos!'
+                              : `${customPhotosCount}/5 custom photos used. ${5 - customPhotosCount} remaining.`}
+                          </Text>
+                        </HStack>
+                        <Button size="xs" onPress={() => router.push('/subscription')} className="bg-blue-500">
+                          <ButtonText>Upgrade</ButtonText>
                         </Button>
-                      ) : (
-                        <Button size="lg" onPress={pickImage} className="bg-blue-500">
-                          <ButtonText>Upload Property Photo</ButtonText>
-                        </Button>
-                      )}
+                      </HStack>
                     </Box>
-                  </VStack>
-                ) : (
-                  <VStack className="pt-5">
-                    <Heading size="sm">
-                      Custom Property Photo <ProBadge />
-                    </Heading>
-                    <Text className="text-gray-600">Use your own photo instead of the property photo</Text>
-                    <Box className="mt-3 rounded-lg border border-gray-300 bg-gray-50 p-4">
-                      <Text className="text-center text-gray-600">
-                        Upgrade to Pro to unlock custom photo uploads for your posts!
-                      </Text>
-                      <Button
-                        size="md"
-                        className="mt-3 bg-blue-500"
-                        onPress={() =>
-                          router.push(`/subscription?returnRoute=${encodeURIComponent(`/property/${id}`)}`)
-                        }
-                      >
-                        <ButtonText>Upgrade to Pro</ButtonText>
+                  )}
+
+                  <Box className="mt-3 rounded-md border border-2 border-dashed border-gray-600 p-5 py-6">
+                    {customImage ? (
+                      <Button size="lg" onPress={removeCustomImage} className="border-red-500">
+                        <ButtonText className="text-red-500">Remove</ButtonText>
                       </Button>
-                    </Box>
-                  </VStack>
-                )}
+                    ) : (
+                      <Button size="lg" onPress={pickImage} className="bg-blue-500">
+                        <ButtonText>Upload Property Photo</ButtonText>
+                      </Button>
+                    )}
+                  </Box>
+                </VStack>
 
                 {/* Custom Text Customization */}
                 {isSubscribed ? (
@@ -1141,6 +1382,35 @@ export default function PropertyDetails() {
                     <Heading size="sm">
                       Personalize Your Post <ProBadge />
                     </Heading>
+
+                    {/* Feature Preview Cards */}
+                    <VStack space="sm">
+                      <Box className="rounded-lg border border-gray-200 bg-white p-4">
+                        <Text className="font-semibold text-gray-800">Main Heading</Text>
+                        <Text className="mt-1 text-sm text-gray-600">
+                          Customize the main headline instead of using default post types like "Just Sold" or "Just
+                          Listed"
+                        </Text>
+                        <Box className="mt-2 rounded bg-gray-100 p-2">
+                          <Text className="text-sm italic text-gray-500">
+                            Example: "🏡 SOLD! Congratulations to our amazing clients!"
+                          </Text>
+                        </Box>
+                      </Box>
+
+                      <Box className="rounded-lg border border-gray-200 bg-white p-4">
+                        <Text className="font-semibold text-gray-800">Sub Heading</Text>
+                        <Text className="mt-1 text-sm text-gray-600">
+                          Replace the price text with custom messaging or call-to-action
+                        </Text>
+                        <Box className="mt-2 rounded bg-gray-100 p-2">
+                          <Text className="text-sm italic text-gray-500">
+                            Example: "Call for details" or "Price upon request"
+                          </Text>
+                        </Box>
+                      </Box>
+                    </VStack>
+
                     <Box className="rounded-lg border border-gray-300 bg-gray-50 p-4">
                       <Text className="text-center text-gray-600">
                         Upgrade to Pro to unlock custom text personalization for your posts!

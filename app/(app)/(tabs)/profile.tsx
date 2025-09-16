@@ -9,6 +9,7 @@ import { Text } from '@/components/ui/text'
 import { Toast, ToastTitle, useToast } from '@/components/ui/toast'
 import { VStack } from '@/components/ui/vstack'
 import { useAuth } from '@/context/AuthContext'
+import { useSubscription } from '@/context/SubscriptionContext'
 import { BUCKET_ID, storage } from '@/lib/appwriteConfig'
 import {
   cleanupTempImages,
@@ -21,7 +22,8 @@ import { getUserPrefs, updateUserPrefs } from '@/lib/userService'
 import { ColorPicker } from '@expo/ui/swift-ui'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
-import { useEffect, useState } from 'react'
+import { router, useFocusEffect } from 'expo-router'
+import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView } from 'react-native'
 import { ID } from 'react-native-appwrite'
 import RevenueCatUI from 'react-native-purchases-ui'
@@ -29,6 +31,7 @@ import RevenueCatUI from 'react-native-purchases-ui'
 export default function Profile() {
   const toast = useToast()
   const { signout, user, deleteAccount, setDeletingAccount } = useAuth()
+  const { isSubscribed } = useSubscription()
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -37,6 +40,9 @@ export default function Profile() {
     brokerageLogo: null,
     realtorPicture: null,
     globalPrimaryColor: '#3b82f6', // Default blue color
+    globalSecondaryColor: '#6b7280', // Default gray color
+    globalTextColor: '#1f2937', // Default dark gray color
+    customPhotosCount: 0,
   })
   const [isLoading, setIsLoading] = useState(false)
   const [isInitialLoading, setIsInitialLoading] = useState(true)
@@ -63,7 +69,10 @@ export default function Profile() {
             phone: userPrefs.phone || '',
             brokerageLogo: userPrefs.brokerageLogo || null,
             realtorPicture: userPrefs.realtorPicture || null,
-            globalPrimaryColor: userPrefs.globalPrimaryColor || '#3b82f6', // Default blue color
+            globalPrimaryColor: userPrefs.globalPrimaryColor || '#3b82f6',
+            globalSecondaryColor: userPrefs.globalSecondaryColor || '#ffffff',
+            globalTextColor: userPrefs.globalTextColor || '#3b82f6',
+            customPhotosCount: userPrefs.customPhotosCount || 0,
           }))
         }
       } catch (error) {
@@ -88,6 +97,15 @@ export default function Profile() {
 
     fetchUserPrefs()
   }, [user?.$id])
+
+  // Refresh data every time the profile tab is focused
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.$id) {
+        handleRefresh()
+      }
+    }, [user?.$id])
+  )
 
   // Cleanup temporary images when component unmounts
   useEffect(() => {
@@ -132,6 +150,9 @@ export default function Profile() {
                   phone: formData.phone,
                   brokerageLogo: type === 'brokerageLogo' ? null : formData.brokerageLogo,
                   realtorPicture: type === 'realtorPicture' ? null : formData.realtorPicture,
+                  globalPrimaryColor: formData.globalPrimaryColor,
+                  globalSecondaryColor: formData.globalSecondaryColor,
+                  globalTextColor: formData.globalTextColor,
                 })
 
                 console.log(`Preferences saved successfully after clearing ${type}`)
@@ -192,8 +213,6 @@ export default function Profile() {
       // Launch image picker
       let result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1], // Square aspect ratio for profile images
         quality: 1, // Use full quality for processing
       })
 
@@ -291,6 +310,9 @@ export default function Profile() {
             phone: formData.phone,
             brokerageLogo: type === 'brokerageLogo' ? uploadedImageUrl : formData.brokerageLogo,
             realtorPicture: type === 'realtorPicture' ? uploadedImageUrl : formData.realtorPicture,
+            globalPrimaryColor: formData.globalPrimaryColor,
+            globalSecondaryColor: formData.globalSecondaryColor,
+            globalTextColor: formData.globalTextColor,
           })
 
           console.log(`Preferences saved successfully for ${type}`)
@@ -338,10 +360,6 @@ export default function Profile() {
             },
           })
         }
-
-        console.log(
-          `Image compression stats: Original: ${formatFileSize(compressionStats.originalSize)}, Processed: ${formatFileSize(compressionStats.processedSize)}, Reduction: ${compressionStats.compressionRatio.toFixed(1)}%`
-        )
       } catch (uploadError) {
         console.error('Upload error details:', uploadError)
         console.error('Upload error message:', uploadError instanceof Error ? uploadError.message : 'Unknown error')
@@ -378,6 +396,9 @@ export default function Profile() {
           brokerageLogo: userPrefs.brokerageLogo || null,
           realtorPicture: userPrefs.realtorPicture || null,
           globalPrimaryColor: userPrefs.globalPrimaryColor || '#3b82f6', // Default blue color
+          globalSecondaryColor: userPrefs.globalSecondaryColor || '#6b7280', // Default gray color
+          globalTextColor: userPrefs.globalTextColor || '#1f2937', // Default dark gray color
+          customPhotosCount: userPrefs.customPhotosCount || 0,
         }))
       }
     } catch (error) {
@@ -396,6 +417,9 @@ export default function Profile() {
         brokerageLogo: formData?.brokerageLogo ?? null,
         realtorPicture: formData?.realtorPicture ?? null,
         globalPrimaryColor: formData?.globalPrimaryColor ?? '#3b82f6', // Default blue color
+        globalSecondaryColor: formData?.globalSecondaryColor ?? '#6b7280', // Default gray color
+        globalTextColor: formData?.globalTextColor ?? '#1f2937', // Default dark gray color
+        customPhotosCount: formData?.customPhotosCount ?? 0,
       })
 
       // Refresh the form data to show the updated values
@@ -481,6 +505,121 @@ export default function Profile() {
         <VStack className="min-h-screen" space="xl">
           <VStack space="lg" className="p-6">
             <VStack space="lg">
+              <HStack space="lg" className="justify-center">
+                {/* Brokerage Logo */}
+                <FormControl>
+                  <FormControlLabel>
+                    <FormControlLabelText className="font-medium text-gray-700">Brokerage Logo</FormControlLabelText>
+                  </FormControlLabel>
+                  <VStack space="sm">
+                    <Pressable onPress={() => pickImage('brokerageLogo')} disabled={uploadingImage === 'brokerageLogo'}>
+                      <VStack className="aspect-square h-40 w-40 items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-400">
+                        {formData.brokerageLogo ? (
+                          <VStack space="sm" className="min-h-40 w-40 items-center justify-center px-5">
+                            <Image
+                              source={{ uri: formData.brokerageLogo }}
+                              className="min-h-40 w-40 rounded-lg p-4"
+                              resizeMode="contain"
+                            />
+                            {uploadingImage === 'brokerageLogo' && (
+                              <VStack space="xs" className="items-center">
+                                <ActivityIndicator size="small" color="#3b82f6" />
+                                <Text className="text-center text-sm text-blue-500">Uploading...</Text>
+                              </VStack>
+                            )}
+                          </VStack>
+                        ) : (
+                          <VStack space="sm" className="min-h-40 w-40 items-center justify-center px-5">
+                            {uploadingImage === 'brokerageLogo' ? (
+                              <VStack space="xs" className="items-center">
+                                <ActivityIndicator size="small" color="#3b82f6" />
+                                <Text className="text-center text-sm text-blue-500">Selecting...</Text>
+                              </VStack>
+                            ) : (
+                              <>
+                                <Icon size="lg" className="text-gray-400" />
+                                <Text className="text-center text-gray-500">Tap to select brokerage logo</Text>
+                              </>
+                            )}
+                          </VStack>
+                        )}
+                      </VStack>
+                    </Pressable>
+
+                    {/* Clear Button - Only show when image exists */}
+                    {formData.brokerageLogo && (
+                      <Button
+                        size="xs"
+                        action="negative"
+                        onPress={() => clearImage('brokerageLogo')}
+                        disabled={uploadingImage === 'brokerageLogo'}
+                        className="absolute bottom-0 left-0 right-0"
+                      >
+                        <ButtonText>Remove Logo</ButtonText>
+                      </Button>
+                    )}
+                  </VStack>
+                </FormControl>
+
+                {/* Realtor Picture */}
+                <FormControl>
+                  <FormControlLabel>
+                    <FormControlLabelText className="font-medium text-gray-700">Realtor Picture</FormControlLabelText>
+                  </FormControlLabel>
+                  <VStack space="sm">
+                    <Pressable
+                      onPress={() => pickImage('realtorPicture')}
+                      disabled={uploadingImage === 'realtorPicture'}
+                    >
+                      <VStack className="aspect-square items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-400">
+                        {formData.realtorPicture ? (
+                          <VStack space="sm" className="min-h-40 w-40 items-center justify-center px-5">
+                            <Image
+                              source={{ uri: formData.realtorPicture }}
+                              className="min-h-40 w-40 rounded-lg p-4"
+                              resizeMode="contain"
+                            />
+                            {uploadingImage === 'realtorPicture' && (
+                              <VStack space="xs" className="items-center">
+                                <ActivityIndicator size="small" color="#3b82f6" />
+                                <Text className="text-center text-sm text-blue-500">Uploading...</Text>
+                              </VStack>
+                            )}
+                          </VStack>
+                        ) : (
+                          <VStack space="sm" className="min-h-40 w-40 items-center justify-center px-5">
+                            {uploadingImage === 'realtorPicture' ? (
+                              <VStack space="xs" className="items-center">
+                                <ActivityIndicator size="small" color="#3b82f6" />
+                                <Text className="text-center text-sm text-blue-500">Selecting...</Text>
+                              </VStack>
+                            ) : (
+                              <>
+                                <Icon size="lg" className="text-gray-400" />
+                                <Text className="text-center text-gray-500">Tap to select profile picture</Text>
+                              </>
+                            )}
+                          </VStack>
+                        )}
+                      </VStack>
+                    </Pressable>
+
+                    {/* Clear Button - Only show when image exists */}
+                    {formData.realtorPicture && (
+                      <Button
+                        size="xs"
+                        action="negative"
+                        onPress={() => clearImage('realtorPicture')}
+                        disabled={uploadingImage === 'realtorPicture'}
+                        className="absolute bottom-0 left-0 right-0"
+                      >
+                        <ButtonText>Remove Picture</ButtonText>
+                      </Button>
+                    )}
+                  </VStack>
+                </FormControl>
+              </HStack>
+
               {/* First Name */}
               <FormControl>
                 <FormControlLabel>
@@ -539,6 +678,52 @@ export default function Profile() {
                 </Input>
               </FormControl>
 
+              {/* Custom Photos Counter */}
+              <FormControl>
+                <FormControlLabel>
+                  <FormControlLabelText className="font-medium text-gray-700">
+                    Custom Photos Uploaded
+                  </FormControlLabelText>
+                </FormControlLabel>
+                <VStack space="sm" className="rounded-lg bg-blue-50 p-4">
+                  <HStack space="sm" className="items-center">
+                    <Ionicons name="camera" size={20} color="#3b82f6" />
+                    <Text className="text-lg font-semibold text-blue-700">
+                      {formData.customPhotosCount} photos
+                      {!isSubscribed && ` (${formData.customPhotosCount}/5)`}
+                    </Text>
+                  </HStack>
+                  <Text className="text-sm text-blue-600">
+                    {!isSubscribed && formData.customPhotosCount >= 5
+                      ? 'Photo limit reached! Upgrade to Pro for unlimited photos.'
+                      : !isSubscribed && formData.customPhotosCount > 0
+                        ? `Total custom photos uploaded for your properties. ${5 - formData.customPhotosCount} photos remaining.`
+                        : !isSubscribed
+                          ? 'Total custom photos uploaded for your properties. 5 photos available.'
+                          : 'Total custom photos uploaded for your properties'}
+                  </Text>
+
+                  {/* Upgrade Buttons for Free Users */}
+                  {!isSubscribed && (
+                    <Button size="sm" className="mt-2 bg-blue-600" onPress={() => router.push('/subscription')}>
+                      <ButtonText className="text-white">Upgrade to Pro</ButtonText>
+                    </Button>
+                  )}
+
+                  {/* Upgrade Suggestion for Users Close to Limit */}
+                  {!isSubscribed && formData.customPhotosCount >= 3 && formData.customPhotosCount < 5 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-2 border-blue-500"
+                      onPress={() => router.push('/subscription')}
+                    >
+                      <ButtonText className="text-blue-600">Upgrade for Unlimited Photos</ButtonText>
+                    </Button>
+                  )}
+                </VStack>
+              </FormControl>
+
               {/* Global Primary Color */}
               <FormControl>
                 <FormControlLabel>
@@ -558,120 +743,41 @@ export default function Profile() {
                 </VStack>
               </FormControl>
 
-              <HStack space="lg" className="justify-center">
-                {/* Brokerage Logo */}
-                <FormControl>
-                  <FormControlLabel>
-                    <FormControlLabelText className="font-medium text-gray-700">Brokerage Logo</FormControlLabelText>
-                  </FormControlLabel>
-                  <VStack space="sm">
-                    <Pressable onPress={() => pickImage('brokerageLogo')} disabled={uploadingImage === 'brokerageLogo'}>
-                      <VStack className="aspect-square h-40 w-40 items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-400">
-                        {formData.brokerageLogo ? (
-                          <VStack space="sm" className="min-h-40 w-40 items-center justify-center px-5">
-                            <Image
-                              source={{ uri: formData.brokerageLogo }}
-                              className="min-h-40 w-40 rounded-lg"
-                              resizeMode="cover"
-                            />
-                            {uploadingImage === 'brokerageLogo' && (
-                              <VStack space="xs" className="items-center">
-                                <ActivityIndicator size="small" color="#3b82f6" />
-                                <Text className="text-center text-sm text-blue-500">Uploading...</Text>
-                              </VStack>
-                            )}
-                          </VStack>
-                        ) : (
-                          <VStack space="sm" className="min-h-40 w-40 items-center justify-center px-5">
-                            {uploadingImage === 'brokerageLogo' ? (
-                              <VStack space="xs" className="items-center">
-                                <ActivityIndicator size="small" color="#3b82f6" />
-                                <Text className="text-center text-sm text-blue-500">Selecting...</Text>
-                              </VStack>
-                            ) : (
-                              <>
-                                <Icon size="lg" className="text-gray-400" />
-                                <Text className="text-center text-gray-500">Tap to select brokerage logo</Text>
-                              </>
-                            )}
-                          </VStack>
-                        )}
-                      </VStack>
-                    </Pressable>
+              {/* Global Secondary Color */}
+              <FormControl>
+                <FormControlLabel>
+                  <FormControlLabelText className="font-medium text-gray-700">
+                    Global Secondary Color
+                  </FormControlLabelText>
+                </FormControlLabel>
+                <VStack space="sm">
+                  <Text className="text-gray-600">
+                    This color will be used as the default secondary color for all new posts
+                  </Text>
+                  <ColorPicker
+                    selection={formData.globalSecondaryColor}
+                    onValueChanged={(color: string) => handleInputChange('globalSecondaryColor', color)}
+                    supportsOpacity={false}
+                  />
+                </VStack>
+              </FormControl>
 
-                    {/* Clear Button - Only show when image exists */}
-                    {formData.brokerageLogo && (
-                      <Button
-                        size="xs"
-                        action="negative"
-                        onPress={() => clearImage('brokerageLogo')}
-                        disabled={uploadingImage === 'brokerageLogo'}
-                        className="absolute bottom-0 left-0 right-0"
-                      >
-                        <ButtonText>Remove Logo</ButtonText>
-                      </Button>
-                    )}
-                  </VStack>
-                </FormControl>
-
-                {/* Realtor Picture */}
-                <FormControl>
-                  <FormControlLabel>
-                    <FormControlLabelText className="font-medium text-gray-700">Realtor Picture</FormControlLabelText>
-                  </FormControlLabel>
-                  <VStack space="sm">
-                    <Pressable
-                      onPress={() => pickImage('realtorPicture')}
-                      disabled={uploadingImage === 'realtorPicture'}
-                    >
-                      <VStack className="aspect-square items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-400">
-                        {formData.realtorPicture ? (
-                          <VStack space="sm" className="min-h-40 w-40 items-center justify-center px-5">
-                            <Image
-                              source={{ uri: formData.realtorPicture }}
-                              className="min-h-40 w-40 rounded-lg"
-                              resizeMode="cover"
-                            />
-                            {uploadingImage === 'realtorPicture' && (
-                              <VStack space="xs" className="items-center">
-                                <ActivityIndicator size="small" color="#3b82f6" />
-                                <Text className="text-center text-sm text-blue-500">Uploading...</Text>
-                              </VStack>
-                            )}
-                          </VStack>
-                        ) : (
-                          <VStack space="sm" className="min-h-40 w-40 items-center justify-center px-5">
-                            {uploadingImage === 'realtorPicture' ? (
-                              <VStack space="xs" className="items-center">
-                                <ActivityIndicator size="small" color="#3b82f6" />
-                                <Text className="text-center text-sm text-blue-500">Selecting...</Text>
-                              </VStack>
-                            ) : (
-                              <>
-                                <Icon size="lg" className="text-gray-400" />
-                                <Text className="text-center text-gray-500">Tap to select profile picture</Text>
-                              </>
-                            )}
-                          </VStack>
-                        )}
-                      </VStack>
-                    </Pressable>
-
-                    {/* Clear Button - Only show when image exists */}
-                    {formData.realtorPicture && (
-                      <Button
-                        size="xs"
-                        action="negative"
-                        onPress={() => clearImage('realtorPicture')}
-                        disabled={uploadingImage === 'realtorPicture'}
-                        className="absolute bottom-0 left-0 right-0"
-                      >
-                        <ButtonText>Remove Picture</ButtonText>
-                      </Button>
-                    )}
-                  </VStack>
-                </FormControl>
-              </HStack>
+              {/* Global Text Color */}
+              <FormControl>
+                <FormControlLabel>
+                  <FormControlLabelText className="font-medium text-gray-700">Global Text Color</FormControlLabelText>
+                </FormControlLabel>
+                <VStack space="sm">
+                  <Text className="text-gray-600">
+                    This color will be used as the default text color for all new posts
+                  </Text>
+                  <ColorPicker
+                    selection={formData.globalTextColor}
+                    onValueChanged={(color: string) => handleInputChange('globalTextColor', color)}
+                    supportsOpacity={false}
+                  />
+                </VStack>
+              </FormControl>
 
               {/* Submit Button */}
               <Button size="lg" onPress={handleSubmit} disabled={isLoading} className="mt-4">

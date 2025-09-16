@@ -95,7 +95,7 @@ export default function FontManager({
           </SelectTrigger>
           <SelectPortal>
             <SelectBackdrop />
-            <SelectContent>
+            <SelectContent className="pb-28">
               <SelectDragIndicatorWrapper>
                 <SelectDragIndicator />
               </SelectDragIndicatorWrapper>

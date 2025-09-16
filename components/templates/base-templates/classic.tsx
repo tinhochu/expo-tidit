@@ -24,6 +24,8 @@ interface ClassicTemplateProps {
   template: string
   canvas: {
     primaryColor?: string
+    secondaryColor?: string
+    textColor?: string
     showPrice?: boolean
     priceText?: string
     showBrokerage?: boolean
@@ -86,9 +88,9 @@ export default function ClassicTemplate({
     const isWideRectangle = aspectRatio > 1.5
     const isTallRectangle = aspectRatio < 0.7
 
-    // Base dimensions
-    const baseWidth = screenWidth * 0.27
-    const baseHeight = screenWidth * 0.27
+    // Base dimensions - smaller than rectangle (0.2) to stay centered with margin
+    const baseWidth = screenWidth * 0.17
+    const baseHeight = screenWidth * 0.17
 
     // Adjust dimensions based on aspect ratio
     let logoWidth = baseWidth
@@ -114,66 +116,36 @@ export default function ClassicTemplate({
 
   const logoDimensions = getBrokerageLogoDimensions()
 
-  // Calculate optimal logo positioning to avoid overlap with property description
+  // Calculate optimal logo positioning above the rectangle
   const getOptimalLogoPosition = () => {
-    if (!logoDimensions) return { x: screenWidth * 0.175, y: screenWidth * 1.0 }
+    if (!logoDimensions) return { x: screenWidth * 0.175, y: screenWidth * 1.1 }
 
     const { width: logoWidth, height: logoHeight } = logoDimensions
 
-    // Property description area starts at y = screenWidth * 1.09
-    // But we need to account for the actual text positioning which includes transforms
-    const propertyDescriptionStartY = screenWidth * 1.09
-    const propertyDescriptionBuffer = screenWidth * 0.08 // Additional buffer for text area
-
-    // Calculate where the logo bottom would be at default position
-    const defaultLogoY = screenWidth * 1.0
-    const logoBottomY = defaultLogoY + logoHeight
-
-    // Check if logo overlaps with property description area
-    const hasOverlap = logoBottomY > propertyDescriptionStartY - propertyDescriptionBuffer
-
-    // Adjust Y position if there's overlap
-    let logoY = defaultLogoY
-    if (hasOverlap) {
-      // Move logo up significantly to avoid overlap
-      logoY = propertyDescriptionStartY - logoHeight - propertyDescriptionBuffer
-    }
-
-    // Ensure logo doesn't go above the colored rectangle (starts at y = screenWidth * 1.05)
+    // Rectangle dimensions
     const rectangleTopY = screenWidth * 1.05
-    const rectangleBottomY = rectangleTopY + screenWidth * 0.2 // Rectangle height
-    if (logoY < rectangleTopY) {
-      logoY = rectangleTopY + screenWidth * 0.01 // Small margin from rectangle top
-    }
+    const rectangleHeight = screenWidth * 0.2
 
-    // Also ensure logo doesn't go below the rectangle
-    if (logoY + logoHeight > rectangleBottomY) {
-      logoY = rectangleBottomY - logoHeight - screenWidth * 0.01
-    }
+    // Position logo above the rectangle with minimal padding (almost touching)
+    const paddingFromRectangle = screenWidth * 0.005 // 0.5% padding above rectangle
+    const logoY = rectangleTopY - logoHeight - paddingFromRectangle
 
-    // Check for horizontal overlap with property information
-    const propertyInfoStartX = screenWidth * 0.4
-    const logoRightX = screenWidth * 0.175 + logoWidth
-    const hasHorizontalOverlap = logoRightX > propertyInfoStartX
+    // Position logo on the right side with padding from edge
+    const paddingFromEdge = screenWidth * 0.02 // 2% padding from right edge
+    const logoX = screenWidth - logoWidth - paddingFromEdge
 
-    // Adjust X position if there's horizontal overlap
-    let logoX = screenWidth * 0.175
-    if (hasHorizontalOverlap) {
-      // Move logo left to avoid horizontal overlap
-      logoX = propertyInfoStartX - logoWidth - screenWidth * 0.02 // 2% buffer
-    }
+    // Ensure logo doesn't go too high (above template bounds)
+    const minLogoY = screenWidth * 0.1
+    const finalLogoY = Math.max(logoY, minLogoY)
 
-    // Ensure logo doesn't go too far left
+    // Ensure logo stays within horizontal bounds
     const minLogoX = screenWidth * 0.05 // 5% margin from left edge
-    if (logoX < minLogoX) {
-      logoX = minLogoX
-    }
+    const maxLogoX = screenWidth - logoWidth - screenWidth * 0.02 // Keep 2% margin from right edge
+    const finalLogoX = Math.max(minLogoX, Math.min(logoX, maxLogoX))
 
     return {
-      x: logoX,
-      y: logoY,
-      hasOverlap: hasOverlap || hasHorizontalOverlap,
-      adjustedForOverlap: hasOverlap || hasHorizontalOverlap,
+      x: finalLogoX,
+      y: finalLogoY,
     }
   }
 
@@ -257,7 +229,7 @@ export default function ClassicTemplate({
     const createTextParagraph = (text: string, fontSize: number = 14) => {
       const adjustedFontSize = getParagraphFontSize(fontSize, getFontFamily(selectedFont))
       const textStyle = {
-        color: Skia.Color(getContrastColor(canvas.primaryColor || '#fafafa')),
+        color: Skia.Color(canvas.textColor || canvas.primaryColor || '#000000'),
         fontFamilies: [getFontFamily(selectedFont)],
         fontSize: adjustedFontSize,
       }
@@ -266,7 +238,7 @@ export default function ClassicTemplate({
     }
 
     return createTextParagraph
-  }, [customFontMgr, canvas.primaryColor, selectedFont])
+  }, [customFontMgr, canvas.textColor, canvas.primaryColor, selectedFont])
 
   const paragraphs = useMemo(() => {
     if (!createParagraph) return {}
@@ -281,7 +253,7 @@ export default function ClassicTemplate({
         const adjustedFontSize = getParagraphFontSize(14, getFontFamily(selectedFont))
         const para = Skia.ParagraphBuilder.Make({ textAlign: TextAlign.Right }, customFontMgr!)
           .pushStyle({
-            color: Skia.Color(getContrastColor(canvas.primaryColor || '#fafafa')),
+            color: Skia.Color(canvas.textColor || canvas.primaryColor || '#000000'),
             fontFamilies: [getFontFamily(selectedFont)],
             fontSize: adjustedFontSize,
           })
@@ -295,16 +267,18 @@ export default function ClassicTemplate({
       baths: createParagraph(`${data.propInformation.description.baths} baths`),
       signature: createParagraph('Powered By', 10),
     }
-  }, [createParagraph, customFontMgr, data.propInformation, canvas.primaryColor])
+  }, [createParagraph, customFontMgr, data.propInformation, canvas.textColor, canvas.primaryColor])
 
   if (!customFontMgr || !paragraphs.sqft || !paragraphs.beds || !paragraphs.baths) {
     return null
   }
 
   const primaryColor = canvas.primaryColor || '#fafafa'
+  const secondaryColor = canvas.secondaryColor || '#ffffff'
+  const textColor = canvas.textColor || canvas.primaryColor || '#000000'
   const gradientColors = [
     hexToRgba(primaryColor, 0.4) || 'rgba(0, 0, 0, 0.3)',
-    hexToRgba(primaryColor, 0.4) || 'rgba(0, 0, 0, 0.5)',
+    hexToRgba(primaryColor, 0.2) || 'rgba(0, 0, 0, 0.2)',
   ]
 
   // Use custom text or fall back to post type
@@ -343,10 +317,10 @@ export default function ClassicTemplate({
       )}
 
       {hasRealtorPicture && showRealtor && (
-        <Circle cx={screenWidth * 0.01} cy={screenWidth * 1.15} r={screenWidth * 0.3} color={primaryColor} />
+        <Circle cx={screenWidth * 0.01} cy={screenWidth * 1.15} r={screenWidth * 0.3} color={secondaryColor} />
       )}
 
-      <Rect x={0} y={screenWidth * 1.05} width={screenWidth} height={screenWidth * 0.2} color={primaryColor} />
+      <Rect x={0} y={screenWidth * 1.05} width={screenWidth} height={screenWidth * 0.2} color={secondaryColor} />
 
       {hasRealtorPicture && showRealtor && realtorPicture && (
         <Image
@@ -375,11 +349,7 @@ export default function ClassicTemplate({
           const positioning = getIconPositioning(screenWidth * 1.09, 14, -screenWidth * 0.005)
           return (
             <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: -screenWidth * 0.01 }]}>
-              <ImageSVG
-                svg={bedIcon(getContrastColor(primaryColor || '#fafafa'))}
-                x={screenWidth * 0.4}
-                y={positioning.iconY + screenWidth * 0.01}
-              />
+              <ImageSVG svg={bedIcon(textColor)} x={screenWidth * 0.4} y={positioning.iconY + screenWidth * 0.01} />
               <Paragraph paragraph={paragraphs.beds} x={screenWidth * 0.46} y={positioning.textY} width={100} />
             </Group>
           )
@@ -390,11 +360,7 @@ export default function ClassicTemplate({
           const positioning = getIconPositioning(screenWidth * 1.09, 14, screenWidth * 0.012)
           return (
             <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.03 }]}>
-              <ImageSVG
-                svg={bathIcon(getContrastColor(primaryColor || '#fafafa'))}
-                x={screenWidth * 0.4}
-                y={positioning.iconY + screenWidth * 0.01}
-              />
+              <ImageSVG svg={bathIcon(textColor)} x={screenWidth * 0.4} y={positioning.iconY + screenWidth * 0.01} />
               <Paragraph paragraph={paragraphs.baths} x={screenWidth * 0.46} y={positioning.textY} width={100} />
             </Group>
           )
@@ -405,11 +371,7 @@ export default function ClassicTemplate({
           const positioning = getIconPositioning(screenWidth * 1.09, 15, screenWidth * 0.0175)
           return (
             <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.075 }]}>
-              <ImageSVG
-                svg={sqftIcon(getContrastColor(primaryColor || '#fafafa'))}
-                x={screenWidth * 0.4}
-                y={positioning.iconY + screenWidth * 0.01}
-              />
+              <ImageSVG svg={sqftIcon(textColor)} x={screenWidth * 0.4} y={positioning.iconY + screenWidth * 0.01} />
               <Paragraph paragraph={paragraphs.sqft} x={screenWidth * 0.46} y={positioning.textY} width={100} />
             </Group>
           )
