@@ -48,7 +48,7 @@ export default function JustListedTemplateOne({
       .pushStyle(textStyle)
       .addText(`${data.propInformation.line}`)
       .addText(`\n${data.propInformation.city}, ${data.propInformation.state}`)
-      .addText(`\n${data.propInformation.postalCode}`)
+      .addText(`\n${data.propInformation.country || data.propInformation.postalCode}`)
       .build()
 
     return para

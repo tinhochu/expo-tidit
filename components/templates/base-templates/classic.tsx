@@ -288,7 +288,7 @@ export default function ClassicTemplate({
     return {
       sqft: createParagraph(
         data.propInformation.description.sqft
-          ? `${data?.propInformation?.description?.sqft?.toLocaleString()} sqft`
+          ? `${data?.propInformation?.description?.sqft?.toLocaleString()} ${data?.propInformation?.description?.unitType === 'm2' ? 'm²' : 'sqft'}`
           : 'N/A'
       ),
       address: (() => {
@@ -301,7 +301,7 @@ export default function ClassicTemplate({
           })
           .addText(`${data.propInformation.line}`)
           .addText(`\n${data.propInformation.city}, ${data.propInformation.state}`)
-          .addText(`\n${data.propInformation.postalCode}`)
+          .addText(`\n${data.propInformation.country || data.propInformation.postalCode}`)
           .build()
         return para
       })(),

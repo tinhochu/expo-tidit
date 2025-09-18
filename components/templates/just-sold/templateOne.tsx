@@ -23,6 +23,7 @@ interface PropertyDescription {
   sqft: string | number
   beds: string | number
   baths: string | number
+  unitType?: 'sqft' | 'm2'
 }
 
 interface PropertyInformation {
@@ -30,6 +31,7 @@ interface PropertyInformation {
   city: string
   state: string
   postalCode: string
+  country?: string
   description: PropertyDescription
 }
 
@@ -202,7 +204,10 @@ export default function JustSoldTemplateOne({
     if (!createParagraph) return {}
 
     return {
-      sqft: createParagraph(`${data.propInformation.description.sqft} sqft`, 15),
+      sqft: createParagraph(
+        `${data.propInformation.description.sqft} ${data.propInformation.description.unitType === 'm2' ? 'm²' : 'sqft'}`,
+        15
+      ),
       address: (() => {
         const para = Skia.ParagraphBuilder.Make({ textAlign: TextAlign.Right }, customFontMgr!)
           .pushStyle({
@@ -212,7 +217,7 @@ export default function JustSoldTemplateOne({
           })
           .addText(`${data.propInformation.line}`)
           .addText(`\n${data.propInformation.city}, ${data.propInformation.state}`)
-          .addText(`\n${data.propInformation.postalCode}`)
+          .addText(`\n${data.propInformation.country || data.propInformation.postalCode}`)
           .build()
         return para
       })(),
