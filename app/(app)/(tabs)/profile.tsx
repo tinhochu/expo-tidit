@@ -11,22 +11,98 @@ import { VStack } from '@/components/ui/vstack'
 import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/context/SubscriptionContext'
 import { BUCKET_ID, storage } from '@/lib/appwriteConfig'
-import {
-  cleanupTempImages,
-  formatFileSize,
-  getCompressionStats,
-  getMimeType,
-  processProfileImage,
-} from '@/lib/imageProcessor'
+import { cleanupTempImages, getCompressionStats, getMimeType, processProfileImage } from '@/lib/imageProcessor'
 import { getUserPrefs, updateUserPrefs } from '@/lib/userService'
 import { ColorPicker } from '@expo/ui/swift-ui'
 import { Ionicons } from '@expo/vector-icons'
+import * as FileSystem from 'expo-file-system'
 import * as ImagePicker from 'expo-image-picker'
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView } from 'react-native'
 import { ID } from 'react-native-appwrite'
 import RevenueCatUI from 'react-native-purchases-ui'
+
+// Helper function to convert Uint8Array to base64
+function uint8ArrayToBase64(uint8Array: Uint8Array): string {
+  let binaryString = ''
+  for (let i = 0; i < uint8Array.length; i++) {
+    binaryString += String.fromCharCode(uint8Array[i])
+  }
+
+  // Use btoa if available, otherwise use a manual base64 encoding
+  if (typeof btoa !== 'undefined') {
+    return btoa(binaryString)
+  } else {
+    // Manual base64 encoding for React Native compatibility
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+    let result = ''
+    let i = 0
+
+    while (i < binaryString.length) {
+      const a = binaryString.charCodeAt(i++)
+      const b = i < binaryString.length ? binaryString.charCodeAt(i++) : 0
+      const c = i < binaryString.length ? binaryString.charCodeAt(i++) : 0
+
+      const bitmap = (a << 16) | (b << 8) | c
+
+      result += chars.charAt((bitmap >> 18) & 63)
+      result += chars.charAt((bitmap >> 12) & 63)
+      result += i - 2 < binaryString.length ? chars.charAt((bitmap >> 6) & 63) : '='
+      result += i - 1 < binaryString.length ? chars.charAt(bitmap & 63) : '='
+    }
+
+    return result
+  }
+}
+
+/**
+ * Remove.bg API function
+ * Removes the background from an image using the remove.bg API
+ * @param imageUri - Local URI of the image to process
+ * @returns Promise<string> - URI of the processed image with background removed
+ */
+async function removeBg(imageUri: string): Promise<string> {
+  try {
+    // Convert local URI to base64 for remove.bg API
+    const base64 = await FileSystem.readAsStringAsync(imageUri, {
+      encoding: FileSystem.EncodingType.Base64,
+    })
+
+    const formData = new FormData()
+    formData.append('size', 'auto')
+    formData.append('image_file_b64', base64)
+
+    const response = await fetch('https://api.remove.bg/v1.0/removebg', {
+      method: 'POST',
+      headers: {
+        'X-Api-Key': process.env.EXPO_PUBLIC_REMOVEBG_API_KEY!,
+      },
+      body: formData,
+    })
+
+    if (response.ok) {
+      const arrayBuffer = await response.arrayBuffer()
+
+      // Convert arrayBuffer to base64 using a React Native compatible method
+      const uint8Array = new Uint8Array(arrayBuffer)
+      const base64String = uint8ArrayToBase64(uint8Array)
+
+      // Save the processed image to a temporary file
+      const tempUri = `${FileSystem.cacheDirectory}removed_bg_${Date.now()}.png`
+      await FileSystem.writeAsStringAsync(tempUri, base64String, {
+        encoding: FileSystem.EncodingType.Base64,
+      })
+
+      return tempUri
+    } else {
+      throw new Error(`${response.status}: ${response.statusText}`)
+    }
+  } catch (error) {
+    console.error('Remove.bg error:', error)
+    throw error
+  }
+}
 
 export default function Profile() {
   const toast = useToast()
@@ -223,6 +299,47 @@ export default function Profile() {
 
       const originalImageUri = result.assets[0].uri
 
+      // Show toast for background removal
+      toast.show({
+        id: ID.unique(),
+        placement: 'top',
+        duration: 2000,
+        render: ({ id }) => {
+          const uniqueToastId = 'toast-' + id
+          return (
+            <Toast nativeID={uniqueToastId} action="info" variant="solid">
+              <ToastTitle>{`Removing background from ${type === 'brokerageLogo' ? 'brokerage logo' : 'profile picture'}...`}</ToastTitle>
+            </Toast>
+          )
+        },
+      })
+
+      // Remove background using remove.bg API
+      let imageWithRemovedBg: string
+      try {
+        imageWithRemovedBg = await removeBg(originalImageUri)
+      } catch (removeBgError) {
+        console.error('Background removal failed:', removeBgError)
+
+        // Show error toast for background removal failure
+        toast.show({
+          id: ID.unique(),
+          placement: 'top',
+          duration: 3000,
+          render: ({ id }) => {
+            const uniqueToastId = 'toast-' + id
+            return (
+              <Toast nativeID={uniqueToastId} action="error" variant="solid">
+                <ToastTitle>Background removal failed. Using original image...</ToastTitle>
+              </Toast>
+            )
+          },
+        })
+
+        // Fall back to original image if background removal fails
+        imageWithRemovedBg = originalImageUri
+      }
+
       // Show toast for image processing
       toast.show({
         id: ID.unique(),
@@ -239,10 +356,10 @@ export default function Profile() {
       })
 
       // Process the image to reduce size and dimensions
-      const processedImage = await processProfileImage(originalImageUri, type)
+      const processedImage = await processProfileImage(imageWithRemovedBg, type)
 
       // Get compression statistics
-      const compressionStats = await getCompressionStats(originalImageUri, processedImage.uri)
+      const compressionStats = await getCompressionStats(imageWithRemovedBg, processedImage.uri)
 
       // Set the processed image URI for immediate display
       setFormData((prev) => ({ ...prev, [type]: processedImage.uri }))

@@ -94,6 +94,88 @@ export default function JustSoldTemplateOne({
     PlayfairDisplay: [require('@/assets/fonts/PlayfairDisplay-Regular.ttf')],
   })
 
+  // Calculate brokerage logo dimensions and positioning
+  const getBrokerageLogoDimensions = () => {
+    if (!brokerageLogo) return null
+
+    const imageWidth = brokerageLogo.width()
+    const imageHeight = brokerageLogo.height()
+    const aspectRatio = imageWidth / imageHeight
+
+    // Determine if logo is square (aspect ratio close to 1) or rectangle
+    const isSquare = Math.abs(aspectRatio - 1) < 0.2 // Allow 20% tolerance for "square"
+    const isWideRectangle = aspectRatio > 1.5
+    const isTallRectangle = aspectRatio < 0.7
+
+    // Base dimensions - smaller than rectangle (0.2) to stay centered with margin
+    const baseWidth = screenWidth * 0.27
+    const baseHeight = screenWidth * 0.27
+
+    // Adjust dimensions based on aspect ratio
+    let logoWidth = baseWidth
+    let logoHeight = baseHeight
+
+    if (isWideRectangle) {
+      // Wide rectangle: maintain width, reduce height
+      logoHeight = baseHeight * 0.7
+    } else if (isTallRectangle) {
+      // Tall rectangle: maintain height, reduce width
+      logoWidth = baseWidth * 0.7
+    }
+
+    return {
+      width: logoWidth,
+      height: logoHeight,
+      aspectRatio,
+      isSquare,
+      isWideRectangle,
+      isTallRectangle,
+    }
+  }
+
+  const logoDimensions = getBrokerageLogoDimensions()
+
+  // Calculate realtor picture dimensions and positioning
+  const getRealtorPictureDimensions = () => {
+    if (!realtorPicture) return null
+
+    const imageWidth = realtorPicture.width()
+    const imageHeight = realtorPicture.height()
+    const aspectRatio = imageWidth / imageHeight
+
+    // Determine if picture is square (aspect ratio close to 1) or rectangle
+    const isSquare = Math.abs(aspectRatio - 1) < 0.2 // Allow 20% tolerance for "square"
+    const isWideRectangle = aspectRatio > 1.5
+    const isTallRectangle = aspectRatio < 0.7
+
+    // Base dimensions - smaller than rectangle (0.2) to stay centered with margin
+    const baseWidth = screenWidth * 0.35
+    const baseHeight = screenWidth * 0.35
+
+    // Adjust dimensions based on aspect ratio
+    let pictureWidth = baseWidth
+    let pictureHeight = baseHeight
+
+    if (isWideRectangle) {
+      // Wide rectangle: maintain width, reduce height
+      pictureHeight = baseHeight * 0.7
+    } else if (isTallRectangle) {
+      // Tall rectangle: maintain height, reduce width
+      pictureWidth = baseWidth * 0.7
+    }
+
+    return {
+      width: pictureWidth,
+      height: pictureHeight,
+      aspectRatio,
+      isSquare,
+      isWideRectangle,
+      isTallRectangle,
+    }
+  }
+
+  const realtorPictureDimensions = getRealtorPictureDimensions()
+
   // Consolidated paragraph creation function
   const createParagraph = useMemo(() => {
     if (!customFontMgr) return null
@@ -176,24 +258,24 @@ export default function JustSoldTemplateOne({
       <Circle cx={screenWidth * 0.01} cy={screenWidth * 1.15} r={screenWidth * 0.3} color={primaryColor} />
       <Rect x={0} y={screenWidth * 1.05} width={screenWidth} height={screenWidth * 0.2} color={primaryColor} />
 
-      {hasBrokerageLogo && showBrokerage && brokerageLogo && (
+      {hasBrokerageLogo && showBrokerage && brokerageLogo && logoDimensions && (
         <Image
           image={brokerageLogo}
           fit="contain"
           x={screenWidth * 0.175}
           y={screenWidth * 1.0}
-          width={screenWidth * 0.27}
-          height={screenWidth * 0.27}
+          width={logoDimensions.width}
+          height={logoDimensions.height}
         />
       )}
-      {hasRealtorPicture && showRealtor && realtorPicture && (
+      {hasRealtorPicture && showRealtor && realtorPicture && realtorPictureDimensions && (
         <Image
           image={realtorPicture}
           fit="contain"
           x={-screenWidth * 0.05}
-          y={screenWidth * 0.9}
-          width={screenWidth * 0.35}
-          height={screenWidth * 0.35}
+          y={screenWidth * 1.25 - realtorPictureDimensions.height}
+          width={realtorPictureDimensions.width}
+          height={realtorPictureDimensions.height}
         />
       )}
 

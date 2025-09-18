@@ -116,6 +116,47 @@ export default function ClassicTemplate({
 
   const logoDimensions = getBrokerageLogoDimensions()
 
+  // Calculate realtor picture dimensions and positioning
+  const getRealtorPictureDimensions = () => {
+    if (!realtorPicture) return null
+
+    const imageWidth = realtorPicture.width()
+    const imageHeight = realtorPicture.height()
+    const aspectRatio = imageWidth / imageHeight
+
+    // Determine if picture is square (aspect ratio close to 1) or rectangle
+    const isSquare = Math.abs(aspectRatio - 1) < 0.2 // Allow 20% tolerance for "square"
+    const isWideRectangle = aspectRatio > 1.5
+    const isTallRectangle = aspectRatio < 0.7
+
+    // Base dimensions - smaller than rectangle (0.2) to stay centered with margin
+    const baseWidth = screenWidth * 0.35
+    const baseHeight = screenWidth * 0.35
+
+    // Adjust dimensions based on aspect ratio
+    let pictureWidth = baseWidth
+    let pictureHeight = baseHeight
+
+    if (isWideRectangle) {
+      // Wide rectangle: maintain width, reduce height
+      pictureHeight = baseHeight * 0.7
+    } else if (isTallRectangle) {
+      // Tall rectangle: maintain height, reduce width
+      pictureWidth = baseWidth * 0.7
+    }
+
+    return {
+      width: pictureWidth,
+      height: pictureHeight,
+      aspectRatio,
+      isSquare,
+      isWideRectangle,
+      isTallRectangle,
+    }
+  }
+
+  const realtorPictureDimensions = getRealtorPictureDimensions()
+
   // Calculate optimal logo positioning above the rectangle
   const getOptimalLogoPosition = () => {
     if (!logoDimensions) return { x: screenWidth * 0.175, y: screenWidth * 1.1 }
@@ -322,14 +363,14 @@ export default function ClassicTemplate({
 
       <Rect x={0} y={screenWidth * 1.05} width={screenWidth} height={screenWidth * 0.2} color={secondaryColor} />
 
-      {hasRealtorPicture && showRealtor && realtorPicture && (
+      {hasRealtorPicture && showRealtor && realtorPicture && realtorPictureDimensions && (
         <Image
           image={realtorPicture}
-          fit="contain"
+          fit="cover"
           x={-screenWidth * 0.05}
-          y={screenWidth * 0.9}
-          width={screenWidth * 0.35}
-          height={screenWidth * 0.35}
+          y={screenWidth * 1.25 - realtorPictureDimensions.height}
+          width={realtorPictureDimensions.width}
+          height={realtorPictureDimensions.height}
         />
       )}
 
