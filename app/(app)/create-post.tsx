@@ -62,6 +62,7 @@ interface PropertyFormData {
     | 'BACK_ON_MARKET'
     | 'COMING_SOON'
     | 'PRICE_DROP'
+  currency: string
 }
 
 export default function CreatePost() {
@@ -80,6 +81,7 @@ export default function CreatePost() {
     bathrooms: '',
     squareFeet: '',
     postType: 'JUST_LISTED',
+    currency: 'USD',
   })
 
   const [addressQuery, setAddressQuery] = useState('')
@@ -220,6 +222,7 @@ export default function CreatePost() {
         bedrooms: bedrooms?.toString() || '',
         bathrooms: bathrooms?.toString() || '',
         squareFeet: squareFeet?.toString() || '',
+        currency: 'USD',
       }
 
       return updated
@@ -310,6 +313,7 @@ export default function CreatePost() {
         propInformation: {
           ...propertyDetails,
           ...formData,
+          currency: formData.currency,
         },
         userId: user?.$id,
         postType: formData.postType,
@@ -343,6 +347,7 @@ export default function CreatePost() {
       city: '',
       state: '',
       postalCode: '',
+      currency: 'USD',
     }))
 
     setShowSuggestions(true)
@@ -444,6 +449,7 @@ export default function CreatePost() {
                                 city: '',
                                 state: '',
                                 postalCode: '',
+                                currency: 'USD',
                               }))
                             }}
                             activeOpacity={0.7}

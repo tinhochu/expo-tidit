@@ -28,6 +28,7 @@ export const createPost = async (post: Omit<Post, 'id' | 'createdAt' | 'updatedA
       showRealtor: true,
       showSignature: true, // Enable tidit logo by default
       font: 'playfair',
+      currency: 'USD',
     }
 
     const response = await databases.createDocument(DATABASE_ID, POSTS_COLLECTION_ID, ID.unique(), {

@@ -1,4 +1,5 @@
 import FontManager from '@/components/FontManager'
+import CurrencySelector from '@/components/currency-selector'
 import ProBadge from '@/components/pro-badge'
 import { TemplateRenderer, getTemplates } from '@/components/template-renderer'
 import { Box } from '@/components/ui/box'
@@ -46,6 +47,7 @@ import {
   useWindowDimensions,
 } from 'react-native'
 import { ID } from 'react-native-appwrite'
+import { formatCurrency } from 'react-native-format-currency'
 import Share, { Social } from 'react-native-share'
 
 // Simple slugify function to convert title to safe filename
@@ -355,6 +357,7 @@ export default function PropertyDetails() {
     { value: 'PRICE_DROP', label: 'Price Drop' },
   ]
   const [canvas, setCanvas] = useState<{
+    currency?: string
     primaryColor?: string
     secondaryColor?: string
     textColor?: string
@@ -440,6 +443,7 @@ export default function PropertyDetails() {
         // Set default canvas state if none exists
         // We'll set the primary color after fetching user preferences
         setCanvas({
+          currency: 'USD', // Default to USD
           primaryColor: '#000000',
           secondaryColor: '#ffffff',
           textColor: '#000000', // Default same as primary color
@@ -1020,42 +1024,92 @@ export default function PropertyDetails() {
                   </GridItem>
                 </Grid>
 
-                <VStack space="md">
-                  <Heading size="sm" className="mb-0 leading-none">
-                    Post Type Options
-                  </Heading>
-                  <Grid _extra={{ className: 'grid-cols-3' }}>
-                    <GridItem _extra={{ className: 'col-span-1' }}>
-                      <HStack space="md" className="items-center">
-                        <Switch
-                          size="md"
-                          isDisabled={false}
-                          trackColor={{ false: '#3b82f6', true: '#3b82f6' }}
-                          ios_backgroundColor="#333333"
-                          thumbColor="#fafafa"
-                          onValueChange={async (value) => {
-                            setShowPrice(value)
-                            await handleCanvasChange('showPrice', value)
-                          }}
-                          value={showPrice}
-                        />
-                        <Text>Price</Text>
-                      </HStack>
-                    </GridItem>
-                    <GridItem _extra={{ className: 'col-span-2' }}>
-                      <Input className="bg-white" isDisabled={!showPrice}>
-                        <InputField
-                          placeholder="Enter Your Price"
-                          value={priceText}
-                          onChangeText={async (text) => {
-                            setPriceText(text)
-                            await handleCanvasChange('priceText', text)
-                          }}
-                        />
-                      </Input>
-                    </GridItem>
-                  </Grid>
-                </VStack>
+                {/* Price section - only show for all post types except OPEN_HOUSE */}
+                {postType !== 'OPEN_HOUSE' && (
+                  <VStack space="md">
+                    <Heading size="sm" className="mb-0 leading-none">
+                      Post Type Options
+                    </Heading>
+                    <Grid _extra={{ className: 'grid-cols-4' }}>
+                      <GridItem _extra={{ className: 'col-span-1' }}>
+                        <HStack space="md" className="items-center">
+                          <Switch
+                            size="md"
+                            isDisabled={false}
+                            trackColor={{ false: '#3b82f6', true: '#3b82f6' }}
+                            ios_backgroundColor="#333333"
+                            thumbColor="#fafafa"
+                            onValueChange={async (value) => {
+                              setShowPrice(value)
+                              await handleCanvasChange('showPrice', value)
+                            }}
+                            value={showPrice}
+                          />
+                          <Text>Price</Text>
+                        </HStack>
+                      </GridItem>
+                      <GridItem _extra={{ className: 'col-span-3' }}>
+                        <Grid _extra={{ className: 'grid-cols-3' }}>
+                          <GridItem className="pr-2" _extra={{ className: 'col-span-1' }}>
+                            <CurrencySelector
+                              isDisabled={!showPrice || isCanvasLoading}
+                              defaultValue={canvas.currency || 'USD'}
+                              onCurrencyChange={async (currency) => {
+                                await handleCanvasChange('currency', currency)
+
+                                // Reformat existing price with new currency
+                                if (priceText && priceText.trim() !== '') {
+                                  const numericValue = priceText.replace(/[^\d.]/g, '')
+                                  const amount = parseFloat(numericValue)
+
+                                  if (!isNaN(amount)) {
+                                    const [formattedValue] = formatCurrency({
+                                      amount,
+                                      code: currency,
+                                    })
+
+                                    setPriceText(formattedValue)
+                                    await handleCanvasChange('priceText', formattedValue)
+                                  }
+                                }
+                              }}
+                            />
+                          </GridItem>
+                          <GridItem className="pl-2" _extra={{ className: 'col-span-2' }}>
+                            <Input className="bg-white" isDisabled={!showPrice}>
+                              <InputField
+                                placeholder="Enter Your Price"
+                                value={priceText}
+                                onChangeText={async (text) => {
+                                  // Extract numeric value from formatted text
+                                  const numericValue = text.replace(/[^\d.]/g, '')
+
+                                  if (numericValue === '' || numericValue === '0') {
+                                    setPriceText('')
+                                    await handleCanvasChange('priceText', '')
+                                    return
+                                  }
+
+                                  const amount = parseFloat(numericValue)
+                                  if (!isNaN(amount)) {
+                                    // Format the currency
+                                    const [formattedValue] = formatCurrency({
+                                      amount,
+                                      code: canvas.currency || 'USD',
+                                    })
+
+                                    setPriceText(formattedValue)
+                                    await handleCanvasChange('priceText', formattedValue)
+                                  }
+                                }}
+                              />
+                            </Input>
+                          </GridItem>
+                        </Grid>
+                      </GridItem>
+                    </Grid>
+                  </VStack>
+                )}
 
                 {/* Font Manager - Pro Feature */}
                 <Grid _extra={{ className: 'grid-cols-1' }}>
