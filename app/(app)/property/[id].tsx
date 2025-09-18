@@ -30,7 +30,7 @@ import { processImage } from '@/lib/imageProcessor'
 import { deletePost, ensureDefaultCanvas, getPostById, updatePost } from '@/lib/postService'
 import { saveSkiaImageToPhotos } from '@/lib/saveSkiaImage'
 import { getUserPrefs, updateUserPrefs } from '@/lib/userService'
-import { ColorPicker } from '@expo/ui/swift-ui'
+import { ColorPicker, DateTimePicker, Host } from '@expo/ui/swift-ui'
 import AntDesign from '@expo/vector-icons/AntDesign'
 import { Canvas, Image as SkImage, useCanvasRef, useImage } from '@shopify/react-native-skia'
 import * as ImagePicker from 'expo-image-picker'
@@ -369,6 +369,7 @@ export default function PropertyDetails() {
     customImage?: string | null
     showSignature?: boolean
     font?: string
+    openHouseString?: string
   } | null>(null)
   const [userPrefs, setUserPrefs] = useState<any>(null)
   const [isLoadingUserPrefs, setIsLoadingUserPrefs] = useState<boolean>(true)
@@ -383,6 +384,11 @@ export default function PropertyDetails() {
     { mainHeading?: string; subHeading?: string; description?: string } | undefined
   >(undefined)
   const [selectedFont, setSelectedFont] = useState<string>('playfair') // Default to Playfair font
+  const [openHouseStartDate, setOpenHouseStartDate] = useState<Date>(new Date())
+  const [openHouseEndDate, setOpenHouseEndDate] = useState<Date>(() => {
+    const startDate = new Date()
+    return new Date(startDate.getTime() + 60 * 60 * 1000) // 1 hour after start date
+  })
   // Use the useImage hook with the actual image URL - provide fallback to prevent conditional hook calls
   const img = useImage(imageUrl || 'https://via.placeholder.com/400x300?text=Loading...')
   const customImg = useImage(customImage || '')
@@ -439,6 +445,33 @@ export default function PropertyDetails() {
         setShowSignature(parsedCanvas.showSignature !== undefined ? parsedCanvas.showSignature : true)
         // Load font from canvas if it exists, otherwise default to 'inter'
         setSelectedFont(parsedCanvas.font || 'playfair')
+        // Load open house dates from canvas if they exist
+        if (parsedCanvas.openHouseStartDate) {
+          setOpenHouseStartDate(new Date(parsedCanvas.openHouseStartDate))
+        }
+        if (parsedCanvas.openHouseEndDate) {
+          const endDate = new Date(parsedCanvas.openHouseEndDate)
+          const startDate = parsedCanvas.openHouseStartDate ? new Date(parsedCanvas.openHouseStartDate) : new Date()
+
+          // Ensure end date is not equal to start date
+          if (endDate.getTime() === startDate.getTime()) {
+            setOpenHouseEndDate(new Date(startDate.getTime() + 60 * 60 * 1000)) // Add 1 hour
+          } else {
+            setOpenHouseEndDate(endDate)
+          }
+        }
+
+        // Generate open house string if both dates exist
+        if (parsedCanvas.openHouseStartDate && parsedCanvas.openHouseEndDate) {
+          const startDate = new Date(parsedCanvas.openHouseStartDate)
+          const endDate = parsedCanvas.openHouseEndDate
+            ? new Date(parsedCanvas.openHouseEndDate)
+            : new Date(startDate.getTime() + 60 * 60 * 1000)
+          const openHouseString = formatOpenHouseString(startDate, endDate)
+          // Update canvas with the formatted string
+          const updatedCanvas = { ...parsedCanvas, openHouseString }
+          setCanvas(updatedCanvas)
+        }
       } else {
         // Set default canvas state if none exists
         // We'll set the primary color after fetching user preferences
@@ -577,6 +610,15 @@ export default function PropertyDetails() {
     }
   }, [postType, templateStyle])
 
+  // Generate initial open house string when component mounts
+  useEffect(() => {
+    if (postType === 'OPEN_HOUSE' && canvas && !canvas.openHouseString) {
+      const openHouseString = formatOpenHouseString(openHouseStartDate, openHouseEndDate)
+      const updatedCanvas = { ...canvas, openHouseString }
+      setCanvas(updatedCanvas)
+    }
+  }, [postType, canvas, openHouseStartDate, openHouseEndDate])
+
   const handleDelete = () => {
     Alert.alert('Delete Post', 'Are you sure you want to delete this post? This action cannot be undone.', [
       {
@@ -637,6 +679,45 @@ export default function PropertyDetails() {
     } finally {
       setIsCanvasLoading(false)
     }
+  }
+
+  // Format open house date/time string
+  const formatOpenHouseString = (startDate: Date, endDate: Date): string => {
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    }
+
+    const formatTime = (date: Date) => {
+      return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      })
+    }
+
+    const startDateStr = formatDate(startDate)
+    const startTimeStr = formatTime(startDate)
+    const endTimeStr = formatTime(endDate)
+
+    // Check if both dates are on the same day
+    const isSameDay = startDate.toDateString() === endDate.toDateString()
+
+    if (isSameDay) {
+      return `${startDateStr}\n${startTimeStr} - ${endTimeStr}`
+    } else {
+      const endDateStr = formatDate(endDate)
+      return `${startDateStr} at ${startTimeStr}\n${endDateStr} at ${endTimeStr}`
+    }
+  }
+
+  // Update open house string in canvas
+  const updateOpenHouseString = async () => {
+    const openHouseString = formatOpenHouseString(openHouseStartDate, openHouseEndDate)
+    await handleCanvasChange('openHouseString', openHouseString)
   }
 
   // Get the label for the currently selected template
@@ -1106,6 +1187,72 @@ export default function PropertyDetails() {
                             </Input>
                           </GridItem>
                         </Grid>
+                      </GridItem>
+                    </Grid>
+                  </VStack>
+                )}
+
+                {/* Open House Date/Time section - only show for OPEN_HOUSE post type */}
+                {postType === 'OPEN_HOUSE' && (
+                  <VStack space="md">
+                    <Heading size="sm" className="mb-0 leading-none">
+                      Open House Schedule
+                    </Heading>
+                    <Grid _extra={{ className: 'grid-cols-2' }}>
+                      <GridItem _extra={{ className: 'col-span-1' }}>
+                        <VStack space="sm">
+                          <Text size="sm" className="font-medium">
+                            Start Date & Time
+                          </Text>
+                          <Host>
+                            <DateTimePicker
+                              onDateSelected={async (date) => {
+                                setOpenHouseStartDate(date)
+                                await handleCanvasChange('openHouseStartDate', date.toISOString())
+
+                                // If end date is equal to or before the new start date, adjust it
+                                if (openHouseEndDate.getTime() <= date.getTime()) {
+                                  const adjustedEndDate = new Date(date.getTime() + 60 * 60 * 1000) // Add 1 hour
+                                  setOpenHouseEndDate(adjustedEndDate)
+                                  await handleCanvasChange('openHouseEndDate', adjustedEndDate.toISOString())
+                                }
+
+                                // Update the open house string
+                                await updateOpenHouseString()
+                              }}
+                              displayedComponents="dateAndTime"
+                              initialDate={openHouseStartDate.toISOString()}
+                            />
+                          </Host>
+                        </VStack>
+                      </GridItem>
+                      <GridItem _extra={{ className: 'col-span-1' }}>
+                        <VStack space="sm">
+                          <Text size="sm" className="font-medium">
+                            End Date & Time
+                          </Text>
+                          <Host>
+                            <DateTimePicker
+                              onDateSelected={async (date) => {
+                                // Ensure end date is not equal to start date
+                                if (date.getTime() === openHouseStartDate.getTime()) {
+                                  // If they're equal, add 1 hour to the end date
+                                  const adjustedDate = new Date(date.getTime() + 60 * 60 * 1000)
+                                  setOpenHouseEndDate(adjustedDate)
+                                  await handleCanvasChange('openHouseEndDate', adjustedDate.toISOString())
+                                } else {
+                                  setOpenHouseEndDate(date)
+                                  await handleCanvasChange('openHouseEndDate', date.toISOString())
+                                }
+
+                                // Update the open house string
+                                await updateOpenHouseString()
+                              }}
+                              displayedComponents="dateAndTime"
+                              initialDate={openHouseEndDate.toISOString()}
+                            />
+                          </Host>
+                        </VStack>
                       </GridItem>
                     </Grid>
                   </VStack>

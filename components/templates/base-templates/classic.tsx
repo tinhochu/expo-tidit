@@ -30,6 +30,7 @@ interface ClassicTemplateProps {
     priceText?: string
     showBrokerage?: boolean
     showRealtor?: boolean
+    openHouseString?: string
   }
   userPrefs: any | null
   showBrokerage: boolean
@@ -324,7 +325,12 @@ export default function ClassicTemplate({
 
   // Use custom text or fall back to post type
   const mainHeading = customText?.mainHeading || getPostTypeLabel(postType)
-  const subHeading = customText?.subHeading || (canvas.showPrice && canvas.priceText ? canvas.priceText : '')
+  const subHeading =
+    customText?.subHeading || postType === 'OPEN_HOUSE'
+      ? canvas.openHouseString
+      : canvas.showPrice && canvas.priceText
+        ? canvas.priceText
+        : ''
 
   // Adjust positioning for beds, baths, sqft when property line is long
   const isLongPropertyLine = data.propInformation.line && data.propInformation.line.length > 20
@@ -352,7 +358,7 @@ export default function ClassicTemplate({
           text={subHeading}
           x={screenWidth * 0}
           y={screenWidth * 0.325}
-          size={1.25}
+          size={postType === 'OPEN_HOUSE' ? 2 : 1.25}
           fontFamily={getFontFamily(selectedFont)}
         />
       )}
