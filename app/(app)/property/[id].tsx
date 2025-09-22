@@ -384,9 +384,16 @@ export default function PropertyDetails() {
     { mainHeading?: string; subHeading?: string; description?: string } | undefined
   >(undefined)
   const [selectedFont, setSelectedFont] = useState<string>('playfair') // Default to Playfair font
-  const [openHouseStartDate, setOpenHouseStartDate] = useState<Date>(new Date())
+  // Helper function to round date to the nearest hour
+  const roundToNearestHour = (date: Date): Date => {
+    const rounded = new Date(date)
+    rounded.setMinutes(0, 0, 0) // Set minutes, seconds, and milliseconds to 0
+    return rounded
+  }
+
+  const [openHouseStartDate, setOpenHouseStartDate] = useState<Date>(() => roundToNearestHour(new Date()))
   const [openHouseEndDate, setOpenHouseEndDate] = useState<Date>(() => {
-    const startDate = new Date()
+    const startDate = roundToNearestHour(new Date())
     return new Date(startDate.getTime() + 60 * 60 * 1000) // 1 hour after start date
   })
   // Use the useImage hook with the actual image URL - provide fallback to prevent conditional hook calls
@@ -447,11 +454,13 @@ export default function PropertyDetails() {
         setSelectedFont(parsedCanvas.font || 'playfair')
         // Load open house dates from canvas if they exist
         if (parsedCanvas.openHouseStartDate) {
-          setOpenHouseStartDate(new Date(parsedCanvas.openHouseStartDate))
+          setOpenHouseStartDate(roundToNearestHour(new Date(parsedCanvas.openHouseStartDate)))
         }
         if (parsedCanvas.openHouseEndDate) {
-          const endDate = new Date(parsedCanvas.openHouseEndDate)
-          const startDate = parsedCanvas.openHouseStartDate ? new Date(parsedCanvas.openHouseStartDate) : new Date()
+          const endDate = roundToNearestHour(new Date(parsedCanvas.openHouseEndDate))
+          const startDate = parsedCanvas.openHouseStartDate
+            ? roundToNearestHour(new Date(parsedCanvas.openHouseStartDate))
+            : roundToNearestHour(new Date())
 
           // Ensure end date is not equal to start date
           if (endDate.getTime() === startDate.getTime()) {
@@ -463,9 +472,9 @@ export default function PropertyDetails() {
 
         // Generate open house string if both dates exist
         if (parsedCanvas.openHouseStartDate && parsedCanvas.openHouseEndDate) {
-          const startDate = new Date(parsedCanvas.openHouseStartDate)
+          const startDate = roundToNearestHour(new Date(parsedCanvas.openHouseStartDate))
           const endDate = parsedCanvas.openHouseEndDate
-            ? new Date(parsedCanvas.openHouseEndDate)
+            ? roundToNearestHour(new Date(parsedCanvas.openHouseEndDate))
             : new Date(startDate.getTime() + 60 * 60 * 1000)
           const openHouseString = formatOpenHouseString(startDate, endDate)
           // Update canvas with the formatted string
@@ -1198,24 +1207,25 @@ export default function PropertyDetails() {
                     <Heading size="sm" className="mb-0 leading-none">
                       Open House Schedule
                     </Heading>
-                    <Grid _extra={{ className: 'grid-cols-2' }}>
+                    <Grid gap={14} _extra={{ className: 'grid-cols-1' }}>
                       <GridItem _extra={{ className: 'col-span-1' }}>
                         <VStack space="sm">
-                          <Text size="sm" className="font-medium">
-                            Start Date & Time
-                          </Text>
                           <Host>
                             <DateTimePicker
+                              key={`start-${openHouseStartDate.getTime()}`}
+                              color="#000000"
+                              title="Start Date & Time"
                               onDateSelected={async (date) => {
-                                setOpenHouseStartDate(date)
-                                await handleCanvasChange('openHouseStartDate', date.toISOString())
+                                const roundedDate = roundToNearestHour(date)
 
-                                // If end date is equal to or before the new start date, adjust it
-                                if (openHouseEndDate.getTime() <= date.getTime()) {
-                                  const adjustedEndDate = new Date(date.getTime() + 60 * 60 * 1000) // Add 1 hour
-                                  setOpenHouseEndDate(adjustedEndDate)
-                                  await handleCanvasChange('openHouseEndDate', adjustedEndDate.toISOString())
-                                }
+                                setOpenHouseStartDate(roundedDate)
+                                await handleCanvasChange('openHouseStartDate', roundedDate.toISOString())
+
+                                // Always add 1 hour to the start date for the end date
+                                const adjustedEndDate = new Date(roundedDate.getTime() + 60 * 60 * 1000) // Add 1 hour
+
+                                setOpenHouseEndDate(adjustedEndDate)
+                                await handleCanvasChange('openHouseEndDate', adjustedEndDate.toISOString())
 
                                 // Update the open house string
                                 await updateOpenHouseString()
@@ -1228,21 +1238,22 @@ export default function PropertyDetails() {
                       </GridItem>
                       <GridItem _extra={{ className: 'col-span-1' }}>
                         <VStack space="sm">
-                          <Text size="sm" className="font-medium">
-                            End Date & Time
-                          </Text>
                           <Host>
                             <DateTimePicker
+                              key={`end-${openHouseEndDate.getTime()}`}
+                              color="#000000"
+                              title="End Date & Time"
                               onDateSelected={async (date) => {
-                                // Ensure end date is not equal to start date
-                                if (date.getTime() === openHouseStartDate.getTime()) {
-                                  // If they're equal, add 1 hour to the end date
-                                  const adjustedDate = new Date(date.getTime() + 60 * 60 * 1000)
+                                const roundedDate = roundToNearestHour(date)
+                                // Ensure end date is not equal to or before start date
+                                if (roundedDate.getTime() <= openHouseStartDate.getTime()) {
+                                  // If end date is equal to or before start date, add 1 hour to the start date
+                                  const adjustedDate = new Date(openHouseStartDate.getTime() + 60 * 60 * 1000)
                                   setOpenHouseEndDate(adjustedDate)
                                   await handleCanvasChange('openHouseEndDate', adjustedDate.toISOString())
                                 } else {
-                                  setOpenHouseEndDate(date)
-                                  await handleCanvasChange('openHouseEndDate', date.toISOString())
+                                  setOpenHouseEndDate(roundedDate)
+                                  await handleCanvasChange('openHouseEndDate', roundedDate.toISOString())
                                 }
 
                                 // Update the open house string

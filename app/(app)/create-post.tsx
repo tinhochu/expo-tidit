@@ -22,10 +22,12 @@ import {
   SelectInput,
   SelectItem,
   SelectPortal,
+  SelectScrollView,
   SelectTrigger,
 } from '@/components/ui/select'
 import { Text } from '@/components/ui/text'
 import { VStack } from '@/components/ui/vstack'
+import { COUNTRIES, getPostTypeLabel } from '@/constants'
 import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/context/SubscriptionContext'
 import { AddressSuggestion, getPropertyDetails, searchAddresses } from '@/lib/addressService'
@@ -33,7 +35,7 @@ import { checkForDuplicatePost, createPost, getPostCountByUserId } from '@/lib/p
 import AntDesign from '@expo/vector-icons/AntDesign'
 import * as ImagePicker from 'expo-image-picker'
 import { router } from 'expo-router'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   KeyboardAvoidingView,
@@ -107,6 +109,30 @@ export default function CreatePost() {
   const [duplicateStatus, setDuplicateStatus] = useState<Record<string, boolean>>({})
   const [checkingDuplicates, setCheckingDuplicates] = useState(false)
   const [currentPostCount, setCurrentPostCount] = useState<number>(0)
+  const [countrySearchQuery, setCountrySearchQuery] = useState('')
+  const [debouncedCountryQuery, setDebouncedCountryQuery] = useState('')
+
+  // Debounce country search for better performance
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedCountryQuery(countrySearchQuery)
+    }, 150)
+
+    return () => clearTimeout(timeoutId)
+  }, [countrySearchQuery])
+
+  // Filtered countries for better performance
+  const filteredCountries = useMemo(() => {
+    if (!debouncedCountryQuery.trim()) {
+      // Show top 20 countries when no search
+      return COUNTRIES.slice(0, 20)
+    }
+
+    const query = debouncedCountryQuery.toLowerCase()
+    return COUNTRIES.filter(
+      (country) => country.label.toLowerCase().includes(query) || country.value.toLowerCase().includes(query)
+    )
+  }, [debouncedCountryQuery])
 
   // Multi-step form state
   const [currentStep, setCurrentStep] = useState(1)
@@ -539,6 +565,13 @@ export default function CreatePost() {
     setCurrentStep(1)
   }
 
+  // Clear country search when select closes
+  const handleCountrySelectChange = (value: string) => {
+    handleInputChange('countryName', value)
+    setCountrySearchQuery('') // Clear search when selection is made
+    setDebouncedCountryQuery('') // Clear debounced search too
+  }
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -763,13 +796,56 @@ export default function CreatePost() {
                         <FormControlLabel>
                           <FormControlLabelText>Country</FormControlLabelText>
                         </FormControlLabel>
-                        <Input className="bg-white">
-                          <InputField
-                            placeholder="Country"
-                            value={formData.countryName}
-                            onChangeText={(value) => handleInputChange('countryName', value)}
-                          />
-                        </Input>
+                        <Select className="bg-white" onValueChange={handleCountrySelectChange}>
+                          <SelectTrigger>
+                            <SelectInput
+                              placeholder="Select country"
+                              className="flex-1"
+                              value={
+                                COUNTRIES.find((country) => country.value === formData.countryName)?.label ||
+                                formData.countryName
+                              }
+                            />
+                            <SelectIcon className="mr-3" as={ChevronDownIcon} />
+                          </SelectTrigger>
+                          <SelectPortal>
+                            <SelectBackdrop />
+                            <SelectContent className="max-h-[50%] pb-28">
+                              <SelectDragIndicatorWrapper>
+                                <SelectDragIndicator />
+                              </SelectDragIndicatorWrapper>
+
+                              {/* Search Input */}
+                              <Box className="border-b border-gray-200 p-3">
+                                <Input className="w-full bg-white">
+                                  <InputField
+                                    placeholder="Search countries..."
+                                    value={countrySearchQuery}
+                                    onChangeText={setCountrySearchQuery}
+                                  />
+                                </Input>
+                              </Box>
+
+                              <SelectScrollView>
+                                {filteredCountries.map((country) => (
+                                  <SelectItem key={country.value} label={country.label} value={country.value} />
+                                ))}
+                                {filteredCountries.length === 0 && (
+                                  <Box className="p-3">
+                                    <Text className="text-center text-gray-500">No countries found</Text>
+                                  </Box>
+                                )}
+                                {!debouncedCountryQuery && filteredCountries.length === 20 && (
+                                  <Box className="border-t border-gray-200 p-3">
+                                    <Text className="text-center text-sm text-gray-500">
+                                      Type to search all {COUNTRIES.length} countries
+                                    </Text>
+                                  </Box>
+                                )}
+                              </SelectScrollView>
+                            </SelectContent>
+                          </SelectPortal>
+                        </Select>
                       </FormControl>
 
                       <FormControl className="flex-1">
@@ -809,7 +885,7 @@ export default function CreatePost() {
                       </FormControlLabel>
                       <Select className="bg-white" onValueChange={(value) => handleInputChange('postType', value)}>
                         <SelectTrigger>
-                          <SelectInput placeholder="Select post type" className="flex-1" />
+                          <SelectInput placeholder="Select post type" className="flex-1" value={formData.postType} />
                           <SelectIcon className="mr-3" as={ChevronDownIcon} />
                         </SelectTrigger>
                         <SelectPortal>
@@ -954,8 +1030,14 @@ export default function CreatePost() {
                       <Button onPress={prevStep} variant="outline" className="flex-1">
                         <ButtonText>Back</ButtonText>
                       </Button>
-                      <Button onPress={handleSubmit} className="flex-1 bg-blue-600" disabled={loading}>
-                        <ButtonText>{loading ? 'Creating Post...' : 'Create Post'}</ButtonText>
+                      <Button
+                        onPress={handleSubmit}
+                        className="flex-1 bg-blue-600"
+                        disabled={loading || !formData.postType}
+                      >
+                        <ButtonText>
+                          {loading ? 'Creating Post...' : !formData.postType ? 'Select Post Type First' : 'Create Post'}
+                        </ButtonText>
                       </Button>
                     </HStack>
                   </VStack>
@@ -1065,7 +1147,7 @@ export default function CreatePost() {
                       </FormControlLabel>
                       <Select className="bg-white" onValueChange={(value) => handleInputChange('postType', value)}>
                         <SelectTrigger>
-                          <SelectInput placeholder="Select post type" className="flex-1" />
+                          <SelectInput placeholder="Select post type" className="flex-1" value={formData.postType} />
                           <SelectIcon className="mr-3" as={ChevronDownIcon} />
                         </SelectTrigger>
                         <SelectPortal>
@@ -1186,8 +1268,14 @@ export default function CreatePost() {
                       <Button onPress={prevStep} variant="outline" className="flex-1">
                         <ButtonText>Back</ButtonText>
                       </Button>
-                      <Button onPress={handleSubmit} className="flex-1 bg-blue-600" disabled={loading}>
-                        <ButtonText>{loading ? 'Creating Post...' : 'Create Post'}</ButtonText>
+                      <Button
+                        onPress={handleSubmit}
+                        className="flex-1 bg-blue-600"
+                        disabled={loading || !formData.postType}
+                      >
+                        <ButtonText>
+                          {loading ? 'Creating Post...' : !formData.postType ? 'Select Post Type First' : 'Create Post'}
+                        </ButtonText>
                       </Button>
                     </HStack>
                   </VStack>
@@ -1268,7 +1356,7 @@ export default function CreatePost() {
                       </Input>
 
                       {/* Address Suggestions Dropdown */}
-                      {showSuggestions && addressSuggestions.length >= 2 && (
+                      {showSuggestions && addressSuggestions.length >= 1 && (
                         <Box className="mt-2">
                           <HStack className="items-center justify-between">
                             <Heading>Property Suggestions</Heading>
@@ -1429,7 +1517,11 @@ export default function CreatePost() {
                           </FormControlLabel>
                           <Select className="bg-white" onValueChange={(value) => handleInputChange('postType', value)}>
                             <SelectTrigger>
-                              <SelectInput placeholder="Select option" className="flex-1" />
+                              <SelectInput
+                                placeholder="Select option"
+                                className="flex-1"
+                                value={getPostTypeLabel(formData.postType)}
+                              />
                               <SelectIcon className="mr-3" as={ChevronDownIcon} />
                             </SelectTrigger>
                             <SelectPortal>
@@ -1508,15 +1600,17 @@ export default function CreatePost() {
                         <Button
                           size="xl"
                           onPress={handleSubmit}
-                          disabled={loading || (!isSubscribed && currentPostCount >= 3)}
-                          className={`${!isSubscribed && currentPostCount >= 3 ? 'bg-gray-400' : 'bg-blue-600'}`}
+                          disabled={loading || (!isSubscribed && currentPostCount >= 3) || !formData.postType}
+                          className={`${(!isSubscribed && currentPostCount >= 3) || !formData.postType ? 'bg-gray-400' : 'bg-blue-600'}`}
                         >
                           <ButtonText>
                             {loading
                               ? 'Creating Post...'
                               : !isSubscribed && currentPostCount >= 3
                                 ? 'Post Limit Reached'
-                                : 'Create Post'}
+                                : !formData.postType
+                                  ? 'Select Post Type First'
+                                  : 'Create Post'}
                           </ButtonText>
                         </Button>
 
