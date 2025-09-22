@@ -915,17 +915,11 @@ export default function PropertyDetails() {
               <AntDesign size={24} name="back" color="black" />
             </Pressable>
             <Heading size="sm">{data?.title ? data.title.slice(0, 25) + '...' : 'Fetching...'}</Heading>
-            {img ? (
-              <HStack className="gap-6">
-                <Pressable onPress={handleDelete}>
-                  <AntDesign size={24} name="delete" color="red" />
-                </Pressable>
-              </HStack>
-            ) : (
-              <HStack className="gap-3">
-                <AntDesign size={24} name="loading1" color="blue" className="animate-spin" />
-              </HStack>
-            )}
+            <HStack className="gap-6">
+              <Pressable onPress={handleDelete}>
+                <AntDesign size={24} name="delete" color="red" />
+              </Pressable>
+            </HStack>
           </HStack>
         </Box>
 
