@@ -11,6 +11,7 @@ import { Text } from '@/components/ui/text'
 import { VStack } from '@/components/ui/vstack'
 import { POST_TYPES } from '@/constants/PostTypes'
 import { useAuth } from '@/context/AuthContext'
+import { useSubscription } from '@/context/SubscriptionContext'
 import { Post, deletePost, getPostsByUserId } from '@/lib/postService'
 import AntDesign from '@expo/vector-icons/AntDesign'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
@@ -20,6 +21,7 @@ import { Alert, RefreshControl, ScrollView } from 'react-native'
 
 export default function Home() {
   const { user, isDeletingAccount } = useAuth()
+  const { isSubscribed } = useSubscription()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -146,32 +148,37 @@ export default function Home() {
 
       {/* Post Type Filter */}
       <Box className="border-b border-gray-200 bg-white p-3">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <HStack space="md" className="px-2">
-            <Pressable
-              onPress={() => setSelectedFilter('all')}
-              className={`rounded-full border px-4 py-2 ${
-                selectedFilter === 'all' ? 'border-blue-500 bg-blue-500' : 'border-gray-300 bg-white'
-              }`}
-            >
-              <Text className={`font-medium ${selectedFilter === 'all' ? 'text-white' : 'text-gray-700'}`}>All</Text>
-            </Pressable>
-
-            {Object.entries(POST_TYPES).map(([key, label]) => (
+        <HStack className="items-center justify-between">
+          <Heading size="sm" className="pr-4">
+            Post Type
+          </Heading>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <HStack space="md" className="px-2">
               <Pressable
-                key={key}
-                onPress={() => setSelectedFilter(key)}
+                onPress={() => setSelectedFilter('all')}
                 className={`rounded-full border px-4 py-2 ${
-                  selectedFilter === key ? 'border-blue-500 bg-blue-500' : 'border-gray-300 bg-white'
+                  selectedFilter === 'all' ? 'border-blue-500 bg-blue-500' : 'border-gray-300 bg-white'
                 }`}
               >
-                <Text className={`font-medium ${selectedFilter === key ? 'text-white' : 'text-gray-700'}`}>
-                  {label}
-                </Text>
+                <Text className={`font-medium ${selectedFilter === 'all' ? 'text-white' : 'text-gray-700'}`}>All</Text>
               </Pressable>
-            ))}
-          </HStack>
-        </ScrollView>
+
+              {Object.entries(POST_TYPES).map(([key, label]) => (
+                <Pressable
+                  key={key}
+                  onPress={() => setSelectedFilter(key)}
+                  className={`rounded-full border px-4 py-2 ${
+                    selectedFilter === key ? 'border-blue-500 bg-blue-500' : 'border-gray-300 bg-white'
+                  }`}
+                >
+                  <Text className={`font-medium ${selectedFilter === key ? 'text-white' : 'text-gray-700'}`}>
+                    {label}
+                  </Text>
+                </Pressable>
+              ))}
+            </HStack>
+          </ScrollView>
+        </HStack>
       </Box>
 
       <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
@@ -272,6 +279,26 @@ export default function Home() {
               .filter(Boolean)
           ) : (
             <Text>No posts found</Text>
+          )}
+
+          {/* Subscription CTA - Only show for non-subscribed users */}
+          {!isSubscribed && (
+            <Pressable onPress={() => router.push('/subscription')}>
+              <Box className="overflow-hidden rounded-xl border border-orange-200 bg-orange-300 p-4">
+                <HStack className="items-center justify-between">
+                  <VStack className="flex-1" space="sm">
+                    <HStack className="items-center" space="sm">
+                      <AntDesign name="star" size={20} color="#ff6b35" />
+                      <Heading size="sm" className="text-orange-800">
+                        Unlock Unlimited Posts
+                      </Heading>
+                    </HStack>
+                    <Text className="text-sm text-orange-700">Create unlimited posts with Pro features</Text>
+                  </VStack>
+                  <AntDesign name="arrowright" size={24} color="#ff6b35" />
+                </HStack>
+              </Box>
+            </Pressable>
           )}
         </VStack>
       </ScrollView>
