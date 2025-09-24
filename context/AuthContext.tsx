@@ -1,11 +1,11 @@
 import { Box } from '@/components/ui/box'
 import { Image } from '@/components/ui/image'
 import { VStack } from '@/components/ui/vstack'
+import { useSubscription } from '@/context/SubscriptionContext'
 import { account } from '@/lib/appwriteConfig'
 import { deleteAccount as deleteUserAccount } from '@/lib/userService'
+import { usePostHog } from 'posthog-react-native'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-
-import { useSubscription } from './SubscriptionContext'
 
 const AuthContext = createContext<{
   session: any
@@ -56,6 +56,29 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // Get subscription context to clear subscription data on account deletion
   const { clearSubscriptionData } = useSubscription()
 
+  // Get PostHog instance for user identification
+  const posthog = usePostHog()
+
+  // Helper function to identify user with PostHog
+  const identifyUserWithPostHog = useCallback(
+    (userData: any) => {
+      if (userData && userData.$id && posthog) {
+        posthog.identify(userData.$id, {
+          email: userData.email,
+          name: userData.name,
+        })
+      }
+    },
+    [posthog]
+  )
+
+  // Helper function to reset PostHog user identification
+  const resetPostHogUser = useCallback(() => {
+    if (posthog) {
+      posthog.reset()
+    }
+  }, [posthog])
+
   const checkAuth = useCallback(async () => {
     // Don't check auth if we're deleting account
     if (isDeletingAccount) {
@@ -71,6 +94,8 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(response as any)
         setSession(response as any)
         setError(null)
+        // Identify user with PostHog
+        identifyUserWithPostHog(response)
       } else {
         // No valid response, clear user and session
         setUser(null)
@@ -84,84 +109,94 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Don't set error for auth check failures as they're expected for unauthenticated users
     }
     setLoading(false)
-  }, [isDeletingAccount])
+  }, [isDeletingAccount, identifyUserWithPostHog])
 
   useEffect(() => {
     checkAuth()
   }, [checkAuth])
 
-  const signup = useCallback(async ({ email, password, name }: { email: string; password: string; name: string }) => {
-    setLoading(true)
-    setError(null)
-    try {
-      // Create the user account
-      const response = await account.create('unique()', email, password, name)
-
-      // Create email session to automatically sign in the user
-      const responseSession = await account.createEmailPasswordSession(email, password)
-
-      // Get the user details
-      const responseUser = await account.get()
-
-      // Add a small delay to allow form data to be saved before redirecting
-      setTimeout(() => {
-        setSession(responseSession as any)
-        setUser(responseUser as any)
-        setLoading(false)
-      }, 100)
-
-      console.log('User signed up successfully:', response)
-      return response
-    } catch (error: any) {
-      console.log(`AuthContext:Signup Error: ${error?.message}`)
-
-      // Set a user-friendly error message
-      let errorMessage = 'An error occurred during sign up'
-
-      if (error?.message) {
-        // Handle common Appwrite errors with user-friendly messages
-        if (error.message.includes('already exists')) {
-          errorMessage = 'An account with this email already exists. Please try signing in instead.'
-        } else if (error.message.includes('password')) {
-          errorMessage = 'Password requirements not met. Please ensure your password is at least 8 characters.'
-        } else if (error.message.includes('email')) {
-          errorMessage = 'Please enter a valid email address.'
-        } else {
-          errorMessage = error.message
-        }
-      }
-
-      setError({
-        message: errorMessage,
-        code: error.code,
-        page: 'signup',
-      })
-      setLoading(false)
-
-      return null
-    }
-  }, [])
-
-  const signin = useCallback(async ({ email, password }: { email: string; password: string }) => {
-    setLoading(true)
-    // Don't clear error immediately - let the error display until we know the result
-    try {
-      const responseSession = await account.createEmailPasswordSession(email, password)
-      setSession(responseSession as any)
-      const responseUser = await account.get()
-      setUser(responseUser as any)
-      // Only clear error on successful signin
+  const signup = useCallback(
+    async ({ email, password, name }: { email: string; password: string; name: string }) => {
+      setLoading(true)
       setError(null)
-    } catch (error: any) {
-      console.log(`AuthContext:Error: ${error?.message}`)
-      setError({
-        message: error?.message || 'An error occurred during sign in',
-        code: error?.code || 'unknown',
-        page: 'signin',
-      })
-    }
-    setLoading(false)
-  }, [])
+      try {
+        // Create the user account
+        const response = await account.create('unique()', email, password, name)
+
+        // Create email session to automatically sign in the user
+        const responseSession = await account.createEmailPasswordSession(email, password)
+
+        // Get the user details
+        const responseUser = await account.get()
+
+        // Add a small delay to allow form data to be saved before redirecting
+        setTimeout(() => {
+          setSession(responseSession as any)
+          setUser(responseUser as any)
+          setLoading(false)
+          // Identify user with PostHog
+          identifyUserWithPostHog(responseUser)
+        }, 100)
+
+        console.log('User signed up successfully:', response)
+        return response
+      } catch (error: any) {
+        console.log(`AuthContext:Signup Error: ${error?.message}`)
+
+        // Set a user-friendly error message
+        let errorMessage = 'An error occurred during sign up'
+
+        if (error?.message) {
+          // Handle common Appwrite errors with user-friendly messages
+          if (error.message.includes('already exists')) {
+            errorMessage = 'An account with this email already exists. Please try signing in instead.'
+          } else if (error.message.includes('password')) {
+            errorMessage = 'Password requirements not met. Please ensure your password is at least 8 characters.'
+          } else if (error.message.includes('email')) {
+            errorMessage = 'Please enter a valid email address.'
+          } else {
+            errorMessage = error.message
+          }
+        }
+
+        setError({
+          message: errorMessage,
+          code: error.code,
+          page: 'signup',
+        })
+        setLoading(false)
+
+        return null
+      }
+    },
+    [identifyUserWithPostHog]
+  )
+
+  const signin = useCallback(
+    async ({ email, password }: { email: string; password: string }) => {
+      setLoading(true)
+      // Don't clear error immediately - let the error display until we know the result
+      try {
+        const responseSession = await account.createEmailPasswordSession(email, password)
+        setSession(responseSession as any)
+        const responseUser = await account.get()
+        setUser(responseUser as any)
+        // Only clear error on successful signin
+        setError(null)
+        // Identify user with PostHog
+        identifyUserWithPostHog(responseUser)
+      } catch (error: any) {
+        console.log(`AuthContext:Error: ${error?.message}`)
+        setError({
+          message: error?.message || 'An error occurred during sign in',
+          code: error?.code || 'unknown',
+          page: 'signin',
+        })
+      }
+      setLoading(false)
+    },
+    [identifyUserWithPostHog]
+  )
 
   const signout = useCallback(async () => {
     setLoading(true)
@@ -170,6 +205,8 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(null)
       setUser(null)
       setError(null)
+      // Reset PostHog user identification
+      resetPostHogUser()
       // Set redirect page to signin after logout
       setRedirectPage('/signin')
     } catch (error: any) {
@@ -181,7 +218,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       })
     }
     setLoading(false)
-  }, [])
+  }, [resetPostHogUser])
 
   const deleteAccount = useCallback(async () => {
     setLoading(true)
@@ -200,6 +237,9 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(null)
       setUser(null)
       setError(null)
+
+      // Reset PostHog user identification
+      resetPostHogUser()
 
       // Clear subscription data
       clearSubscriptionData()
@@ -231,7 +271,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(false)
       // Don't reset isDeletingAccount here - keep it true for successful deletion
     }
-  }, [user?.$id, clearSubscriptionData])
+  }, [user?.$id, clearSubscriptionData, resetPostHogUser])
 
   const clearError = useCallback(() => {
     setError(null)
