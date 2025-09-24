@@ -289,7 +289,7 @@ export default function Home() {
                                 {propInfo?.city && `${propInfo.city}`}
                                 {propInfo?.state && `, ${propInfo.state}`}
                                 {/* Show country for international properties, postal code for USA properties */}
-                                {propInfo?.country
+                                {propInfo?.country && propInfo.country !== 'US'
                                   ? `, ${propInfo.country}`
                                   : propInfo?.postalCode && `, ${propInfo.postalCode}`}
                               </Heading>

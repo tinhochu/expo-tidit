@@ -652,6 +652,8 @@ export default function PropertyDetails() {
       // Set the image URL for the useImage hook
       if (parsedData?.propInformation?.photos?.[0]?.href) {
         setImageUrl(parsedData.propInformation.photos[0].href.replace('.jpg', '-w1200_h1200.jpg'))
+      } else if (parsedData?.propInformation?.propertyImage) {
+        setImageUrl(parsedData?.propInformation?.propertyImage)
       }
     }
 

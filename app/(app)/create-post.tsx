@@ -27,10 +27,12 @@ import {
 } from '@/components/ui/select'
 import { Text } from '@/components/ui/text'
 import { VStack } from '@/components/ui/vstack'
-import { COUNTRIES, getPostTypeLabel } from '@/constants'
+import { COUNTRIES, STATES, getPostTypeLabel } from '@/constants'
 import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/context/SubscriptionContext'
 import { AddressSuggestion, getPropertyDetails, searchAddresses } from '@/lib/addressService'
+import { BUCKET_ID, storage } from '@/lib/appwriteConfig'
+import { getMimeType, processImage } from '@/lib/imageProcessor'
 import { checkForDuplicatePost, createPost, getPostCountByUserId } from '@/lib/postService'
 import AntDesign from '@expo/vector-icons/AntDesign'
 import * as ImagePicker from 'expo-image-picker'
@@ -45,6 +47,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native'
+import { ID } from 'react-native-appwrite'
 
 interface PropertyFormData {
   fullAddress: string
@@ -67,7 +70,7 @@ interface PropertyFormData {
     | 'PRICE_DROP'
   currency: string
   // International property fields
-  country: 'USA' | 'International'
+  country: 'US' | 'International'
   unitType: 'sqft' | 'm2'
   // International address fields
   countryName?: string
@@ -93,7 +96,7 @@ export default function CreatePost() {
     squareFeet: '',
     postType: 'JUST_LISTED',
     currency: 'USD',
-    country: 'USA',
+    country: 'US',
     unitType: 'sqft',
   })
 
@@ -105,12 +108,15 @@ export default function CreatePost() {
   const [loading, setLoading] = useState(false)
   const [searching, setSearching] = useState(false)
   const [fetchingPropertyDetails, setFetchingPropertyDetails] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
   const [errors, setErrors] = useState<Partial<PropertyFormData>>({})
   const [duplicateStatus, setDuplicateStatus] = useState<Record<string, boolean>>({})
   const [checkingDuplicates, setCheckingDuplicates] = useState(false)
   const [currentPostCount, setCurrentPostCount] = useState<number>(0)
   const [countrySearchQuery, setCountrySearchQuery] = useState('')
   const [debouncedCountryQuery, setDebouncedCountryQuery] = useState('')
+  const [stateSearchQuery, setStateSearchQuery] = useState('')
+  const [debouncedStateQuery, setDebouncedStateQuery] = useState('')
 
   // Debounce country search for better performance
   useEffect(() => {
@@ -120,6 +126,15 @@ export default function CreatePost() {
 
     return () => clearTimeout(timeoutId)
   }, [countrySearchQuery])
+
+  // Debounce state search for better performance
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedStateQuery(stateSearchQuery)
+    }, 150)
+
+    return () => clearTimeout(timeoutId)
+  }, [stateSearchQuery])
 
   // Filtered countries for better performance
   const filteredCountries = useMemo(() => {
@@ -133,6 +148,19 @@ export default function CreatePost() {
       (country) => country.label.toLowerCase().includes(query) || country.value.toLowerCase().includes(query)
     )
   }, [debouncedCountryQuery])
+
+  // Filtered states for better performance
+  const filteredStates = useMemo(() => {
+    if (!debouncedStateQuery.trim()) {
+      // Show all states when no search
+      return STATES
+    }
+
+    const query = debouncedStateQuery.toLowerCase()
+    return STATES.filter(
+      (state) => state.label.toLowerCase().includes(query) || state.value.toLowerCase().includes(query)
+    )
+  }, [debouncedStateQuery])
 
   // Multi-step form state
   const [currentStep, setCurrentStep] = useState(1)
@@ -267,6 +295,7 @@ export default function CreatePost() {
         bathrooms: bathrooms?.toString() || '',
         squareFeet: squareFeet?.toString() || '',
         currency: 'USD',
+        country: 'US' as 'US' | 'International', // Ensure default country is set to US when using dynamic listings
       }
 
       return updated
@@ -283,6 +312,8 @@ export default function CreatePost() {
       city: suggestion.city,
       state: suggestion.state_code,
       postalCode: suggestion.postal_code,
+      country: 'US', // Ensure country is set to US when using dynamic listings
+      currency: 'USD', // Ensure currency is set to USD for USA properties
     }))
 
     setAddressQuery(suggestion.line)
@@ -324,6 +355,7 @@ export default function CreatePost() {
       if (!formData.city.trim()) newErrors.city = 'City is required'
       if (!formData.state.trim()) newErrors.state = 'State is required'
       if (!formData.postalCode.trim()) newErrors.postalCode = 'ZIP code is required'
+      else if (!/^\d{5}$/.test(formData.postalCode.trim())) newErrors.postalCode = 'ZIP code must be exactly 5 digits'
       if (!formData.bedrooms.trim()) newErrors.bedrooms = 'Bedrooms is required'
       if (!formData.bathrooms.trim()) newErrors.bathrooms = 'Bathrooms is required'
       if (!formData.squareFeet.trim()) newErrors.squareFeet = 'Square feet is required'
@@ -445,31 +477,75 @@ export default function CreatePost() {
       state: '',
       postalCode: '',
       currency: 'USD',
+      country: 'US', // Ensure country remains USA when changing address
     }))
 
     setShowSuggestions(true)
     setDuplicateStatus({})
   }
 
-  // Image picker functionality
+  // Image picker functionality with upload to Appwrite storage
   const pickImage = async () => {
     try {
+      setUploadingImage(true)
+
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
-        aspect: [4, 3],
+        aspect: [4, 5],
         quality: 0.8,
       })
 
       if (!result.canceled && result.assets[0]) {
-        setFormData((prev) => ({
-          ...prev,
-          propertyImage: result.assets[0].uri,
-        }))
+        const originalImageUri = result.assets[0].uri
+
+        try {
+          // Process and optimize the image
+          const processedImage = await processImage(originalImageUri, {
+            maxWidth: 800,
+            maxHeight: 1000, // 4:5 aspect ratio
+            quality: 0.85,
+            format: 'auto',
+            maintainAspectRatio: true,
+          })
+
+          // Upload processed image to Appwrite storage
+          try {
+            // Determine file extension and MIME type based on processed format
+            const fileExtension = processedImage.format === 'jpeg' ? 'jpg' : processedImage.format
+            const mimeType = getMimeType(fileExtension)
+
+            const response = await storage.createFile(BUCKET_ID, ID.unique(), {
+              name: `${user?.$id}-property-${Date.now()}.${fileExtension}`,
+              type: mimeType,
+              size: processedImage.size,
+              uri: processedImage.uri,
+            })
+
+            // Get the uploaded image URL
+            const uploadedImageUrl = `${process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT!}/storage/buckets/${BUCKET_ID}/files/${response.$id}/view?project=${process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID}`
+
+            // Update form data with the uploaded image URL
+            setFormData((prev) => ({
+              ...prev,
+              propertyImage: uploadedImageUrl,
+            }))
+
+            console.log('Image uploaded successfully:', uploadedImageUrl)
+          } catch (uploadError) {
+            console.error('Error uploading image to storage:', uploadError)
+            Alert.alert('Upload Error', 'Failed to upload image. Please try again.')
+          }
+        } catch (processError) {
+          console.error('Error processing image:', processError)
+          Alert.alert('Processing Error', 'Failed to process image. Please try again.')
+        }
       }
     } catch (error) {
       console.error('Error picking image:', error)
       Alert.alert('Error', 'Failed to pick image. Please try again.')
+    } finally {
+      setUploadingImage(false)
     }
   }
 
@@ -481,13 +557,13 @@ export default function CreatePost() {
   }
 
   // Country selection handlers
-  const handleCountrySelection = (country: 'USA' | 'International') => {
+  const handleCountrySelection = (country: 'US' | 'International') => {
     setFormData((prev) => ({
       ...prev,
       country,
     }))
 
-    if (country === 'USA') {
+    if (country === 'US') {
       setShowCountrySelection(false)
       setIsInternationalForm(false)
       setShowUSAMethodSelection(true)
@@ -553,7 +629,7 @@ export default function CreatePost() {
     setCurrentStep(1)
     setFormData((prev) => ({
       ...prev,
-      country: 'USA',
+      country: 'US',
       unitType: 'sqft',
       propertyImage: undefined,
     }))
@@ -570,6 +646,13 @@ export default function CreatePost() {
     handleInputChange('countryName', value)
     setCountrySearchQuery('') // Clear search when selection is made
     setDebouncedCountryQuery('') // Clear debounced search too
+  }
+
+  // Clear state search when select closes
+  const handleStateSelectChange = (value: string) => {
+    handleInputChange('state', value)
+    setStateSearchQuery('') // Clear search when selection is made
+    setDebouncedStateQuery('') // Clear debounced search too
   }
 
   return (
@@ -642,7 +725,7 @@ export default function CreatePost() {
 
                   <VStack space="md" className="mt-6">
                     <TouchableOpacity
-                      onPress={() => handleCountrySelection('USA')}
+                      onPress={() => handleCountrySelection('US')}
                       activeOpacity={0.7}
                       className="rounded-lg border-2 border-blue-200 bg-blue-50 p-6"
                     >
@@ -1008,19 +1091,22 @@ export default function CreatePost() {
                               <AntDesign name="close" size={16} color="white" />
                             </TouchableOpacity>
                           </Box>
-                          <Button onPress={pickImage} variant="outline" className="w-full">
-                            <ButtonText>Change Image</ButtonText>
+                          <Button onPress={pickImage} variant="outline" className="w-full" isDisabled={uploadingImage}>
+                            <ButtonText>{uploadingImage ? 'Uploading...' : 'Change Image'}</ButtonText>
                           </Button>
                         </VStack>
                       ) : (
                         <TouchableOpacity
                           onPress={pickImage}
                           className="h-64 w-full rounded-lg border-2 border-dashed border-gray-300 bg-gray-50"
+                          disabled={uploadingImage}
                         >
                           <VStack space="md" className="flex-1 items-center justify-center">
-                            <AntDesign name="camera" size={48} color="#6B7280" />
-                            <Text className="text-gray-600">Tap to upload property image</Text>
-                            <Text className="text-sm text-gray-500">Recommended: 4:3 aspect ratio</Text>
+                            <AntDesign name="camera" size={48} color={uploadingImage ? '#9CA3AF' : '#6B7280'} />
+                            <Text className="text-gray-600">
+                              {uploadingImage ? 'Uploading image...' : 'Tap to upload property image'}
+                            </Text>
+                            <Text className="text-sm text-gray-500">Recommended: 4:5 aspect ratio</Text>
                           </VStack>
                         </TouchableOpacity>
                       )}
@@ -1101,13 +1187,46 @@ export default function CreatePost() {
                         <FormControlLabel>
                           <FormControlLabelText>State</FormControlLabelText>
                         </FormControlLabel>
-                        <Input className="bg-white">
-                          <InputField
-                            placeholder="State"
-                            value={formData.state}
-                            onChangeText={(value) => handleInputChange('state', value)}
-                          />
-                        </Input>
+                        <Select className="bg-white" onValueChange={handleStateSelectChange}>
+                          <SelectTrigger>
+                            <SelectInput
+                              placeholder="Select state"
+                              className="flex-1"
+                              value={STATES.find((state) => state.value === formData.state)?.label || formData.state}
+                            />
+                            <SelectIcon className="mr-3" as={ChevronDownIcon} />
+                          </SelectTrigger>
+                          <SelectPortal>
+                            <SelectBackdrop />
+                            <SelectContent className="max-h-[50%] pb-28">
+                              <SelectDragIndicatorWrapper>
+                                <SelectDragIndicator />
+                              </SelectDragIndicatorWrapper>
+
+                              {/* Search Input */}
+                              <Box className="border-b border-gray-200 p-3">
+                                <Input className="w-full bg-white">
+                                  <InputField
+                                    placeholder="Search states..."
+                                    value={stateSearchQuery}
+                                    onChangeText={setStateSearchQuery}
+                                  />
+                                </Input>
+                              </Box>
+
+                              <SelectScrollView>
+                                {filteredStates.map((state) => (
+                                  <SelectItem key={state.value} label={state.label} value={state.value} />
+                                ))}
+                                {filteredStates.length === 0 && (
+                                  <Box className="p-3">
+                                    <Text className="text-center text-gray-500">No states found</Text>
+                                  </Box>
+                                )}
+                              </SelectScrollView>
+                            </SelectContent>
+                          </SelectPortal>
+                        </Select>
                       </FormControl>
                     </HStack>
 
@@ -1117,9 +1236,15 @@ export default function CreatePost() {
                       </FormControlLabel>
                       <Input className="bg-white">
                         <InputField
-                          placeholder="ZIP Code"
+                          placeholder="12345"
                           value={formData.postalCode}
-                          onChangeText={(value) => handleInputChange('postalCode', value)}
+                          onChangeText={(value) => {
+                            // Only allow numeric input and limit to 5 characters
+                            const numericValue = value.replace(/[^0-9]/g, '').slice(0, 5)
+                            handleInputChange('postalCode', numericValue)
+                          }}
+                          keyboardType="numeric"
+                          maxLength={5}
                         />
                       </Input>
                     </FormControl>
@@ -1147,7 +1272,11 @@ export default function CreatePost() {
                       </FormControlLabel>
                       <Select className="bg-white" onValueChange={(value) => handleInputChange('postType', value)}>
                         <SelectTrigger>
-                          <SelectInput placeholder="Select post type" className="flex-1" value={formData.postType} />
+                          <SelectInput
+                            placeholder="Select post type"
+                            className="flex-1"
+                            value={getPostTypeLabel(formData.postType)}
+                          />
                           <SelectIcon className="mr-3" as={ChevronDownIcon} />
                         </SelectTrigger>
                         <SelectPortal>
@@ -1246,19 +1375,22 @@ export default function CreatePost() {
                               <AntDesign name="close" size={16} color="white" />
                             </TouchableOpacity>
                           </Box>
-                          <Button onPress={pickImage} variant="outline" className="w-full">
-                            <ButtonText>Change Image</ButtonText>
+                          <Button onPress={pickImage} variant="outline" className="w-full" isDisabled={uploadingImage}>
+                            <ButtonText>{uploadingImage ? 'Uploading...' : 'Change Image'}</ButtonText>
                           </Button>
                         </VStack>
                       ) : (
                         <TouchableOpacity
                           onPress={pickImage}
                           className="h-64 w-full rounded-lg border-2 border-dashed border-gray-300 bg-gray-50"
+                          disabled={uploadingImage}
                         >
                           <VStack space="md" className="flex-1 items-center justify-center">
-                            <AntDesign name="camera" size={48} color="#6B7280" />
-                            <Text className="text-gray-600">Tap to upload property image</Text>
-                            <Text className="text-sm text-gray-500">Recommended: 4:3 aspect ratio</Text>
+                            <AntDesign name="camera" size={48} color={uploadingImage ? '#9CA3AF' : '#6B7280'} />
+                            <Text className="text-gray-600">
+                              {uploadingImage ? 'Uploading image...' : 'Tap to upload property image'}
+                            </Text>
+                            <Text className="text-sm text-gray-500">Recommended: 4:5 aspect ratio</Text>
                           </VStack>
                         </TouchableOpacity>
                       )}
@@ -1345,6 +1477,7 @@ export default function CreatePost() {
                                   state: '',
                                   postalCode: '',
                                   currency: 'USD',
+                                  country: 'US', // Ensure country remains USA when clearing address
                                 }))
                               }}
                               activeOpacity={0.7}
