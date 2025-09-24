@@ -658,7 +658,14 @@ export default function PropertyDetails() {
         const slugifiedTitle = data?.title ? slugify(`tidit-${data.title}`) : `tidit-${Date.now()}`
         await saveSkiaImageToPhotos(image, { filename: slugifiedTitle, albumName: 'Tidit' })
 
-        Alert.alert('Success', 'Canvas saved to image!')
+        // Trigger paywall after successful save if user is not subscribed
+        if (!isSubscribed) {
+          Alert.alert('Success!', 'Canvas saved to image!', [
+            { text: 'OK', onPress: () => router.push('/subscription') },
+          ])
+        } else {
+          Alert.alert('Success', 'Canvas saved to image!')
+        }
       } else {
         Alert.alert('Error', 'Failed to save canvas')
       }
@@ -826,6 +833,13 @@ export default function PropertyDetails() {
           url: `data:image/png;base64,${imageData}`,
           type: 'image/*',
         })
+
+        // Trigger paywall after successful share if user is not subscribed
+        if (!isSubscribed) {
+          Alert.alert('Success!', 'Shared to Instagram!', [{ text: 'OK', onPress: () => router.push('/subscription') }])
+        } else {
+          Alert.alert('Success!', 'Shared to Instagram!')
+        }
       } else {
         // No fallback needed - just log error
         console.error('No image available for Instagram sharing')
@@ -852,6 +866,13 @@ export default function PropertyDetails() {
           url: `data:image/png;base64,${imageData}`,
           type: 'image/*',
         })
+
+        // Trigger paywall after successful share if user is not subscribed
+        if (!isSubscribed) {
+          Alert.alert('Success!', 'Shared to Facebook!', [{ text: 'OK', onPress: () => router.push('/subscription') }])
+        } else {
+          Alert.alert('Success!', 'Shared to Facebook!')
+        }
       } else {
         // No fallback needed - just log error
         console.error('No image available for Facebook sharing')
@@ -881,6 +902,15 @@ export default function PropertyDetails() {
         }
 
         await Share.open(shareOptions)
+
+        // Trigger paywall after successful share if user is not subscribed
+        if (!isSubscribed) {
+          Alert.alert('Success!', 'Post shared successfully!', [
+            { text: 'OK', onPress: () => router.push('/subscription') },
+          ])
+        } else {
+          Alert.alert('Success!', 'Post shared successfully!')
+        }
       } else {
         // No fallback - just log error if no image available
         console.error('No image available for sharing')
@@ -1530,7 +1560,7 @@ export default function PropertyDetails() {
                         <ButtonText className="text-red-500">Remove</ButtonText>
                       </Button>
                     ) : (
-                      <Button size="xl" onPress={pickImage} className="bg-blue-500">
+                      <Button size="xl" onPress={pickImage} className="bg-tidit-primary">
                         <ButtonText>Upload Property Photo</ButtonText>
                       </Button>
                     )}
