@@ -102,7 +102,17 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(null)
       }
     } catch (error: any) {
-      console.log('Auth check failed:', error)
+      // Enhanced error logging for auth check failures
+      console.error('AuthContext:Auth Check Failed:', {
+        message: error?.message,
+        code: error?.code,
+        type: error?.type,
+        response: error?.response,
+        stack: error?.stack,
+        timestamp: new Date().toISOString(),
+        function: 'checkAuth',
+        isDeletingAccount,
+      })
       // Clear user and session on any error
       setUser(null)
       setSession(null)
@@ -141,7 +151,17 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log('User signed up successfully:', response)
         return response
       } catch (error: any) {
-        console.log(`AuthContext:Signup Error: ${error?.message}`)
+        // Enhanced error logging with more context
+        console.error('AuthContext:Signup Error:', {
+          message: error?.message,
+          code: error?.code,
+          type: error?.type,
+          response: error?.response,
+          stack: error?.stack,
+          email: email, // Don't log password for security
+          timestamp: new Date().toISOString(),
+          function: 'signup',
+        })
 
         // Set a user-friendly error message
         let errorMessage = 'An error occurred during sign up'
@@ -161,7 +181,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         setError({
           message: errorMessage,
-          code: error.code,
+          code: error?.code || 'unknown',
           page: 'signup',
         })
         setLoading(false)
@@ -186,14 +206,44 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Identify user with PostHog
         identifyUserWithPostHog(responseUser)
       } catch (error: any) {
-        console.log(`AuthContext:Error: ${error?.message}`)
+        // Enhanced error logging with more context
+        console.error('AuthContext:Signin Error:', {
+          message: error?.message,
+          code: error?.code,
+          type: error?.type,
+          response: error?.response,
+          stack: error?.stack,
+          email: email, // Don't log password for security
+          timestamp: new Date().toISOString(),
+          function: 'signin',
+        })
+
+        // Set a user-friendly error message
+        let errorMessage = 'An error occurred during sign in'
+
+        if (error?.message) {
+          // Handle common Appwrite errors with user-friendly messages
+          if (error.message.includes('Invalid credentials') || error.message.includes('invalid')) {
+            errorMessage = 'Invalid email or password. Please check your credentials and try again.'
+          } else if (error.message.includes('User not found')) {
+            errorMessage = 'No account found with this email. Please sign up first.'
+          } else if (error.message.includes('email')) {
+            errorMessage = 'Please enter a valid email address.'
+          } else {
+            errorMessage = error.message
+          }
+        }
+
         setError({
-          message: error?.message || 'An error occurred during sign in',
+          message: errorMessage,
           code: error?.code || 'unknown',
           page: 'signin',
         })
+        // Re-throw the error so the calling component knows login failed
+        throw error
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     },
     [identifyUserWithPostHog]
   )
@@ -210,7 +260,17 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Set redirect page to signin after logout
       setRedirectPage('/signin')
     } catch (error: any) {
-      console.log(`AuthContext:Signout Error: ${error?.message}`)
+      // Enhanced error logging with more context
+      console.error('AuthContext:Signout Error:', {
+        message: error?.message,
+        code: error?.code,
+        type: error?.type,
+        response: error?.response,
+        stack: error?.stack,
+        timestamp: new Date().toISOString(),
+        function: 'signout',
+        userId: user?.$id,
+      })
       setError({
         message: error?.message || 'An error occurred during sign out',
         code: error?.code || 'unknown',
@@ -259,7 +319,18 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Keep isDeletingAccount true until redirect happens
       // Don't reset it here - let the app layout handle the redirect
     } catch (error: any) {
-      console.log(`AuthContext:Delete Account Error: ${error?.message}`)
+      // Enhanced error logging with more context
+      console.error('AuthContext:Delete Account Error:', {
+        message: error?.message,
+        code: error?.code,
+        type: error?.type,
+        response: error?.response,
+        stack: error?.stack,
+        timestamp: new Date().toISOString(),
+        function: 'deleteAccount',
+        userId: user?.$id,
+        userEmail: user?.email,
+      })
       setError({
         message: error?.message || 'An error occurred during account deletion',
         code: error?.code || 'unknown',

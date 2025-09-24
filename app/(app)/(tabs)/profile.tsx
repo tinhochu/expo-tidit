@@ -1,5 +1,6 @@
 import DeleteAccountModal from '@/components/DeleteAccountModal'
 import { Button, ButtonText } from '@/components/ui/button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { FormControl, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control'
 import { HStack } from '@/components/ui/hstack'
 import { Icon } from '@/components/ui/icon'
@@ -935,24 +936,35 @@ export default function Profile() {
                 <ButtonText>Customer Center</ButtonText>
               </Button>
 
+              {/* Account Deletion Section */}
+              <VStack space="md" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-4">
+                <Collapsible>
+                  <CollapsibleTrigger>
+                    <HStack space="sm" className="w-full items-center justify-between">
+                      <HStack space="sm" className="items-center">
+                        <Ionicons name="warning" size={24} color="#ef4444" />
+                        <Text className="text-lg font-bold text-red-700">Danger Zone</Text>
+                      </HStack>
+                      <Ionicons name="chevron-down" size={20} color="#ef4444" />
+                    </HStack>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <VStack space="md" className="mt-4">
+                      <Text className="text-sm text-red-600">
+                        Once you delete your account, there is no going back. Please be certain.
+                      </Text>
+                      <Button size="lg" action="negative" onPress={() => setShowDeleteModal(true)}>
+                        <ButtonText>Delete Account</ButtonText>
+                      </Button>
+                    </VStack>
+                  </CollapsibleContent>
+                </Collapsible>
+              </VStack>
+
               {/* Sign Out Button */}
               <Button size="lg" action="negative" variant="outline" onPress={signout} className="mt-2">
                 <ButtonText className="text-red-500">Sign Out</ButtonText>
               </Button>
-
-              {/* Account Deletion Section */}
-              <VStack space="md" className="mt-8 rounded-lg border border-red-200 bg-red-50 p-4">
-                <HStack space="sm" className="items-center">
-                  <Ionicons name="warning" size={24} color="#ef4444" />
-                  <Text className="text-lg font-bold text-red-700">Danger Zone</Text>
-                </HStack>
-                <Text className="text-sm text-red-600">
-                  Once you delete your account, there is no going back. Please be certain.
-                </Text>
-                <Button size="lg" action="negative" onPress={() => setShowDeleteModal(true)} className="mt-2">
-                  <ButtonText>Delete Account</ButtonText>
-                </Button>
-              </VStack>
 
               <Image source={require('@/assets/images/icon.png')} className="mx-auto h-14 w-14" />
             </VStack>

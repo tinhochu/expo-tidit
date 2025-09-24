@@ -249,7 +249,7 @@ export default function Signup() {
 
             <Text size="lg" className="text-black">
               Already have an account?{' '}
-              <Link href="/signin" className="font-bold underline">
+              <Link href="/signin" className="text-tidit-primary font-bold underline">
                 Log In
               </Link>
             </Text>
@@ -257,10 +257,9 @@ export default function Signup() {
 
           <VStack className="mt-5" space="lg">
             <HStack space="sm" className="items-end">
-              <Heading size="xl" className="text-black">
-                Welcome to
+              <Heading size="xl" className="text-tidit-primary">
+                Welcome!
               </Heading>
-              <Image source={require('@/assets/images/icon.png')} alt="Tidit" size="xl" className="h-10 w-10" />
             </HStack>
 
             <Text size="lg">Create a account to access personalized wellness insights and track your progress.</Text>
@@ -383,11 +382,19 @@ export default function Signup() {
 
             <Text>
               By Continuing, you agree to our{' '}
-              <Link href="/terms" className="font-semibold underline">
-                Terms of Service
+              <Link
+                href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+                target="_blank"
+                className="text-tidit-primary font-semibold underline"
+              >
+                Terms of Use (EULA)
               </Link>{' '}
               and{' '}
-              <Link href="/privacy-policy" className="font-semibold underline">
+              <Link
+                href="https://tidit.co/privacy-policy/"
+                target="_blank"
+                className="text-tidit-primary font-semibold underline"
+              >
                 Privacy Policy
               </Link>
               .
@@ -402,7 +409,7 @@ export default function Signup() {
               </Box>
             )}
 
-            <Button onPress={handleSubmit} size="xl" isDisabled={loading}>
+            <Button onPress={handleSubmit} size="xl" isDisabled={loading} className="bg-tidit-primary">
               <ButtonText>{loading ? 'Creating Account...' : 'Continue'}</ButtonText>
             </Button>
             <Image source={require('@/assets/images/icon.png')} alt="Tidit" size="xl" className="self-center" />

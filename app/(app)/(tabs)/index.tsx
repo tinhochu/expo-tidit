@@ -189,116 +189,121 @@ export default function Home() {
                 <Skeleton key={index} variant="sharp" className="h-44 w-full rounded-xl" />
               ))}
             </VStack>
-          ) : filteredPosts.length > 0 ? (
-            filteredPosts
-              .map((post: any, index: number) => {
-                const propInfo = post.propInformation
-                const isLastItem = index === filteredPosts.length - 1
-
-                // Safety check - if propInfo is null/undefined, skip this post
-                if (!propInfo || typeof propInfo !== 'object') {
-                  console.warn('Post has invalid propInformation:', post.id)
-                  return null
-                }
-
-                // Check for custom image in canvas
-                let customImageUrl = null
-                try {
-                  if (post.canvas) {
-                    const canvas = JSON.parse(post.canvas)
-                    customImageUrl = canvas.customImage || null
-                  }
-                } catch (error) {
-                  console.error('Error parsing canvas:', error)
-                }
-
-                return (
-                  <Pressable
-                    key={post.id}
-                    onPress={() => router.push(`/property/${post.id}`)}
-                    onLongPress={() => handleLongPress(post)}
-                  >
-                    <Box
-                      className={`${isLastItem ? 'mb-8' : 'mb-5'} overflow-hidden rounded-xl border border-gray-300 bg-white`}
-                    >
-                      <Grid _extra={{ className: 'grid-cols-5 items-start' }}>
-                        <GridItem _extra={{ className: 'col-span-2' }} className="relative p-0">
-                          {!propInfo.photos && !propInfo.propertyImage && !customImageUrl ? (
-                            <Skeleton variant="sharp" className="aspect-square h-44 w-full" />
-                          ) : (
-                            <PropertyImage
-                              imageUrl={customImageUrl || propInfo?.propertyImage || propInfo?.photos?.[0]?.href || ''}
-                              alt={post.title}
-                              className="aspect-video h-44 object-fill"
-                            />
-                          )}
-                          {post.postType && (
-                            <Box className="absolute left-0 top-0 p-2">
-                              <StatusBadge status={post.postType} />
-                            </Box>
-                          )}
-                        </GridItem>
-                        <GridItem _extra={{ className: 'col-span-3' }} className="p-3">
-                          <HStack space="lg" className="mb-2 items-center justify-between">
-                            {propInfo && (
-                              <Text className="font-bold text-gray-600">
-                                <FontAwesome name="bed" size={14} color="inherit" />{' '}
-                                {propInfo.description?.beds || 'N/A'}
-                                {' • '}
-                                <FontAwesome name="bath" size={14} color="inherit" />{' '}
-                                {propInfo.description?.baths || 'N/A'}
-                                {' • '}
-                                <FontAwesome name="home" size={14} color="inherit" />{' '}
-                                {propInfo.description?.sqft
-                                  ? `${propInfo.description?.sqft.toLocaleString()} ${propInfo.description?.unitType === 'm2' ? 'm²' : 'sqft'}`
-                                  : 'N/A'}
-                              </Text>
-                            )}
-                          </HStack>
-                          <Heading size="md" className="leading-tight">
-                            {propInfo?.line
-                              ? propInfo.line.length > 20
-                                ? `${propInfo.line.slice(0, 20)}...`
-                                : `${propInfo.line},`
-                              : 'Address not available'}
-                          </Heading>
-                          <Heading size="md" className="leading-tight">
-                            {propInfo?.city && `${propInfo.city}`}
-                            {propInfo?.state && `, ${propInfo.state}`}
-                            {/* Show country for international properties, postal code for USA properties */}
-                            {propInfo?.country
-                              ? `, ${propInfo.country}`
-                              : propInfo?.postalCode && `, ${propInfo.postalCode}`}
-                          </Heading>
-                        </GridItem>
-                      </Grid>
-                    </Box>
-                  </Pressable>
-                )
-              })
-              .filter(Boolean)
           ) : (
-            <Text>No posts found</Text>
-          )}
-
-          {/* Subscription CTA - Only show for non-subscribed users */}
-          {!isSubscribed && (
-            <Pressable onPress={() => router.push('/subscription')}>
-              <Box className="overflow-hidden rounded-xl border border-orange-200 bg-orange-300 p-4">
-                <HStack className="items-center justify-between">
-                  <VStack className="flex-1" space="sm">
-                    <HStack className="items-center" space="sm">
-                      <AntDesign name="star" size={20} color="#ff6b35" />
-                      <Heading size="sm" className="text-orange-800">
-                        Unlock Unlimited Posts
-                      </Heading>
+            <>
+              {/* Subscription CTA - Only show for non-subscribed users */}
+              {!isSubscribed && (
+                <Pressable onPress={() => router.push('/subscription')}>
+                  <Box className="border-tidit-primary bg-tidit-primary/20 mb-4 overflow-hidden rounded-xl border p-4">
+                    <HStack className="items-center justify-between">
+                      <VStack className="flex-1" space="sm">
+                        <HStack className="items-center" space="sm">
+                          <AntDesign name="star" size={20} color="#3193EE" />
+                          <Heading size="sm" className="text-tidit-primary">
+                            Unlock Unlimited Posts
+                          </Heading>
+                        </HStack>
+                        <Text className="text-tidit-primary text-sm">Create unlimited posts with Pro features</Text>
+                      </VStack>
+                      <AntDesign name="arrowright" size={24} color="#3193EE" />
                     </HStack>
-                    <Text className="text-sm text-orange-700">Create unlimited posts with Pro features</Text>
-                  </VStack>
-                  <AntDesign name="arrowright" size={24} color="#ff6b35" />
-                </HStack>
-              </Box>
-            </Pressable>
+                  </Box>
+                </Pressable>
+              )}
+              {filteredPosts.length > 0 ? (
+                filteredPosts
+                  .map((post: any, index: number) => {
+                    const propInfo = post.propInformation
+                    const isLastItem = index === filteredPosts.length - 1
+
+                    // Safety check - if propInfo is null/undefined, skip this post
+                    if (!propInfo || typeof propInfo !== 'object') {
+                      console.warn('Post has invalid propInformation:', post.id)
+                      return null
+                    }
+
+                    // Check for custom image in canvas
+                    let customImageUrl = null
+                    try {
+                      if (post.canvas) {
+                        const canvas = JSON.parse(post.canvas)
+                        customImageUrl = canvas.customImage || null
+                      }
+                    } catch (error) {
+                      console.error('Error parsing canvas:', error)
+                    }
+
+                    return (
+                      <Pressable
+                        key={post.id}
+                        onPress={() => router.push(`/property/${post.id}`)}
+                        onLongPress={() => handleLongPress(post)}
+                      >
+                        <Box
+                          className={`${isLastItem ? 'mb-8' : 'mb-5'} overflow-hidden rounded-xl border border-gray-300 bg-white`}
+                        >
+                          <Grid _extra={{ className: 'grid-cols-5 items-start' }}>
+                            <GridItem _extra={{ className: 'col-span-2' }} className="relative p-0">
+                              {!propInfo.photos && !propInfo.propertyImage && !customImageUrl ? (
+                                <Skeleton variant="sharp" className="aspect-square h-44 w-full" />
+                              ) : (
+                                <PropertyImage
+                                  imageUrl={
+                                    customImageUrl || propInfo?.propertyImage || propInfo?.photos?.[0]?.href || ''
+                                  }
+                                  alt={post.title}
+                                  className="aspect-video h-44 object-fill"
+                                />
+                              )}
+                              {post.postType && (
+                                <Box className="absolute left-0 top-0 p-2">
+                                  <StatusBadge status={post.postType} />
+                                </Box>
+                              )}
+                            </GridItem>
+                            <GridItem _extra={{ className: 'col-span-3' }} className="p-3">
+                              <HStack space="lg" className="mb-2 items-center justify-between">
+                                {propInfo && (
+                                  <Text className="font-bold text-gray-600">
+                                    <FontAwesome name="bed" size={14} color="inherit" />{' '}
+                                    {propInfo.description?.beds || 'N/A'}
+                                    {' • '}
+                                    <FontAwesome name="bath" size={14} color="inherit" />{' '}
+                                    {propInfo.description?.baths || 'N/A'}
+                                    {' • '}
+                                    <FontAwesome name="home" size={14} color="inherit" />{' '}
+                                    {propInfo.description?.sqft
+                                      ? `${propInfo.description?.sqft.toLocaleString()} ${propInfo.description?.unitType === 'm2' ? 'm²' : 'sqft'}`
+                                      : 'N/A'}
+                                  </Text>
+                                )}
+                              </HStack>
+                              <Heading size="md" className="leading-tight">
+                                {propInfo?.line
+                                  ? propInfo.line.length > 20
+                                    ? `${propInfo.line.slice(0, 20)}...`
+                                    : `${propInfo.line},`
+                                  : 'Address not available'}
+                              </Heading>
+                              <Heading size="md" className="leading-tight">
+                                {propInfo?.city && `${propInfo.city}`}
+                                {propInfo?.state && `, ${propInfo.state}`}
+                                {/* Show country for international properties, postal code for USA properties */}
+                                {propInfo?.country
+                                  ? `, ${propInfo.country}`
+                                  : propInfo?.postalCode && `, ${propInfo.postalCode}`}
+                              </Heading>
+                            </GridItem>
+                          </Grid>
+                        </Box>
+                      </Pressable>
+                    )
+                  })
+                  .filter(Boolean)
+              ) : (
+                <Text>No posts found</Text>
+              )}
+            </>
           )}
         </VStack>
       </ScrollView>
