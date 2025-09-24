@@ -1524,13 +1524,13 @@ export default function PropertyDetails() {
                     </Box>
                   )}
 
-                  <Box className="mt-3 rounded-md border border-2 border-dashed border-gray-600 p-5 py-6">
+                  <Box className="mt-3 rounded-full border border-2 border-dashed border-gray-600 p-5 py-6">
                     {customImage ? (
                       <Button size="lg" onPress={removeCustomImage} className="border-red-500">
                         <ButtonText className="text-red-500">Remove</ButtonText>
                       </Button>
                     ) : (
-                      <Button size="lg" onPress={pickImage} className="bg-blue-500">
+                      <Button size="xl" onPress={pickImage} className="bg-blue-500">
                         <ButtonText>Upload Property Photo</ButtonText>
                       </Button>
                     )}
@@ -1617,12 +1617,12 @@ export default function PropertyDetails() {
                       </Box>
                     </VStack>
 
-                    <Box className="rounded-lg border border-gray-300 bg-gray-50 p-4">
+                    <Box className="bg-tidit-primary/20 border-tidit-primary rounded-lg border p-4">
                       <Text className="text-center text-gray-600">
                         Upgrade to Pro to unlock custom text personalization for your posts!
                       </Text>
                       <Button
-                        size="md"
+                        size="xl"
                         className="mt-3 bg-blue-500"
                         onPress={() =>
                           router.push(`/subscription?returnRoute=${encodeURIComponent(`/property/${id}`)}`)

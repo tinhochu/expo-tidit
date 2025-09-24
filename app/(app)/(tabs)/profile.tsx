@@ -1,4 +1,5 @@
 import DeleteAccountModal from '@/components/DeleteAccountModal'
+import { Box } from '@/components/ui/box'
 import { Button, ButtonText } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { FormControl, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control'
@@ -216,10 +217,6 @@ export default function Profile() {
                   throw new Error('User ID is not available')
                 }
 
-                console.log(`Saving preferences after clearing ${type}`)
-                console.log('Current formData:', formData)
-                console.log('User ID:', user.$id)
-
                 await updateUserPrefs(user.$id, {
                   firstName: formData.firstName,
                   lastName: formData.lastName,
@@ -231,8 +228,6 @@ export default function Profile() {
                   globalSecondaryColor: formData.globalSecondaryColor,
                   globalTextColor: formData.globalTextColor,
                 })
-
-                console.log(`Preferences saved successfully after clearing ${type}`)
 
                 // Only clear the image from form data after successful save
                 setFormData((prev) => ({ ...prev, [type]: null }))
@@ -633,7 +628,7 @@ export default function Profile() {
                     <Pressable onPress={() => pickImage('brokerageLogo')} disabled={uploadingImage === 'brokerageLogo'}>
                       <VStack className="aspect-square h-40 w-40 items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-400">
                         {formData.brokerageLogo ? (
-                          <VStack space="sm" className="min-h-40 w-40 items-center justify-center px-5">
+                          <VStack space="sm" className="bg-tidit-primary/20 h-40 w-40 items-center justify-center px-5">
                             <Image
                               source={{ uri: formData.brokerageLogo }}
                               className="min-h-40 w-40 rounded-lg p-4"
@@ -666,15 +661,16 @@ export default function Profile() {
 
                     {/* Clear Button - Only show when image exists */}
                     {formData.brokerageLogo && (
-                      <Button
-                        size="xs"
-                        action="negative"
-                        onPress={() => clearImage('brokerageLogo')}
-                        disabled={uploadingImage === 'brokerageLogo'}
-                        className="absolute bottom-0 left-0 right-0"
-                      >
-                        <ButtonText>Remove Logo</ButtonText>
-                      </Button>
+                      <Box className="relative mb-2 w-full px-4">
+                        <Button
+                          size="xs"
+                          action="negative"
+                          onPress={() => clearImage('brokerageLogo')}
+                          disabled={uploadingImage === 'brokerageLogo'}
+                        >
+                          <ButtonText>Remove Logo</ButtonText>
+                        </Button>
+                      </Box>
                     )}
                   </VStack>
                 </FormControl>
@@ -691,7 +687,7 @@ export default function Profile() {
                     >
                       <VStack className="aspect-square items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-400">
                         {formData.realtorPicture ? (
-                          <VStack space="sm" className="min-h-40 w-40 items-center justify-center px-5">
+                          <VStack space="sm" className="bg-tidit-primary/20 h-40 w-40 items-center justify-center px-5">
                             <Image
                               source={{ uri: formData.realtorPicture }}
                               className="min-h-40 w-40 rounded-lg p-4"
@@ -724,15 +720,16 @@ export default function Profile() {
 
                     {/* Clear Button - Only show when image exists */}
                     {formData.realtorPicture && (
-                      <Button
-                        size="xs"
-                        action="negative"
-                        onPress={() => clearImage('realtorPicture')}
-                        disabled={uploadingImage === 'realtorPicture'}
-                        className="absolute bottom-0 left-0 right-0"
-                      >
-                        <ButtonText>Remove Picture</ButtonText>
-                      </Button>
+                      <Box className="relative mb-2 w-full px-4">
+                        <Button
+                          size="xs"
+                          action="negative"
+                          onPress={() => clearImage('realtorPicture')}
+                          disabled={uploadingImage === 'realtorPicture'}
+                        >
+                          <ButtonText>Remove Picture</ButtonText>
+                        </Button>
+                      </Box>
                     )}
                   </VStack>
                 </FormControl>
@@ -803,10 +800,10 @@ export default function Profile() {
                     Custom Photos Uploaded
                   </FormControlLabelText>
                 </FormControlLabel>
-                <VStack space="sm" className="rounded-lg bg-blue-50 p-4">
+                <VStack space="sm" className="bg-tidit-primary/20 border-tidit-primary rounded-lg p-4">
                   <HStack space="sm" className="items-center">
-                    <Ionicons name="camera" size={20} color="#3b82f6" />
-                    <Text className="text-lg font-semibold text-blue-700">
+                    <Ionicons name="camera" size={20} color="#3193EE" />
+                    <Text className="text-tidit-primary text-lg font-semibold">
                       {formData.customPhotosCount} photos
                       {!isSubscribed && ` (${formData.customPhotosCount}/5)`}
                     </Text>
@@ -823,7 +820,7 @@ export default function Profile() {
 
                   {/* Upgrade Buttons for Free Users */}
                   {!isSubscribed && (
-                    <Button size="sm" className="mt-2 bg-blue-600" onPress={() => router.push('/subscription')}>
+                    <Button size="xl" className="mt-2 bg-blue-600" onPress={() => router.push('/subscription')}>
                       <ButtonText className="text-white">Upgrade to Pro</ButtonText>
                     </Button>
                   )}
@@ -898,14 +895,15 @@ export default function Profile() {
               </FormControl>
 
               {/* Submit Button */}
-              <Button size="lg" onPress={handleSubmit} disabled={isLoading} className="mt-4">
+              <Button size="xl" className="bg-tidit-primary mt-4" onPress={handleSubmit} disabled={isLoading}>
                 <ButtonText>{isLoading ? 'Updating...' : 'Update Profile'}</ButtonText>
               </Button>
 
               {/* Customer Center Button */}
               <Button
-                size="lg"
+                size="xl"
                 variant="outline"
+                className="!border-tidit-primary border"
                 onPress={async () => {
                   try {
                     if (!RevenueCatUI || typeof RevenueCatUI.presentCustomerCenter !== 'function') {
@@ -915,7 +913,6 @@ export default function Profile() {
                     }
                     await RevenueCatUI.presentCustomerCenter()
                   } catch (error) {
-                    console.error('Error presenting customer center:', error)
                     toast.show({
                       id: ID.unique(),
                       placement: 'top',
@@ -953,7 +950,7 @@ export default function Profile() {
                       <Text className="text-sm text-red-600">
                         Once you delete your account, there is no going back. Please be certain.
                       </Text>
-                      <Button size="lg" action="negative" onPress={() => setShowDeleteModal(true)}>
+                      <Button size="xl" action="negative" onPress={() => setShowDeleteModal(true)}>
                         <ButtonText>Delete Account</ButtonText>
                       </Button>
                     </VStack>
@@ -962,7 +959,7 @@ export default function Profile() {
               </VStack>
 
               {/* Sign Out Button */}
-              <Button size="lg" action="negative" variant="outline" onPress={signout} className="mt-2">
+              <Button size="xl" action="negative" variant="outline" onPress={signout} className="mt-2">
                 <ButtonText className="text-red-500">Sign Out</ButtonText>
               </Button>
 
