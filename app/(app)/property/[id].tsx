@@ -36,11 +36,13 @@ import { Canvas, Image as SkImage, useCanvasRef, useImage } from '@shopify/react
 import * as ImagePicker from 'expo-image-picker'
 import * as MediaLibrary from 'expo-media-library'
 import { router, useLocalSearchParams } from 'expo-router'
+import * as StoreReview from 'expo-store-review'
 import { useCallback, useEffect, useState } from 'react'
 import {
   ActionSheetIOS,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -58,6 +60,120 @@ const slugify = (text: string): string => {
     .replace(/\s+/g, '-') // Replace spaces with hyphens
     .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
     .trim()
+}
+
+// Store review helper function with smart timing and user preference tracking
+const requestStoreReview = async (userId: string) => {
+  try {
+    // Check if user has already been asked for a review recently
+    const lastReviewRequest = (global as any).lastStoreReviewRequest
+    const now = Date.now()
+    const oneHour = 60 * 60 * 1000 // 1 hour in milliseconds
+
+    // If we've requested a review in the last hour, skip it
+    if (lastReviewRequest && now - lastReviewRequest < oneHour) {
+      console.log('Store review already requested recently, skipping')
+      return
+    }
+
+    // Check user preferences to see if they've already been asked
+    const hasBeenAskedForReview = await checkUserReviewPreference(userId)
+    if (hasBeenAskedForReview) {
+      console.log('User has already been asked for review, skipping')
+      return
+    }
+
+    // Try native store review first
+    const isAvailable = await StoreReview.isAvailableAsync()
+
+    if (isAvailable) {
+      // Request the native store review
+      await StoreReview.requestReview()
+      console.log('Native store review requested successfully')
+
+      // Mark that we've asked the user for a review
+      await markUserReviewRequested(userId)
+    } else {
+      // Fallback to direct App Store link
+      console.log('Native store review not available, using App Store link fallback')
+      await openAppStoreForReview()
+
+      // Mark that we've asked the user for a review
+      await markUserReviewRequested(userId)
+    }
+
+    // Remember when we last requested a review (session-based)
+    ;(global as any).lastStoreReviewRequest = now
+  } catch (error) {
+    console.error('Error requesting store review:', error)
+    // If native API fails, try the fallback
+    try {
+      await openAppStoreForReview()
+      await markUserReviewRequested(userId)
+    } catch (fallbackError) {
+      console.error('Fallback store review also failed:', fallbackError)
+    }
+  }
+}
+
+// Check if user has already been asked for a review (persistent across app sessions)
+const checkUserReviewPreference = async (userId: string) => {
+  try {
+    if (!userId) return false
+
+    // Check user preferences via userService
+    const { getUserPrefs } = await import('@/lib/userService')
+    const userPrefs = await getUserPrefs(userId)
+
+    return userPrefs?.hasBeenAskedForReview || false
+  } catch (error) {
+    console.log('No user preferences found or error checking:', error)
+    return false
+  }
+}
+
+// Mark that we've asked the user for a review
+const markUserReviewRequested = async (userId: string) => {
+  try {
+    if (!userId) return
+
+    // Update user preferences via userService
+    const { updateUserPrefs } = await import('@/lib/userService')
+
+    await updateUserPrefs(userId, {
+      hasBeenAskedForReview: true,
+      reviewRequestDate: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })
+
+    console.log('Marked user as having been asked for review')
+  } catch (error) {
+    console.error('Error marking user review request:', error)
+  }
+}
+
+// Fallback function to open App Store directly (iOS only)
+const openAppStoreForReview = async () => {
+  const itunesItemId = 6751514675
+
+  try {
+    // Try direct App Store link first
+    const directUrl = `itms-apps://itunes.apple.com/app/viewContentsUserReviews/id${itunesItemId}?action=write-review`
+    const canOpen = await Linking.canOpenURL(directUrl)
+
+    if (canOpen) {
+      await Linking.openURL(directUrl)
+      console.log('Opened App Store directly for review')
+    } else {
+      // Fallback to web URL
+      const webUrl = `https://apps.apple.com/app/apple-store/id${itunesItemId}?action=write-review`
+      await Linking.openURL(webUrl)
+      console.log('Opened App Store via web URL for review')
+    }
+  } catch (error) {
+    console.error('Error opening app store for review:', error)
+    throw error
+  }
 }
 
 export default function PropertyDetails() {
@@ -839,6 +955,10 @@ export default function PropertyDetails() {
           Alert.alert('Success!', 'Shared to Instagram!', [{ text: 'OK', onPress: () => router.push('/subscription') }])
         } else {
           Alert.alert('Success!', 'Shared to Instagram!')
+          // Request store review for subscribed users after successful share
+          setTimeout(() => {
+            requestStoreReview(user?.$id || '')
+          }, 1000) // Small delay to let the success alert show first
         }
       } else {
         // No fallback needed - just log error
@@ -872,6 +992,10 @@ export default function PropertyDetails() {
           Alert.alert('Success!', 'Shared to Facebook!', [{ text: 'OK', onPress: () => router.push('/subscription') }])
         } else {
           Alert.alert('Success!', 'Shared to Facebook!')
+          // Request store review for subscribed users after successful share
+          setTimeout(() => {
+            requestStoreReview(user?.$id || '')
+          }, 1000) // Small delay to let the success alert show first
         }
       } else {
         // No fallback needed - just log error
@@ -910,6 +1034,10 @@ export default function PropertyDetails() {
           ])
         } else {
           Alert.alert('Success!', 'Post shared successfully!')
+          // Request store review for subscribed users after successful share
+          setTimeout(() => {
+            requestStoreReview(user?.$id || '')
+          }, 1000) // Small delay to let the success alert show first
         }
       } else {
         // No fallback - just log error if no image available

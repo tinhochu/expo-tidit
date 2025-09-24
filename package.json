@@ -92,7 +92,8 @@
     "react-native-view-shot": "4.0.3",
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
-    "tailwindcss": "^3.4.17"
+    "tailwindcss": "^3.4.17",
+    "expo-store-review": "~8.1.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
