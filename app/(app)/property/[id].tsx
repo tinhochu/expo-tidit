@@ -982,8 +982,8 @@ export default function PropertyDetails() {
                   <GridItem _extra={{ className: 'col-span-1' }}>
                     <Button
                       onPress={handleShare}
-                      className="bg-blue-500"
-                      size="lg"
+                      className="bg-tidit-primary"
+                      size="xl"
                       disabled={isSharing || isDownloading || isLoadingUserPrefs || isCanvasLoading}
                     >
                       <HStack space="sm" className="items-center">
