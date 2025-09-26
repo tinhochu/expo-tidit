@@ -1,12 +1,9 @@
-import { bathIcon, bedIcon, sqftIcon } from '@/components/template-icons'
 import TemplateHeading from '@/components/template-parts/heading'
 import Signature from '@/components/template-parts/signature'
 import { getContrastColor, hexToRgba } from '@/helpers/colorUtils'
 import {
-  Circle,
   Group,
   Image,
-  ImageSVG,
   Paragraph,
   Rect,
   RoundedRect,
@@ -159,7 +156,7 @@ export default function ModernTemplate({
 
   const realtorPictureDimensions = getRealtorPictureDimensions()
 
-  // Calculate optimal logo positioning above the rectangle
+  // Calculate optimal logo positioning centered at the edge/height
   const getOptimalLogoPosition = () => {
     if (!logoDimensions) return { x: screenWidth * 0.175, y: screenWidth * 1.1 }
 
@@ -167,28 +164,19 @@ export default function ModernTemplate({
 
     // Rectangle dimensions
     const rectangleTopY = screenWidth * 1.05
-    const rectangleHeight = screenWidth * 0.2
+    const rectangleBottomY = screenWidth * 1.35
+    const rectangleHeight = rectangleBottomY - rectangleTopY
+    const rectangleLeftX = screenWidth * 0.05 // Rectangle starts at 5% from left
+    const rectangleRightX = screenWidth * 0.95 // Rectangle ends at 95% from left
+    const rectangleWidth = rectangleRightX - rectangleLeftX
 
-    // Position logo above the rectangle with minimal padding (almost touching)
-    const paddingFromRectangle = screenWidth * 0.005 // 0.5% padding above rectangle
-    const logoY = rectangleTopY - logoHeight - paddingFromRectangle
-
-    // Position logo on the right side with padding from edge
-    const paddingFromEdge = screenWidth * 0.02 // 2% padding from right edge
-    const logoX = screenWidth - logoWidth - paddingFromEdge
-
-    // Ensure logo doesn't go too high (above template bounds)
-    const minLogoY = screenWidth * 0.1
-    const finalLogoY = Math.max(logoY, minLogoY)
-
-    // Ensure logo stays within horizontal bounds
-    const minLogoX = screenWidth * 0.05 // 5% margin from left edge
-    const maxLogoX = screenWidth - logoWidth - screenWidth * 0.02 // Keep 2% margin from right edge
-    const finalLogoX = Math.max(minLogoX, Math.min(logoX, maxLogoX))
+    // Center logo both vertically and horizontally within the rectangle
+    const logoX = rectangleLeftX + (rectangleWidth - logoWidth) / 2
+    const logoY = rectangleTopY + (rectangleHeight - logoHeight) / 2
 
     return {
-      x: finalLogoX,
-      y: finalLogoY,
+      x: logoX,
+      y: logoY,
     }
   }
 
@@ -290,24 +278,24 @@ export default function ModernTemplate({
       sqft: createParagraph(
         data.propInformation.description.sqft
           ? `${data?.propInformation?.description?.sqft?.toLocaleString()} ${data?.propInformation?.description?.unitType === 'm2' ? 'm²' : 'SQFT'}`
-          : 'N/A'
+          : 'N/A',
+        20
       ),
       address: (() => {
-        const adjustedFontSize = getParagraphFontSize(14, getFontFamily(selectedFont))
-        const para = Skia.ParagraphBuilder.Make({ textAlign: TextAlign.Right }, customFontMgr!)
+        const adjustedFontSize = getParagraphFontSize(20, getFontFamily(selectedFont))
+        const addressText = `${data.propInformation.line},\n ${data.propInformation.city}, ${data.propInformation.state}, ${data.propInformation.country || data.propInformation.postalCode}`
+        const para = Skia.ParagraphBuilder.Make({ textAlign: TextAlign.Center }, customFontMgr!)
           .pushStyle({
             color: Skia.Color(canvas.textColor || canvas.primaryColor || '#000000'),
             fontFamilies: [getFontFamily(selectedFont)],
             fontSize: adjustedFontSize,
           })
-          .addText(`${data.propInformation.line}`)
-          .addText(`\n${data.propInformation.city}, ${data.propInformation.state}`)
-          .addText(`\n${data.propInformation.country || data.propInformation.postalCode}`)
+          .addText(addressText)
           .build()
         return para
       })(),
-      beds: createParagraph(`${data.propInformation.description.beds}BR`),
-      baths: createParagraph(`${data.propInformation.description.baths}BA`),
+      beds: createParagraph(`${data.propInformation.description.beds}BR`, 20),
+      baths: createParagraph(`${data.propInformation.description.baths}BA`, 20),
       signature: createParagraph('Powered By', 10),
     }
   }, [createParagraph, customFontMgr, data.propInformation, canvas.textColor, canvas.primaryColor])
@@ -345,33 +333,33 @@ export default function ModernTemplate({
 
       <Rect
         color={getContrastColor(primaryColor || '#fafafa')}
-        x={screenWidth * 0.1}
-        y={screenWidth * 0.125}
-        width={screenWidth * 0.8}
+        x={screenWidth * 0.05}
+        y={screenWidth * 0.1}
+        width={screenWidth * 0.9}
         height={5}
       />
 
       <Rect
         color={getContrastColor(primaryColor || '#fafafa')}
-        x={screenWidth * 0.1}
-        y={screenWidth * 0.125}
+        x={screenWidth * 0.05}
+        y={screenWidth * 0.1}
         width={5}
-        height={screenWidth * 1.25 * 0.8}
+        height={screenWidth * 1.25 * 0.85}
       />
 
       <Rect
         color={getContrastColor(primaryColor || '#fafafa')}
-        x={screenWidth * 0.9}
-        y={screenWidth * 0.125}
+        x={screenWidth * 0.95}
+        y={screenWidth * 0.1}
         width={5}
-        height={screenWidth * 1.25 * 0.8}
+        height={screenWidth * 1.25 * 0.85}
       />
 
       <Rect
         color={getContrastColor(primaryColor || '#fafafa')}
-        x={screenWidth * 0.1}
-        y={screenWidth * 1.1135}
-        width={screenWidth * 0.8}
+        x={screenWidth * 0.05}
+        y={screenWidth * 1.15}
+        width={screenWidth * 0.91}
         height={5}
       />
 
@@ -380,7 +368,7 @@ export default function ModernTemplate({
         screenWidth={screenWidth}
         text={mainHeading}
         x={screenWidth * 0}
-        y={screenWidth * 0.325}
+        y={screenWidth * 0.3}
         fontFamily={getFontFamily(selectedFont)}
       />
 
@@ -390,7 +378,7 @@ export default function ModernTemplate({
           screenWidth={screenWidth}
           text={subHeading}
           x={screenWidth * 0}
-          y={screenWidth * 0.7}
+          y={screenWidth * 0.55}
           size={postType === 'OPEN_HOUSE' ? 2 : 1.25}
           fontFamily={getFontFamily(selectedFont)}
         />
@@ -417,53 +405,32 @@ export default function ModernTemplate({
         </>
       )}
 
-      {/* {data.propInformation.description.beds &&
+      {data.propInformation.description.beds &&
         (() => {
-          const positioning = getIconPositioning(screenWidth * 1.09, 14, -screenWidth * 0.005)
           return (
             <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: -screenWidth * 0.01 }]}>
-              <Paragraph paragraph={paragraphs.beds} x={screenWidth * 0.46} y={positioning.textY} width={100} />
+              <Paragraph paragraph={paragraphs.beds} x={screenWidth * 0.46} y={screenWidth * 1.07} width={100} />
             </Group>
           )
         })()}
 
       {data.propInformation.description.baths &&
         (() => {
-          const positioning = getIconPositioning(screenWidth * 1.09, 14, screenWidth * 0.012)
           return (
-            <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.03 }]}>
-              <Paragraph paragraph={paragraphs.baths} x={screenWidth * 0.46} y={positioning.textY} width={100} />
+            <Group transform={[{ translateX: bedsBathsSqftOffset * 8 }, { translateY: -screenWidth * 0.01 }]}>
+              <Paragraph paragraph={paragraphs.baths} x={screenWidth * 0.46} y={screenWidth * 1.07} width={100} />
             </Group>
           )
         })()}
 
       {data.propInformation.description.sqft &&
         (() => {
-          const positioning = getIconPositioning(screenWidth * 1.09, 15, screenWidth * 0.0175)
           return (
-            <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.075 }]}>
-              <Paragraph paragraph={paragraphs.sqft} x={screenWidth * 0.46} y={positioning.textY} width={100} />
+            <Group transform={[{ translateX: bedsBathsSqftOffset * 15 }, { translateY: -screenWidth * 0.01 }]}>
+              <Paragraph paragraph={paragraphs.sqft} x={screenWidth * 0.46} y={screenWidth * 1.07} width={100} />
             </Group>
           )
-        })()} */}
-
-      {/* 
-      {hasRealtorPicture && showRealtor && (
-        <Circle cx={screenWidth * 0.01} cy={screenWidth * 1.15} r={screenWidth * 0.3} color={secondaryColor} />
-      )}
-
-      <Rect x={0} y={screenWidth * 1.05} width={screenWidth} height={screenWidth * 0.2} color={secondaryColor} />
-
-      {hasRealtorPicture && showRealtor && realtorPicture && realtorPictureDimensions && (
-        <Image
-          image={realtorPicture}
-          fit="cover"
-          x={-screenWidth * 0.05}
-          y={screenWidth * 1.25 - realtorPictureDimensions.height}
-          width={realtorPictureDimensions.width}
-          height={realtorPictureDimensions.height}
-        />
-      )}
+        })()}
 
       {hasBrokerageLogo && showBrokerage && brokerageLogo && logoDimensions && (
         <Image
@@ -476,40 +443,7 @@ export default function ModernTemplate({
         />
       )}
 
-      {data.propInformation.description.beds &&
-        (() => {
-          const positioning = getIconPositioning(screenWidth * 1.09, 14, -screenWidth * 0.005)
-          return (
-            <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: -screenWidth * 0.01 }]}>
-              <ImageSVG svg={bedIcon(textColor)} x={screenWidth * 0.4} y={positioning.iconY + screenWidth * 0.01} />
-              <Paragraph paragraph={paragraphs.beds} x={screenWidth * 0.46} y={positioning.textY} width={100} />
-            </Group>
-          )
-        })()}
-
-      {data.propInformation.description.baths &&
-        (() => {
-          const positioning = getIconPositioning(screenWidth * 1.09, 14, screenWidth * 0.012)
-          return (
-            <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.03 }]}>
-              <ImageSVG svg={bathIcon(textColor)} x={screenWidth * 0.4} y={positioning.iconY + screenWidth * 0.01} />
-              <Paragraph paragraph={paragraphs.baths} x={screenWidth * 0.46} y={positioning.textY} width={100} />
-            </Group>
-          )
-        })()}
-
-      {data.propInformation.description.sqft &&
-        (() => {
-          const positioning = getIconPositioning(screenWidth * 1.09, 15, screenWidth * 0.0175)
-          return (
-            <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.075 }]}>
-              <ImageSVG svg={sqftIcon(textColor)} x={screenWidth * 0.4} y={positioning.iconY + screenWidth * 0.01} />
-              <Paragraph paragraph={paragraphs.sqft} x={screenWidth * 0.46} y={positioning.textY} width={100} />
-            </Group>
-          )
-        })()}
-
-      <Paragraph paragraph={paragraphs.address} x={-screenWidth * 0.025} y={screenWidth * 1.075} width={screenWidth} /> */}
+      <Paragraph paragraph={paragraphs.address} x={0} y={screenWidth * 0.8} width={screenWidth} />
 
       {/* Tidit Signature - Only show if enabled */}
       {showSignature && (

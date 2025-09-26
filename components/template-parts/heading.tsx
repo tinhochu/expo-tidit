@@ -55,22 +55,36 @@ export default function TemplateHeading({
   const getFontSize = (baseSize: number, font: string) => {
     const baseFontSize = 55 * baseSize
 
+    let adjustedSize: number
     switch (font) {
       case 'PlayfairDisplay':
-        return baseFontSize * 1.0 // Playfair is already well-balanced
+        adjustedSize = baseFontSize * 1.0 // Playfair is already well-balanced
+        break
       case 'Inter':
-        return baseFontSize * 1.25 // Inter is more compact, reduce slightly
+        adjustedSize = baseFontSize * 1.25 // Inter is more compact, reduce slightly
+        break
       case 'MontserratExtraBold':
-        return baseFontSize * 1 // Montserrat ExtraBold is very bold, reduce more
+        adjustedSize = baseFontSize * 1 // Montserrat ExtraBold is very bold, reduce more
+        break
       case 'CormorantGaramond':
-        return baseFontSize * 1.3 // Cormorant is elegant but can be small, increase
+        adjustedSize = baseFontSize * 1.3 // Cormorant is elegant but can be small, increase
+        break
       case 'PoppinsSemiBold':
-        return baseFontSize * 1.125 // Poppins is balanced, slight reduction
+        adjustedSize = baseFontSize * 1.125 // Poppins is balanced, slight reduction
+        break
       case 'SpaceMono':
-        return baseFontSize * 1 // SpaceMono is monospace and can be large, reduce more
+        adjustedSize = baseFontSize * 1 // SpaceMono is monospace and can be large, reduce more
+        break
       default:
-        return baseFontSize
+        adjustedSize = baseFontSize
     }
+
+    // If the font is not PlayfairDisplay, decrease the font size by 5 points
+    if (font !== 'PlayfairDisplay') {
+      adjustedSize = Math.max(adjustedSize - 5, adjustedSize * 0.5) // Ensure font doesn't get too small
+    }
+
+    return adjustedSize
   }
 
   const CustomParagraph = useMemo(() => {
