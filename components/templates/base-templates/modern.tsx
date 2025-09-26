@@ -274,8 +274,37 @@ export default function ModernTemplate({
   const paragraphs = useMemo(() => {
     if (!createParagraph) return {}
 
+    const createParagraphWithShadow = (text: string, fontSize: number = 14) => {
+      const adjustedFontSize = getParagraphFontSize(fontSize, getFontFamily(selectedFont))
+      const backgroundColor = canvas.primaryColor || '#000000'
+      const shadowColor = getContrastColor(backgroundColor) === '#ffffff' ? '#000000' : '#ffffff'
+
+      const baseStyle = {
+        textAlign: TextAlign.Left,
+      }
+
+      // Shadow paragraph
+      const shadowStyle = {
+        color: Skia.Color(shadowColor),
+        fontFamilies: [getFontFamily(selectedFont)],
+        fontSize: adjustedFontSize,
+      }
+
+      // Main paragraph
+      const textStyle = {
+        color: Skia.Color(canvas.textColor || canvas.primaryColor || '#000000'),
+        fontFamilies: [getFontFamily(selectedFont)],
+        fontSize: adjustedFontSize,
+      }
+
+      return {
+        shadow: Skia.ParagraphBuilder.Make(baseStyle, customFontMgr!).pushStyle(shadowStyle).addText(text).build(),
+        main: Skia.ParagraphBuilder.Make(baseStyle, customFontMgr!).pushStyle(textStyle).addText(text).build(),
+      }
+    }
+
     return {
-      sqft: createParagraph(
+      sqft: createParagraphWithShadow(
         data.propInformation.description.sqft
           ? `${data?.propInformation?.description?.sqft?.toLocaleString()} ${data?.propInformation?.description?.unitType === 'm2' ? 'm²' : 'SQFT'}`
           : 'N/A',
@@ -284,7 +313,19 @@ export default function ModernTemplate({
       address: (() => {
         const adjustedFontSize = getParagraphFontSize(20, getFontFamily(selectedFont))
         const addressText = `${data.propInformation.line},\n ${data.propInformation.city}, ${data.propInformation.state}, ${data.propInformation.country || data.propInformation.postalCode}`
-        const para = Skia.ParagraphBuilder.Make({ textAlign: TextAlign.Center }, customFontMgr!)
+        const backgroundColor = canvas.primaryColor || '#000000'
+        const shadowColor = getContrastColor(backgroundColor) === '#ffffff' ? '#000000' : '#ffffff'
+
+        const shadowPara = Skia.ParagraphBuilder.Make({ textAlign: TextAlign.Center }, customFontMgr!)
+          .pushStyle({
+            color: Skia.Color(shadowColor),
+            fontFamilies: [getFontFamily(selectedFont)],
+            fontSize: adjustedFontSize,
+          })
+          .addText(addressText)
+          .build()
+
+        const mainPara = Skia.ParagraphBuilder.Make({ textAlign: TextAlign.Center }, customFontMgr!)
           .pushStyle({
             color: Skia.Color(canvas.textColor || canvas.primaryColor || '#000000'),
             fontFamilies: [getFontFamily(selectedFont)],
@@ -292,13 +333,14 @@ export default function ModernTemplate({
           })
           .addText(addressText)
           .build()
-        return para
+
+        return { shadow: shadowPara, main: mainPara }
       })(),
-      beds: createParagraph(`${data.propInformation.description.beds}BR`, 20),
-      baths: createParagraph(`${data.propInformation.description.baths}BA`, 20),
-      signature: createParagraph('Powered By', 10),
+      beds: createParagraphWithShadow(`${data.propInformation.description.beds}BR`, 20),
+      baths: createParagraphWithShadow(`${data.propInformation.description.baths}BA`, 20),
+      signature: createParagraphWithShadow('Powered By', 10),
     }
-  }, [createParagraph, customFontMgr, data.propInformation, canvas.textColor, canvas.primaryColor])
+  }, [createParagraph, customFontMgr, data.propInformation, canvas.textColor, canvas.primaryColor, selectedFont])
 
   if (!customFontMgr || !paragraphs.sqft || !paragraphs.beds || !paragraphs.baths) {
     return null
@@ -332,7 +374,7 @@ export default function ModernTemplate({
       </Rect>
 
       <Rect
-        color={getContrastColor(primaryColor || '#fafafa')}
+        color={secondaryColor || '#ffffff'}
         x={screenWidth * 0.05}
         y={screenWidth * 0.1}
         width={screenWidth * 0.9}
@@ -340,7 +382,7 @@ export default function ModernTemplate({
       />
 
       <Rect
-        color={getContrastColor(primaryColor || '#fafafa')}
+        color={secondaryColor || '#ffffff'}
         x={screenWidth * 0.05}
         y={screenWidth * 0.1}
         width={5}
@@ -348,7 +390,7 @@ export default function ModernTemplate({
       />
 
       <Rect
-        color={getContrastColor(primaryColor || '#fafafa')}
+        color={secondaryColor || '#ffffff'}
         x={screenWidth * 0.95}
         y={screenWidth * 0.1}
         width={5}
@@ -356,7 +398,7 @@ export default function ModernTemplate({
       />
 
       <Rect
-        color={getContrastColor(primaryColor || '#fafafa')}
+        color={secondaryColor || '#ffffff'}
         x={screenWidth * 0.05}
         y={screenWidth * 1.15}
         width={screenWidth * 0.91}
@@ -392,7 +434,7 @@ export default function ModernTemplate({
             width={screenWidth * 0.5}
             height={screenWidth * 0.5}
             r={30}
-            color={secondaryColor}
+            color={secondaryColor || '#ffffff'}
           />
           <Image
             image={realtorPicture}
@@ -409,7 +451,13 @@ export default function ModernTemplate({
         (() => {
           return (
             <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: -screenWidth * 0.01 }]}>
-              <Paragraph paragraph={paragraphs.beds} x={screenWidth * 0.46} y={screenWidth * 1.07} width={100} />
+              <Paragraph
+                paragraph={paragraphs.beds.shadow}
+                x={screenWidth * 0.46 + 1}
+                y={screenWidth * 1.07 + 2}
+                width={100}
+              />
+              <Paragraph paragraph={paragraphs.beds.main} x={screenWidth * 0.46} y={screenWidth * 1.07} width={100} />
             </Group>
           )
         })()}
@@ -418,7 +466,13 @@ export default function ModernTemplate({
         (() => {
           return (
             <Group transform={[{ translateX: bedsBathsSqftOffset * 8 }, { translateY: -screenWidth * 0.01 }]}>
-              <Paragraph paragraph={paragraphs.baths} x={screenWidth * 0.46} y={screenWidth * 1.07} width={100} />
+              <Paragraph
+                paragraph={paragraphs.baths.shadow}
+                x={screenWidth * 0.46 + 1}
+                y={screenWidth * 1.07 + 2}
+                width={100}
+              />
+              <Paragraph paragraph={paragraphs.baths.main} x={screenWidth * 0.46} y={screenWidth * 1.07} width={100} />
             </Group>
           )
         })()}
@@ -427,7 +481,13 @@ export default function ModernTemplate({
         (() => {
           return (
             <Group transform={[{ translateX: bedsBathsSqftOffset * 15 }, { translateY: -screenWidth * 0.01 }]}>
-              <Paragraph paragraph={paragraphs.sqft} x={screenWidth * 0.46} y={screenWidth * 1.07} width={100} />
+              <Paragraph
+                paragraph={paragraphs.sqft.shadow}
+                x={screenWidth * 0.46 + 1}
+                y={screenWidth * 1.07 + 2}
+                width={100}
+              />
+              <Paragraph paragraph={paragraphs.sqft.main} x={screenWidth * 0.46} y={screenWidth * 1.07} width={100} />
             </Group>
           )
         })()}
@@ -443,11 +503,16 @@ export default function ModernTemplate({
         />
       )}
 
-      <Paragraph paragraph={paragraphs.address} x={0} y={screenWidth * 0.8} width={screenWidth} />
+      <Paragraph paragraph={paragraphs.address.shadow} x={1} y={screenWidth * 0.8 + 2} width={screenWidth} />
+      <Paragraph paragraph={paragraphs.address.main} x={0} y={screenWidth * 0.8} width={screenWidth} />
 
       {/* Tidit Signature - Only show if enabled */}
       {showSignature && (
-        <Signature screenWidth={screenWidth} poweredBy={paragraphs.signature} primaryColor={primaryColor} />
+        <Signature
+          screenWidth={screenWidth}
+          poweredBy={paragraphs.signature?.main || paragraphs.signature}
+          primaryColor={primaryColor}
+        />
       )}
     </>
   )

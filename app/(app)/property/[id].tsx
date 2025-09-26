@@ -1192,32 +1192,30 @@ export default function PropertyDetails() {
 
                           setPostType(newPostType)
 
-                          // Update templateStyle to match the first available template
+                          // Check if current template is valid for the new post type
                           const availableTemplates = getTemplates()
+                          const isValidCurrentTemplate = availableTemplates.some((t) => t.value === templateStyle)
 
                           try {
-                            if (availableTemplates.length > 0) {
-                              // Prefer 'classic' template if available, otherwise use first available
+                            // Keep the current template if it's valid for the new post type
+                            let templateSelected = templateStyle
+
+                            // If current template is not valid, find a new one
+                            if (!isValidCurrentTemplate && availableTemplates.length > 0) {
                               const defaultTemplate =
                                 availableTemplates.find((t) => t.value === 'classic') || availableTemplates[0]
-                              const newTemplateStyle = defaultTemplate.value
-
-                              setTemplateStyle(newTemplateStyle)
-
-                              // Update the post type and template in the database
-                              await updatePost(id as string, {
-                                postType: newPostType,
-                                canvas: JSON.stringify({
-                                  ...canvas,
-                                  template: newTemplateStyle,
-                                }),
-                              })
-                            } else {
-                              // Update just the post type in the database
-                              await updatePost(id as string, {
-                                postType: newPostType,
-                              })
+                              templateSelected = defaultTemplate.value
+                              setTemplateStyle(templateSelected)
                             }
+
+                            // Update the post type and template in the database
+                            await updatePost(id as string, {
+                              postType: newPostType,
+                              canvas: JSON.stringify({
+                                ...canvas,
+                                template: templateSelected,
+                              }),
+                            })
                           } catch (error) {
                             console.error('Error updating post type and template:', error)
                           } finally {
