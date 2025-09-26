@@ -36,8 +36,8 @@ export default function OnboardingScreen() {
   const { completeOnboarding } = useOnboarding()
 
   const handleOnboardingComplete = async () => {
-    await completeOnboarding()
-    router.replace('/signin')
+    await completeOnboarding({})
+    router.replace('/(app)/(tabs)')
   }
 
   return <OnboardingCarousel steps={onboardingSteps} onComplete={handleOnboardingComplete} />

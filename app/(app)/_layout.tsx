@@ -3,7 +3,7 @@ import { useOnboarding } from '@/context/OnboardingContext'
 import { Redirect, Stack } from 'expo-router'
 import { useEffect, useMemo } from 'react'
 
-type RedirectTarget = '/signin' | '/signup' | 'app' | null
+type RedirectTarget = '/signin' | '/signup' | '/onboarding' | 'app' | null
 
 export default function AppLayout() {
   const { session, error, redirectPage, isDeletingAccount, setDeletingAccount } = useAuth()
@@ -25,11 +25,8 @@ export default function AppLayout() {
       return null // This will show the loading state from AuthProvider
     }
 
-    // For now, skip onboarding check since the route doesn't exist
-    // TODO: Add onboarding route and re-enable this logic
-    // if (!isOnboarded) {
-    //   return '/onboarding'
-    // }
+    // Authenticated users don't need to see onboarding carousel
+    // The onboarding preferences can be set later through profile/settings
 
     // User is authenticated, show the app
     return 'app'
@@ -52,6 +49,10 @@ export default function AppLayout() {
 
   if (redirectTarget === '/signup') {
     return <Redirect href="/signup" />
+  }
+
+  if (redirectTarget === '/onboarding') {
+    return <Redirect href="/onboarding" />
   }
 
   if (redirectTarget === null) {

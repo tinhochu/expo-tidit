@@ -6,6 +6,7 @@ import { useAuth } from './AuthContext'
 
 interface OnboardingContextType {
   isOnboarded: boolean
+  hasSeenOnboarding: boolean
   isLoading: boolean
   completeOnboarding: (preferences: UserPreferences) => Promise<void>
   userPreferences: UserPreferences | null
@@ -24,6 +25,7 @@ interface UserPreferences {
 
 const OnboardingContext = createContext<OnboardingContextType>({
   isOnboarded: false,
+  hasSeenOnboarding: false,
   isLoading: true,
   completeOnboarding: async () => {},
   userPreferences: null,
@@ -33,6 +35,7 @@ const OnboardingContext = createContext<OnboardingContextType>({
 export const OnboardingProvider = ({ children }: { children: React.ReactNode }) => {
   const { user, session } = useAuth()
   const [isOnboarded, setIsOnboarded] = useState(false)
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null)
 
@@ -52,6 +55,9 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
     isCheckingRef.current = true
 
     try {
+      // If user is authenticated, they have seen onboarding (they signed in)
+      setHasSeenOnboarding(true)
+
       // Try to fetch existing user preferences from Appwrite
       const preferences = user.prefs
 
@@ -66,6 +72,9 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
       // Update the last checked user ID
       lastCheckedUserId.current = user.$id
     } catch (error: any) {
+      // If user is authenticated, they have seen onboarding even if preferences fail
+      setHasSeenOnboarding(true)
+
       // If document doesn't exist (404) or other error, user needs onboarding
       if (error.code === 404) {
         setIsOnboarded(false)
@@ -91,6 +100,7 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
     } else if (!user || !session) {
       // Reset state when user logs out
       setIsOnboarded(false)
+      setHasSeenOnboarding(false)
       setUserPreferences(null)
       setIsLoading(false)
       lastCheckedUserId.current = null
@@ -109,6 +119,7 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
       // The actual update happens through the userService.updateUserPrefs
       setUserPreferences(preferences)
       setIsOnboarded(true)
+      setHasSeenOnboarding(true)
 
       console.log('Onboarding completed with preferences:', preferences)
     } catch (error) {
@@ -146,6 +157,7 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
 
   const value = {
     isOnboarded,
+    hasSeenOnboarding,
     isLoading,
     completeOnboarding,
     userPreferences,
