@@ -4,6 +4,7 @@ import { HStack } from '@/components/ui/hstack'
 import { Image } from '@/components/ui/image'
 import { Text } from '@/components/ui/text'
 import { VStack } from '@/components/ui/vstack'
+import { usePaywall } from '@/context/PaywallContext'
 import { useSubscription } from '@/context/SubscriptionContext'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
@@ -53,9 +54,9 @@ const SubscriptionPlanToggle: React.FC<SubscriptionPlanToggleProps> = ({ pkg, is
 }
 
 export default function SubscriptionScreen() {
-  const closeRef = useRef<() => void>(null)
   const { returnRoute } = useLocalSearchParams<{ returnRoute?: string }>()
   const { offerings, isSubscribed, checkSubscriptionStatus } = useSubscription()
+  const { markPaywallAsClosed } = usePaywall()
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null)
@@ -137,11 +138,18 @@ export default function SubscriptionScreen() {
   }
 
   const handleBackNavigation = () => {
-    // If we have a return route, go back there, otherwise use router.back()
-    if (returnRoute) {
-      router.push(returnRoute as any)
-    } else {
-      router.back()
+    try {
+      // Mark paywall as closed when user closes
+      markPaywallAsClosed()
+
+      // If we have a return route, go back there, otherwise use router.back()
+      if (returnRoute) {
+        router.push(returnRoute as any)
+      } else {
+        router.back()
+      }
+    } catch (error) {
+      router.push('/')
     }
   }
 
@@ -156,7 +164,7 @@ export default function SubscriptionScreen() {
           </TouchableOpacity>
 
           <VStack className="items-center justify-center">
-            <Image source={require('@/assets/images/splash-icon-light.png')} className="h-24 w-24" />
+            <Image source={require('@/assets/images/splash-icon-light.png')} className="h-24 w-24" alt="Tidit Pro" />
             <Text className="text-5xl font-black text-white">Unlock your</Text>
             <HStack className="items-center justify-center">
               <Text className="text-dark text-5xl font-black">Pro</Text>

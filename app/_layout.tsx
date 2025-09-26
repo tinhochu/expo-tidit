@@ -2,6 +2,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider'
 import { AuthProvider } from '@/context/AuthContext'
 import { OnboardingProvider } from '@/context/OnboardingContext'
+import { PaywallProvider } from '@/context/PaywallContext'
 import { SubscriptionProvider } from '@/context/SubscriptionContext'
 import '@/global.css'
 import { Slot } from 'expo-router'
@@ -27,7 +28,9 @@ export default function RootLayout() {
           <AuthProvider>
             <OnboardingProvider>
               <SubscriptionProvider>
-                <Slot />
+                <PaywallProvider>
+                  <Slot />
+                </PaywallProvider>
               </SubscriptionProvider>
             </OnboardingProvider>
           </AuthProvider>

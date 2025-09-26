@@ -18,6 +18,7 @@ export default function PreAuthOnboardingStep3({}: PreAuthOnboardingStep3Props) 
           source={require('@/assets/images/onboarding/3.jpg')}
           style={{ width: '100%', height: '100%' }}
           contentFit="cover"
+          alt="Onboarding step 3"
         />
       </View>
     </VStack>

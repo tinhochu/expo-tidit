@@ -194,16 +194,18 @@ export default function Home() {
               {/* Subscription CTA - Only show for non-subscribed users */}
               {!isSubscribed && (
                 <Pressable onPress={() => router.push('/subscription')}>
-                  <Box className="border-tidit-primary bg-tidit-primary/20 mb-4 overflow-hidden rounded-xl border p-4">
+                  <Box className="mb-4 overflow-hidden rounded-xl border border-tidit-primary bg-tidit-primary/20 p-4">
                     <HStack className="items-center justify-between">
                       <VStack className="flex-1" space="sm">
                         <HStack className="items-center" space="sm">
                           <AntDesign name="star" size={20} color="#3193EE" />
-                          <Heading size="sm" className="text-tidit-primary">
+                          <Heading size="sm" className="text-blue-500">
                             Unlock Unlimited Posts
                           </Heading>
                         </HStack>
-                        <Text className="text-tidit-primary text-sm">Create unlimited posts with Pro features</Text>
+                        <Text className="text-sm font-semibold text-blue-500">
+                          Create unlimited posts with Pro features
+                        </Text>
                       </VStack>
                       <AntDesign name="arrowright" size={24} color="#3193EE" />
                     </HStack>

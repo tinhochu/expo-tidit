@@ -50,11 +50,6 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
       // Check if user has any active entitlements
       const hasActiveEntitlements = info.entitlements?.active ? Object.keys(info.entitlements.active).length > 0 : false
       setIsSubscribed(hasActiveEntitlements)
-
-      console.log('Subscription status checked:', {
-        isSubscribed: hasActiveEntitlements,
-        entitlements: info.entitlements.active,
-      })
     } catch (error: any) {
       console.error('Error checking subscription status:', error)
       setIsSubscribed(false)
@@ -108,14 +103,11 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     // Set initialized after first render to avoid issues during initial mount
-    console.log('SubscriptionContext: Setting up initialization timer')
     const timer = setTimeout(() => {
-      console.log('SubscriptionContext: Initializing...')
       setIsInitialized(true)
     }, 100)
 
     return () => {
-      console.log('SubscriptionContext: Cleaning up timer')
       clearTimeout(timer)
     }
   }, [])

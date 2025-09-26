@@ -628,11 +628,12 @@ export default function Profile() {
                     <Pressable onPress={() => pickImage('brokerageLogo')} disabled={uploadingImage === 'brokerageLogo'}>
                       <VStack className="aspect-square h-40 w-40 items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-400">
                         {formData.brokerageLogo ? (
-                          <VStack space="sm" className="bg-tidit-primary/20 h-40 w-40 items-center justify-center px-5">
+                          <VStack space="sm" className="h-40 w-40 items-center justify-center bg-tidit-primary/20 px-5">
                             <Image
                               source={{ uri: formData.brokerageLogo }}
                               className="min-h-40 w-40 rounded-lg p-4"
                               resizeMode="contain"
+                              alt="Brokerage logo"
                             />
                             {uploadingImage === 'brokerageLogo' && (
                               <VStack space="xs" className="items-center">
@@ -687,11 +688,12 @@ export default function Profile() {
                     >
                       <VStack className="aspect-square items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-400">
                         {formData.realtorPicture ? (
-                          <VStack space="sm" className="bg-tidit-primary/20 h-40 w-40 items-center justify-center px-5">
+                          <VStack space="sm" className="h-40 w-40 items-center justify-center bg-tidit-primary/20 px-5">
                             <Image
                               source={{ uri: formData.realtorPicture }}
                               className="min-h-40 w-40 rounded-lg p-4"
                               resizeMode="contain"
+                              alt="Realtor picture"
                             />
                             {uploadingImage === 'realtorPicture' && (
                               <VStack space="xs" className="items-center">
@@ -800,10 +802,10 @@ export default function Profile() {
                     Custom Photos Uploaded
                   </FormControlLabelText>
                 </FormControlLabel>
-                <VStack space="sm" className="bg-tidit-primary/20 border-tidit-primary rounded-lg p-4">
+                <VStack space="sm" className="rounded-lg border-tidit-primary bg-tidit-primary/20 p-4">
                   <HStack space="sm" className="items-center">
                     <Ionicons name="camera" size={20} color="#3193EE" />
-                    <Text className="text-tidit-primary text-lg font-semibold">
+                    <Text className="text-lg font-semibold text-tidit-primary">
                       {formData.customPhotosCount} photos
                       {!isSubscribed && ` (${formData.customPhotosCount}/5)`}
                     </Text>
@@ -895,7 +897,7 @@ export default function Profile() {
               </FormControl>
 
               {/* Submit Button */}
-              <Button size="xl" className="bg-tidit-primary mt-4" onPress={handleSubmit} disabled={isLoading}>
+              <Button size="xl" className="mt-4 bg-tidit-primary" onPress={handleSubmit} disabled={isLoading}>
                 <ButtonText>{isLoading ? 'Updating...' : 'Update Profile'}</ButtonText>
               </Button>
 
@@ -903,7 +905,7 @@ export default function Profile() {
               <Button
                 size="xl"
                 variant="outline"
-                className="!border-tidit-primary border"
+                className="border !border-tidit-primary"
                 onPress={async () => {
                   try {
                     if (!RevenueCatUI || typeof RevenueCatUI.presentCustomerCenter !== 'function') {
@@ -963,7 +965,7 @@ export default function Profile() {
                 <ButtonText className="text-red-500">Sign Out</ButtonText>
               </Button>
 
-              <Image source={require('@/assets/images/icon.png')} className="mx-auto h-14 w-14" />
+              <Image source={require('@/assets/images/icon.png')} className="mx-auto h-14 w-14" alt="Tidit App Icon" />
             </VStack>
           </VStack>
         </VStack>

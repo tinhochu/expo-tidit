@@ -18,6 +18,7 @@ export default function PreAuthOnboardingStep5({}: PreAuthOnboardingStep5Props) 
             source={require('@/assets/images/onboarding/5.jpg')}
             style={{ width: '100%', height: '100%' }}
             contentFit="cover"
+            alt="Onboarding step 5"
           />
         </Pressable>
       </View>

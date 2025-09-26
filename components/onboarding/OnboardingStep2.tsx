@@ -19,6 +19,7 @@ export default function PreAuthOnboardingStep2({}: PreAuthOnboardingStep2Props) 
             source={require('@/assets/images/onboarding/2.jpg')}
             style={{ width: '100%', height: '100%' }}
             contentFit="cover"
+            alt="Onboarding step 2"
           />
         </View>
       </HStack>
