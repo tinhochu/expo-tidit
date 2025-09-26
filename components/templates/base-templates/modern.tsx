@@ -1,7 +1,20 @@
+import { bathIcon, bedIcon, sqftIcon } from '@/components/template-icons'
 import TemplateHeading from '@/components/template-parts/heading'
 import Signature from '@/components/template-parts/signature'
-import { hexToRgba } from '@/helpers/colorUtils'
-import { Circle, Paragraph, Rect, Skia, TextAlign, useFonts } from '@shopify/react-native-skia'
+import { getContrastColor, hexToRgba } from '@/helpers/colorUtils'
+import {
+  Circle,
+  Group,
+  Image,
+  ImageSVG,
+  Paragraph,
+  Rect,
+  RoundedRect,
+  Skia,
+  TextAlign,
+  useFonts,
+  useImage,
+} from '@shopify/react-native-skia'
 import { LinearGradient, vec } from '@shopify/react-native-skia'
 import { useMemo } from 'react'
 import { useWindowDimensions } from 'react-native'
@@ -12,10 +25,13 @@ interface ModernTemplateProps {
   template: string
   canvas: {
     primaryColor?: string
+    secondaryColor?: string
+    textColor?: string
     showPrice?: boolean
     priceText?: string
     showBrokerage?: boolean
     showRealtor?: boolean
+    openHouseString?: string
   }
   userPrefs: any | null
   showBrokerage: boolean
@@ -41,13 +57,150 @@ export default function ModernTemplate({
   customText,
   selectedFont = 'inter',
 }: ModernTemplateProps) {
-  // Safety check for data
-  if (!data || !data.propInformation) {
+  // Safety check for userPrefs and data
+  if (!userPrefs || Object.keys(userPrefs).length === 0) {
+    console.warn('ModernTemplate: userPrefs is null, undefined, or empty')
+    return null
+  }
+
+  if (!data || !data.propInformation || !data.propInformation.description) {
     console.warn('ModernTemplate: data or data.propInformation is null or undefined')
     return null
   }
 
   const { width: screenWidth } = useWindowDimensions()
+
+  // Only create image objects if we have valid URLs
+  const hasBrokerageLogo = userPrefs?.brokerageLogo && userPrefs.brokerageLogo.trim() !== ''
+  const hasRealtorPicture = userPrefs?.realtorPicture && userPrefs.realtorPicture.trim() !== ''
+
+  const brokerageLogo = hasBrokerageLogo ? useImage(userPrefs.brokerageLogo) : null
+  const realtorPicture = hasRealtorPicture ? useImage(userPrefs.realtorPicture) : null
+
+  // Calculate brokerage logo dimensions and positioning
+  const getBrokerageLogoDimensions = () => {
+    if (!brokerageLogo) return null
+
+    const imageWidth = brokerageLogo.width()
+    const imageHeight = brokerageLogo.height()
+    const aspectRatio = imageWidth / imageHeight
+
+    // Determine if logo is square (aspect ratio close to 1) or rectangle
+    const isSquare = Math.abs(aspectRatio - 1) < 0.2 // Allow 20% tolerance for "square"
+    const isWideRectangle = aspectRatio > 1.5
+    const isTallRectangle = aspectRatio < 0.7
+
+    // Base dimensions - smaller than rectangle (0.2) to stay centered with margin
+    const baseWidth = screenWidth * 0.17
+    const baseHeight = screenWidth * 0.17
+
+    // Adjust dimensions based on aspect ratio
+    let logoWidth = baseWidth
+    let logoHeight = baseHeight
+
+    if (isWideRectangle) {
+      // Wide rectangle: maintain width, reduce height
+      logoHeight = baseHeight * 0.7
+    } else if (isTallRectangle) {
+      // Tall rectangle: maintain height, reduce width
+      logoWidth = baseWidth * 0.7
+    }
+
+    return {
+      width: logoWidth,
+      height: logoHeight,
+      aspectRatio,
+      isSquare,
+      isWideRectangle,
+      isTallRectangle,
+    }
+  }
+
+  const logoDimensions = getBrokerageLogoDimensions()
+
+  // Calculate realtor picture dimensions and positioning
+  const getRealtorPictureDimensions = () => {
+    if (!realtorPicture) return null
+
+    const imageWidth = realtorPicture.width()
+    const imageHeight = realtorPicture.height()
+    const aspectRatio = imageWidth / imageHeight
+
+    // Determine if picture is square (aspect ratio close to 1) or rectangle
+    const isSquare = Math.abs(aspectRatio - 1) < 0.2 // Allow 20% tolerance for "square"
+    const isWideRectangle = aspectRatio > 1.5
+    const isTallRectangle = aspectRatio < 0.7
+
+    // Base dimensions - smaller than rectangle (0.2) to stay centered with margin
+    const baseWidth = screenWidth * 0.35
+    const baseHeight = screenWidth * 0.35
+
+    // Adjust dimensions based on aspect ratio
+    let pictureWidth = baseWidth
+    let pictureHeight = baseHeight
+
+    if (isWideRectangle) {
+      // Wide rectangle: maintain width, reduce height
+      pictureHeight = baseHeight * 0.7
+    } else if (isTallRectangle) {
+      // Tall rectangle: maintain height, reduce width
+      pictureWidth = baseWidth * 0.7
+    }
+
+    return {
+      width: pictureWidth,
+      height: pictureHeight,
+      aspectRatio,
+      isSquare,
+      isWideRectangle,
+      isTallRectangle,
+    }
+  }
+
+  const realtorPictureDimensions = getRealtorPictureDimensions()
+
+  // Calculate optimal logo positioning above the rectangle
+  const getOptimalLogoPosition = () => {
+    if (!logoDimensions) return { x: screenWidth * 0.175, y: screenWidth * 1.1 }
+
+    const { width: logoWidth, height: logoHeight } = logoDimensions
+
+    // Rectangle dimensions
+    const rectangleTopY = screenWidth * 1.05
+    const rectangleHeight = screenWidth * 0.2
+
+    // Position logo above the rectangle with minimal padding (almost touching)
+    const paddingFromRectangle = screenWidth * 0.005 // 0.5% padding above rectangle
+    const logoY = rectangleTopY - logoHeight - paddingFromRectangle
+
+    // Position logo on the right side with padding from edge
+    const paddingFromEdge = screenWidth * 0.02 // 2% padding from right edge
+    const logoX = screenWidth - logoWidth - paddingFromEdge
+
+    // Ensure logo doesn't go too high (above template bounds)
+    const minLogoY = screenWidth * 0.1
+    const finalLogoY = Math.max(logoY, minLogoY)
+
+    // Ensure logo stays within horizontal bounds
+    const minLogoX = screenWidth * 0.05 // 5% margin from left edge
+    const maxLogoX = screenWidth - logoWidth - screenWidth * 0.02 // Keep 2% margin from right edge
+    const finalLogoX = Math.max(minLogoX, Math.min(logoX, maxLogoX))
+
+    return {
+      x: finalLogoX,
+      y: finalLogoY,
+    }
+  }
+
+  const logoPosition = getOptimalLogoPosition()
+  const customFontMgr = useFonts({
+    PlayfairDisplay: [require('@/assets/fonts/PlayfairDisplay-Regular.ttf')],
+    Inter: [require('@/assets/fonts/Inter.ttf')],
+    MontserratExtraBold: [require('@/assets/fonts/Montserrat-ExtraBold.ttf')],
+    CormorantGaramond: [require('@/assets/fonts/CormorantGaramond.ttf')],
+    PoppinsSemiBold: [require('@/assets/fonts/Poppins-SemiBold.ttf')],
+    SpaceMono: [require('@/assets/fonts/SpaceMono-Regular.ttf')],
+  })
 
   // Function to get font family based on selected font
   const getFontFamily = (font: string) => {
@@ -65,7 +218,7 @@ export default function ModernTemplate({
       case 'spacemono':
         return 'SpaceMono'
       default:
-        return 'PlayfairDisplay'
+        return 'Inter'
     }
   }
 
@@ -89,94 +242,279 @@ export default function ModernTemplate({
     }
   }
 
-  const customFontMgr = useFonts({
-    PlayfairDisplay: [require('@/assets/fonts/PlayfairDisplay-Regular.ttf')],
-    Inter: [require('@/assets/fonts/Inter.ttf')],
-    MontserratExtraBold: [require('@/assets/fonts/Montserrat-ExtraBold.ttf')],
-    CormorantGaramond: [require('@/assets/fonts/CormorantGaramond.ttf')],
-    PoppinsSemiBold: [require('@/assets/fonts/Poppins-SemiBold.ttf')],
-    SpaceMono: [require('@/assets/fonts/SpaceMono-Regular.ttf')],
-  })
+  // Function to calculate icon positioning based on font size for vertical centering
+  const getIconPositioning = (baseY: number, fontSize: number, groupTranslateY: number) => {
+    const fontFamily = getFontFamily(selectedFont)
+    const adjustedFontSize = getParagraphFontSize(fontSize, fontFamily)
 
-  const paragraph = useMemo(() => {
+    // Calculate the center point of the text and align the icon with it
+    // Icon height is typically around 20-24px, so we center it with the text
+    const iconHeight = 22 // Approximate icon height
+
+    // Apply the group translation to the base Y position
+    const adjustedBaseY = baseY + groupTranslateY
+    const textCenterY = adjustedBaseY + adjustedFontSize / 2
+    const iconCenterY = textCenterY - iconHeight / 2
+
+    return {
+      iconY: iconCenterY,
+      textY: adjustedBaseY,
+    }
+  }
+
+  const createParagraph = useMemo(() => {
     if (!customFontMgr) return null
 
-    const paragraphStyle = {
-      textAlign: TextAlign.Right,
-    }
-    const adjustedFontSize = getParagraphFontSize(14, getFontFamily(selectedFont))
-    const textStyle = {
-      color: Skia.Color('white'),
-      fontFamilies: [getFontFamily(selectedFont)],
-      fontSize: adjustedFontSize,
+    const baseParagraphStyle = {
+      textAlign: TextAlign.Left,
     }
 
-    const para = Skia.ParagraphBuilder.Make(paragraphStyle, customFontMgr)
-      .pushStyle(textStyle)
-      .addText(`${data.propInformation.line}`)
-      .addText(`\n${data.propInformation.city}, ${data.propInformation.state}`)
-      .addText(`\n${data.propInformation.country || data.propInformation.postalCode}`)
-      .build()
+    const createTextParagraph = (text: string, fontSize: number = 14) => {
+      const adjustedFontSize = getParagraphFontSize(fontSize, getFontFamily(selectedFont))
+      const textStyle = {
+        color: Skia.Color(canvas.textColor || canvas.primaryColor || '#000000'),
+        fontFamilies: [getFontFamily(selectedFont)],
+        fontSize: adjustedFontSize,
+      }
 
-    return para
-  }, [customFontMgr, data.propInformation, selectedFont])
+      return Skia.ParagraphBuilder.Make(baseParagraphStyle, customFontMgr).pushStyle(textStyle).addText(text).build()
+    }
+
+    return createTextParagraph
+  }, [customFontMgr, canvas.textColor, canvas.primaryColor, selectedFont])
+
+  const paragraphs = useMemo(() => {
+    if (!createParagraph) return {}
+
+    return {
+      sqft: createParagraph(
+        data.propInformation.description.sqft
+          ? `${data?.propInformation?.description?.sqft?.toLocaleString()} ${data?.propInformation?.description?.unitType === 'm2' ? 'm²' : 'SQFT'}`
+          : 'N/A'
+      ),
+      address: (() => {
+        const adjustedFontSize = getParagraphFontSize(14, getFontFamily(selectedFont))
+        const para = Skia.ParagraphBuilder.Make({ textAlign: TextAlign.Right }, customFontMgr!)
+          .pushStyle({
+            color: Skia.Color(canvas.textColor || canvas.primaryColor || '#000000'),
+            fontFamilies: [getFontFamily(selectedFont)],
+            fontSize: adjustedFontSize,
+          })
+          .addText(`${data.propInformation.line}`)
+          .addText(`\n${data.propInformation.city}, ${data.propInformation.state}`)
+          .addText(`\n${data.propInformation.country || data.propInformation.postalCode}`)
+          .build()
+        return para
+      })(),
+      beds: createParagraph(`${data.propInformation.description.beds}BR`),
+      baths: createParagraph(`${data.propInformation.description.baths}BA`),
+      signature: createParagraph('Powered By', 10),
+    }
+  }, [createParagraph, customFontMgr, data.propInformation, canvas.textColor, canvas.primaryColor])
+
+  if (!customFontMgr || !paragraphs.sqft || !paragraphs.beds || !paragraphs.baths) {
+    return null
+  }
+
+  const primaryColor = canvas.primaryColor || '#fafafa'
+  const secondaryColor = canvas.secondaryColor || '#ffffff'
+  const textColor = canvas.textColor || canvas.primaryColor || '#000000'
+  const gradientColors = [
+    hexToRgba(primaryColor, 0.5) || 'rgba(0, 0, 0, 0.3)',
+    hexToRgba(primaryColor, 0.5) || 'rgba(0, 0, 0, 0.2)',
+  ]
 
   // Use custom text or fall back to post type
   const mainHeading = customText?.mainHeading || getPostTypeLabel(postType)
-  const subHeading = customText?.subHeading || (canvas.showPrice && canvas.priceText ? canvas.priceText : '')
-  const description = customText?.description || ''
+  const subHeading =
+    customText?.subHeading || postType === 'OPEN_HOUSE'
+      ? canvas.openHouseString
+      : canvas.showPrice && canvas.priceText
+        ? canvas.priceText
+        : ''
+
+  // Adjust positioning for beds, baths, sqft when property line is long
+  const isLongPropertyLine = data.propInformation.line && data.propInformation.line.length > 20
+  const bedsBathsSqftOffset = isLongPropertyLine ? screenWidth * 0 : screenWidth * 0.015
 
   return (
     <>
-      <Rect x={0} y={0} width={screenWidth} height={screenWidth}>
-        <LinearGradient
-          start={vec(0, 0)}
-          end={vec(0, screenWidth)}
-          positions={[0, 0.9]}
-          colors={[
-            hexToRgba(canvas.primaryColor || '#fafafa', 0.4) || 'rgba(0, 0, 0, 0.3)',
-            hexToRgba(canvas.primaryColor || '#fafafa', 0.4) || 'rgba(0, 0, 0, 0.5)',
-          ]}
-        />
+      <Rect x={0} y={0} width={screenWidth} height={screenWidth * 1.25}>
+        <LinearGradient start={vec(0, 0)} end={vec(0, screenWidth)} positions={[0, 0.9]} colors={gradientColors} />
       </Rect>
 
+      <Rect
+        color={getContrastColor(primaryColor || '#fafafa')}
+        x={screenWidth * 0.1}
+        y={screenWidth * 0.125}
+        width={screenWidth * 0.8}
+        height={5}
+      />
+
+      <Rect
+        color={getContrastColor(primaryColor || '#fafafa')}
+        x={screenWidth * 0.1}
+        y={screenWidth * 0.125}
+        width={5}
+        height={screenWidth * 1.25 * 0.8}
+      />
+
+      <Rect
+        color={getContrastColor(primaryColor || '#fafafa')}
+        x={screenWidth * 0.9}
+        y={screenWidth * 0.125}
+        width={5}
+        height={screenWidth * 1.25 * 0.8}
+      />
+
+      <Rect
+        color={getContrastColor(primaryColor || '#fafafa')}
+        x={screenWidth * 0.1}
+        y={screenWidth * 1.1135}
+        width={screenWidth * 0.8}
+        height={5}
+      />
+
       <TemplateHeading
+        color={getContrastColor(primaryColor || '#fafafa')}
         screenWidth={screenWidth}
         text={mainHeading}
         x={screenWidth * 0}
-        y={screenWidth * 0.1}
+        y={screenWidth * 0.325}
         fontFamily={getFontFamily(selectedFont)}
       />
 
       {subHeading && (
         <TemplateHeading
+          color={getContrastColor(primaryColor || '#fafafa')}
           screenWidth={screenWidth}
           text={subHeading}
           x={screenWidth * 0}
-          y={screenWidth * 0.25}
-          size={0.8}
+          y={screenWidth * 0.7}
+          size={postType === 'OPEN_HOUSE' ? 2 : 1.25}
           fontFamily={getFontFamily(selectedFont)}
         />
       )}
 
-      <Circle
-        cx={screenWidth * 0.01}
-        cy={screenWidth * 0.95}
-        r={screenWidth * 0.3}
-        color={canvas.primaryColor || '#fafafa'}
-      />
-      <Rect
-        x={0}
-        y={screenWidth * 0.8}
-        width={screenWidth}
-        height={screenWidth * 0.2}
-        color={canvas.primaryColor || '#fafafa'}
-      />
+      {hasRealtorPicture && showRealtor && realtorPicture && realtorPictureDimensions && (
+        <>
+          <RoundedRect
+            x={-screenWidth * 0.2}
+            y={screenWidth * 1}
+            width={screenWidth * 0.5}
+            height={screenWidth * 0.5}
+            r={30}
+            color={secondaryColor}
+          />
+          <Image
+            image={realtorPicture}
+            fit="cover"
+            x={-screenWidth * 0.05}
+            y={screenWidth * 1.25 - realtorPictureDimensions.height}
+            width={realtorPictureDimensions.width}
+            height={realtorPictureDimensions.height}
+          />
+        </>
+      )}
 
-      <Paragraph paragraph={paragraph} x={-screenWidth * 0.025} y={screenWidth * 0.85} width={screenWidth} />
+      {/* {data.propInformation.description.beds &&
+        (() => {
+          const positioning = getIconPositioning(screenWidth * 1.09, 14, -screenWidth * 0.005)
+          return (
+            <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: -screenWidth * 0.01 }]}>
+              <Paragraph paragraph={paragraphs.beds} x={screenWidth * 0.46} y={positioning.textY} width={100} />
+            </Group>
+          )
+        })()}
+
+      {data.propInformation.description.baths &&
+        (() => {
+          const positioning = getIconPositioning(screenWidth * 1.09, 14, screenWidth * 0.012)
+          return (
+            <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.03 }]}>
+              <Paragraph paragraph={paragraphs.baths} x={screenWidth * 0.46} y={positioning.textY} width={100} />
+            </Group>
+          )
+        })()}
+
+      {data.propInformation.description.sqft &&
+        (() => {
+          const positioning = getIconPositioning(screenWidth * 1.09, 15, screenWidth * 0.0175)
+          return (
+            <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.075 }]}>
+              <Paragraph paragraph={paragraphs.sqft} x={screenWidth * 0.46} y={positioning.textY} width={100} />
+            </Group>
+          )
+        })()} */}
+
+      {/* 
+      {hasRealtorPicture && showRealtor && (
+        <Circle cx={screenWidth * 0.01} cy={screenWidth * 1.15} r={screenWidth * 0.3} color={secondaryColor} />
+      )}
+
+      <Rect x={0} y={screenWidth * 1.05} width={screenWidth} height={screenWidth * 0.2} color={secondaryColor} />
+
+      {hasRealtorPicture && showRealtor && realtorPicture && realtorPictureDimensions && (
+        <Image
+          image={realtorPicture}
+          fit="cover"
+          x={-screenWidth * 0.05}
+          y={screenWidth * 1.25 - realtorPictureDimensions.height}
+          width={realtorPictureDimensions.width}
+          height={realtorPictureDimensions.height}
+        />
+      )}
+
+      {hasBrokerageLogo && showBrokerage && brokerageLogo && logoDimensions && (
+        <Image
+          image={brokerageLogo}
+          fit="contain"
+          x={logoPosition.x}
+          y={logoPosition.y}
+          width={logoDimensions.width}
+          height={logoDimensions.height}
+        />
+      )}
+
+      {data.propInformation.description.beds &&
+        (() => {
+          const positioning = getIconPositioning(screenWidth * 1.09, 14, -screenWidth * 0.005)
+          return (
+            <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: -screenWidth * 0.01 }]}>
+              <ImageSVG svg={bedIcon(textColor)} x={screenWidth * 0.4} y={positioning.iconY + screenWidth * 0.01} />
+              <Paragraph paragraph={paragraphs.beds} x={screenWidth * 0.46} y={positioning.textY} width={100} />
+            </Group>
+          )
+        })()}
+
+      {data.propInformation.description.baths &&
+        (() => {
+          const positioning = getIconPositioning(screenWidth * 1.09, 14, screenWidth * 0.012)
+          return (
+            <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.03 }]}>
+              <ImageSVG svg={bathIcon(textColor)} x={screenWidth * 0.4} y={positioning.iconY + screenWidth * 0.01} />
+              <Paragraph paragraph={paragraphs.baths} x={screenWidth * 0.46} y={positioning.textY} width={100} />
+            </Group>
+          )
+        })()}
+
+      {data.propInformation.description.sqft &&
+        (() => {
+          const positioning = getIconPositioning(screenWidth * 1.09, 15, screenWidth * 0.0175)
+          return (
+            <Group transform={[{ translateX: bedsBathsSqftOffset }, { translateY: screenWidth * 0.075 }]}>
+              <ImageSVG svg={sqftIcon(textColor)} x={screenWidth * 0.4} y={positioning.iconY + screenWidth * 0.01} />
+              <Paragraph paragraph={paragraphs.sqft} x={screenWidth * 0.46} y={positioning.textY} width={100} />
+            </Group>
+          )
+        })()}
+
+      <Paragraph paragraph={paragraphs.address} x={-screenWidth * 0.025} y={screenWidth * 1.075} width={screenWidth} /> */}
 
       {/* Tidit Signature - Only show if enabled */}
-      {showSignature && <Signature screenWidth={screenWidth} y={screenWidth * 0.95} />}
+      {showSignature && (
+        <Signature screenWidth={screenWidth} poweredBy={paragraphs.signature} primaryColor={primaryColor} />
+      )}
     </>
   )
 }

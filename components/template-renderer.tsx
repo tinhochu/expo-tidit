@@ -54,11 +54,11 @@ function getTemplates(): TemplateComponent[] {
       value: 'classic',
       component: ClassicTemplate,
     },
-    // {
-    //   label: 'Modern',
-    //   value: 'modern',
-    //   component: ModernTemplate,
-    // },
+    {
+      label: 'Modern',
+      value: 'modern',
+      component: ModernTemplate,
+    },
     // {
     //   label: 'Bold',
     //   value: 'bold',

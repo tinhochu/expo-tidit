@@ -1104,15 +1104,30 @@ export default function PropertyDetails() {
                 flex: 1,
               }}
             >
-              {/* Use custom image if available, otherwise use property image */}
-              {customImage && customImg ? (
-                <SkImage image={customImg} x={0} y={0} width={screenWidth} height={screenWidth * 1.25} fit="cover" />
-              ) : img ? (
-                <SkImage image={img} x={0} y={0} width={screenWidth} height={screenWidth * 1.25} fit="cover" />
-              ) : (
-                // Show loading skeleton when no image is available
-                <Box className="absolute inset-0 bg-gray-200" />
-              )}
+              {/* Optimized image rendering with proper error handling */}
+              {(() => {
+                // Priority 1: Custom image if available
+                if (customImage && customImg) {
+                  return (
+                    <SkImage
+                      image={customImg}
+                      x={0}
+                      y={0}
+                      width={screenWidth}
+                      height={screenWidth * 1.25}
+                      fit="cover"
+                    />
+                  )
+                }
+
+                // Priority 2: Property image if custom image unavailable
+                if (img && imageUrl) {
+                  return <SkImage image={img} x={0} y={0} width={screenWidth} height={screenWidth * 1.25} fit="cover" />
+                }
+
+                // Fallback: Show placeholder loading state
+                return <Box className="absolute inset-0 bg-gray-200" />
+              })()}
               {isLoadingUserPrefs || !data ? (
                 <Box className="absolute inset-0 flex items-center justify-center bg-white">
                   <Box className="h-10 w-32 rounded bg-gray-200" />
@@ -1777,7 +1792,7 @@ export default function PropertyDetails() {
                       </Box>
                     </VStack>
 
-                    <Box className="bg-tidit-primary/20 border-tidit-primary rounded-lg border p-4">
+                    <Box className="rounded-lg border border-tidit-primary bg-tidit-primary/20 p-4">
                       <Text className="text-center text-gray-600">
                         Upgrade to Pro to unlock custom text personalization for your posts!
                       </Text>
