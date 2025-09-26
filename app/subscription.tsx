@@ -1,122 +1,86 @@
+import { Box } from '@/components/ui/box'
+import { Button, ButtonText } from '@/components/ui/button'
 import { HStack } from '@/components/ui/hstack'
 import { Image } from '@/components/ui/image'
+import { Text } from '@/components/ui/text'
+import { VStack } from '@/components/ui/vstack'
 import { useSubscription } from '@/context/SubscriptionContext'
 import { Ionicons } from '@expo/vector-icons'
-import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import { useLocalSearchParams } from 'expo-router'
-import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import React, { useEffect, useRef, useState } from 'react'
+import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 import Purchases, { PurchasesPackage } from 'react-native-purchases'
 
-const SubscriptionPlan = ({
-  title,
-  price,
-  period,
-  features,
-  isPopular,
-  onPress,
-  isLoading = false,
-  isAlreadyPro = false,
-}: {
-  title: string
-  price: string
-  period: string
-  features: string[]
-  isPopular?: boolean
-  onPress: () => void
-  isLoading?: boolean
-  isAlreadyPro?: boolean
-}) => (
-  <TouchableOpacity onPress={onPress} activeOpacity={0.8} disabled={isLoading || isAlreadyPro}>
-    <View style={[styles.planCard, isPopular && styles.popularCard]}>
-      {isPopular && (
-        <View style={styles.popularBadge}>
-          <Text style={styles.popularText}>MOST POPULAR</Text>
-        </View>
-      )}
+interface SubscriptionPlanToggleProps {
+  pkg: PurchasesPackage
+  isSelected: boolean
+  onSelect: () => void
+}
 
-      <View style={styles.trialBadge}>
-        <Text style={styles.trialText}>1 WEEK TRIAL</Text>
-      </View>
-
-      <Text style={styles.planTitle}>{title}</Text>
-      <View style={styles.priceContainer}>
-        <Text style={styles.price}>{price}</Text>
-        <Text style={styles.period}>/{period}</Text>
-      </View>
-
-      <View style={styles.featuresContainer}>
-        {features.map((feature, index) => (
-          <View key={index} style={styles.featureRow}>
-            <Ionicons name="checkmark-circle" size={20} color="#4ade80" />
-            <Text style={styles.featureText}>{feature}</Text>
-          </View>
-        ))}
-      </View>
-
-      <LinearGradient
-        colors={isPopular ? ['#ff6b35', '#f7931e', '#ffd700'] : ['#ff6b35', '#f7931e', '#ffd700']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={[styles.selectButton, (isLoading || isAlreadyPro) && styles.selectButtonDisabled]}
+const SubscriptionPlanToggle: React.FC<SubscriptionPlanToggleProps> = ({ pkg, isSelected, onSelect }) => {
+  return (
+    <TouchableOpacity onPress={onSelect} activeOpacity={0.8}>
+      <VStack
+        className={`rounded-xl border-2 p-6 ${
+          isSelected ? 'border-tidit-primary bg-tidit-primary/20' : 'border-gray-300 bg-gray-100/10'
+        }`}
+        space="sm"
       >
-        {isLoading ? (
-          <HStack className="items-center gap-2">
-            <ActivityIndicator size="small" color="white" />
-            <Text style={styles.selectButtonText}>Processing...</Text>
-          </HStack>
-        ) : isAlreadyPro ? (
-          <HStack className="items-center gap-2">
-            <Ionicons name="checkmark-circle" size={20} color="white" />
-            <Text style={styles.selectButtonText}>Already Subscribed</Text>
-          </HStack>
-        ) : (
-          <Text style={styles.selectButtonText}>Start Free Trial</Text>
-        )}
-      </LinearGradient>
-
-      {!isAlreadyPro && (
-        <View style={styles.legalTextContainer}>
-          <Text style={styles.legalText}>
-            1-week free trial, then {price}/{period}. Auto-renews until canceled. Cancel anytime in Settings {'>'} Apple
-            ID {'>'} Subscriptions. By subscribing, you agree to our{' '}
-            <Text
-              style={styles.linkText}
-              onPress={() => Linking.openURL('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/')}
-            >
-              Terms of Use
-            </Text>{' '}
-            and{' '}
-            <Text style={styles.linkText} onPress={() => Linking.openURL('https://www.apple.com/legal/privacy/en-ww/')}>
-              Privacy Policy
-            </Text>
-            .
+        <HStack className="items-center justify-between">
+          <Text className={`text-xl font-bold ${isSelected ? 'text-tidit-primary' : 'text-gray-600'}`}>
+            {pkg.product.title} {pkg.packageType.toLowerCase()}
           </Text>
-        </View>
-      )}
-    </View>
-  </TouchableOpacity>
-)
+          {isSelected && (
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-tidit-primary">
+              <Ionicons name="checkmark" size={24} color="white" />
+            </View>
+          )}
+          {!isSelected && <View className="h-6 w-6 rounded-full border-2 border-gray-400" />}
+        </HStack>
+
+        <VStack className="items-start">
+          <HStack className="items-start" space="sm">
+            <Text className={`relative text-3xl font-bold ${isSelected ? 'text-tidit-primary' : 'text-gray-600'}`}>
+              {pkg.product.priceString}
+            </Text>
+            <Text className="text-sm font-semibold text-tidit-primary">/ {pkg.packageType.toLowerCase()}</Text>
+          </HStack>
+        </VStack>
+      </VStack>
+    </TouchableOpacity>
+  )
+}
 
 export default function SubscriptionScreen() {
+  const closeRef = useRef<() => void>(null)
   const { returnRoute } = useLocalSearchParams<{ returnRoute?: string }>()
   const { offerings, isSubscribed, checkSubscriptionStatus } = useSubscription()
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null)
 
   useEffect(() => {
     checkSubscriptionStatus()
   }, [checkSubscriptionStatus])
 
-  const handleSubscribe = async (pkg: PurchasesPackage) => {
+  // Auto-select first package when offerings are loaded
+  useEffect(() => {
+    if (offerings && offerings.availablePackages && offerings.availablePackages.length > 0 && !selectedPackage) {
+      setSelectedPackage(offerings.availablePackages[0])
+    }
+  }, [offerings, selectedPackage])
+
+  const handleSubscribe = async (pkg?: PurchasesPackage) => {
+    const packageToUse = pkg || selectedPackage
+    if (!packageToUse) return
     setIsLoading(true)
     setErrorMessage(null)
 
     try {
-      console.log('Starting purchase for package:', pkg.identifier)
+      console.log('Starting purchase for package:', packageToUse.identifier)
 
-      const { customerInfo } = await Purchases.purchasePackage(pkg)
+      const { customerInfo } = await Purchases.purchasePackage(packageToUse)
 
       console.log('Purchase successful, customer info:', customerInfo)
 
@@ -182,56 +146,42 @@ export default function SubscriptionScreen() {
   }
 
   return (
-    <LinearGradient colors={['#000000', '#1a1a1a', '#404040']} style={styles.container}>
+    <Box>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleBackNavigation} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={28} color="white" />
+        <View className="relative px-4 pb-14 pt-24">
+          <View className="absolute -top-[190px] left-1/2 right-1/2 h-[1000px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-tidit-primary"></View>
+
+          <TouchableOpacity onPress={handleBackNavigation} className="absolute left-6 top-20">
+            <Ionicons name="close" size={30} color="white" />
           </TouchableOpacity>
 
-          <HStack className="items-center justify-center gap-2">
-            <Text style={styles.title}>Unlock</Text>
-            <Image
-              source={require('@/assets/images/splash-icon-light.png')}
-              className="h-16 w-16 pb-6"
-              alt="Tidit Logo"
-            />
-            <Text style={styles.title}>Pro</Text>
-          </HStack>
-
-          <Text style={styles.subtitle}>Unlock premium features for your real estate success</Text>
+          <VStack className="items-center justify-center">
+            <Image source={require('@/assets/images/splash-icon-light.png')} className="h-24 w-24" />
+            <Text className="text-5xl font-black text-white">Unlock your</Text>
+            <HStack className="items-center justify-center">
+              <Text className="text-dark text-5xl font-black">Pro</Text>
+              <Text className="text-5xl font-black text-white">ductivity</Text>
+            </HStack>
+          </VStack>
         </View>
 
-        <View style={styles.benefitsContainer}>
-          <Text style={styles.benefitsTitle}>What You&apos;ll Get:</Text>
-          <View style={styles.benefitsList}>
-            <View style={styles.benefitItem}>
-              <Ionicons name="infinite" size={24} color="#ffffff" />
-              <Text style={styles.benefitText}>Unlimited Posts Creation</Text>
-            </View>
-            <View style={styles.benefitItem}>
-              <Ionicons name="sparkles" size={24} color="#ffffff" />
-              <Text style={styles.benefitText}>Customize your posts</Text>
-            </View>
-            <View style={styles.benefitItem}>
-              <Ionicons name="heart" size={24} color="#ffffff" />
-              <Text style={styles.benefitText}>Remove Our Logo from your posts</Text>
-            </View>
-            <View style={styles.benefitItem}>
-              <Ionicons name="lock-open" size={24} color="#ffffff" />
-              <Text style={styles.benefitText}>Unlock all templates</Text>
-            </View>
-          </View>
-        </View>
-
-        {errorMessage && (
-          <View style={styles.errorContainer}>
-            <View style={styles.errorBadge}>
-              <Ionicons name="alert-circle" size={24} color="#ef4444" />
-              <Text style={styles.errorText}>{errorMessage}</Text>
-            </View>
-          </View>
-        )}
+        <Box className="px-6 pt-8">
+          <Text className="mb-2 text-2xl font-bold">What You&apos;ll Get:</Text>
+          <VStack className="gap-2">
+            {[
+              'Unlock all templates',
+              'Customize your posts',
+              'Unlimited Templates',
+              'Remove Our Logo from your posts',
+              'Auto brand colors & logo',
+            ].map((feature, index) => (
+              <HStack className="items-center gap-2" key={index}>
+                <Ionicons name="checkmark" size={24} color="#3193EE" />
+                <Text className="text-xl font-medium">{feature}</Text>
+              </HStack>
+            ))}
+          </VStack>
+        </Box>
 
         {isSubscribed && (
           <View style={styles.alreadyProContainer}>
@@ -243,40 +193,122 @@ export default function SubscriptionScreen() {
           </View>
         )}
 
-        <View style={styles.plansContainer}>
-          {offerings?.availablePackages?.map((pkg: any) => (
-            <SubscriptionPlan
-              key={pkg.identifier}
-              title={pkg.product.title}
-              price={pkg.product.priceString}
-              period={pkg.packageType.toLowerCase()}
-              features={[
-                'Unlock all templates',
-                'Customize your posts',
-                'Unlimited Templates',
-                'Remove Our Logo from your posts',
-                'Auto brand colors & logo',
-                'One-tap exports',
-              ]}
-              onPress={() => handleSubscribe(pkg)}
-              isLoading={isLoading}
-              isAlreadyPro={isSubscribed}
-            />
-          ))}
-        </View>
+        <Box className="p-6">
+          {offerings?.availablePackages && (
+            <>
+              {offerings.availablePackages.length === 1 ? (
+                // Single offering - just auto-select it
+                <VStack space="md">
+                  {offerings.availablePackages.map((pkg: any) => (
+                    <SubscriptionPlanToggle
+                      key={pkg.identifier}
+                      pkg={pkg}
+                      isSelected={selectedPackage?.identifier === pkg.identifier}
+                      onSelect={() => setSelectedPackage(pkg)}
+                    />
+                  ))}
+                </VStack>
+              ) : offerings.availablePackages.length === 2 ? (
+                // Two offerings - show side by side with selection
+                <HStack className="gap-4">
+                  {offerings.availablePackages.map((pkg: any) => (
+                    <Box key={pkg.identifier} className="flex-1">
+                      <SubscriptionPlanToggle
+                        pkg={pkg}
+                        isSelected={selectedPackage?.identifier === pkg.identifier}
+                        onSelect={() => setSelectedPackage(pkg)}
+                      />
+                    </Box>
+                  ))}
+                </HStack>
+              ) : (
+                // Fallback for other amounts of offerings
+                <VStack space="md">
+                  {offerings.availablePackages.map((pkg: any) => (
+                    <SubscriptionPlanToggle
+                      key={pkg.identifier}
+                      pkg={pkg}
+                      isSelected={selectedPackage?.identifier === pkg.identifier}
+                      onSelect={() => setSelectedPackage(pkg)}
+                    />
+                  ))}
+                </VStack>
+              )}
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Cancel anytime • Secure payment • Instant access</Text>
-        </View>
+              {/* Single CTA Button */}
+              {selectedPackage && (
+                <VStack className="mt-6" space="md">
+                  <TouchableOpacity
+                    onPress={() => handleSubscribe()}
+                    activeOpacity={0.8}
+                    disabled={isLoading || isSubscribed}
+                    className={isLoading || isSubscribed ? 'opacity-70' : ''}
+                  >
+                    <Button className="h-[65px] w-full bg-tidit-primary" size="xl">
+                      {isLoading ? (
+                        <HStack className="items-center gap-2">
+                          <ActivityIndicator size="small" color="white" />
+                          <ButtonText className="text-2xl font-bold text-white">Processing...</ButtonText>
+                        </HStack>
+                      ) : isSubscribed ? (
+                        <HStack className="items-center gap-2">
+                          <Ionicons name="checkmark-circle" size={20} color="white" />
+                          <ButtonText className="text-2xl font-bold text-white">Already Subscribed</ButtonText>
+                        </HStack>
+                      ) : (
+                        <ButtonText className="text-2xl font-bold text-white">Start 7-Day Trial</ButtonText>
+                      )}
+                    </Button>
+                  </TouchableOpacity>
+
+                  <View className="px-2">
+                    <Text className="text-center text-xs text-gray-500">
+                      1-week free trial, then {selectedPackage.product.priceString}. Auto-renews until canceled. Cancel
+                      anytime in Settings {'>'} Apple ID {'>'} Subscriptions. By subscribing, you agree to our{' '}
+                      <Text
+                        className="text-sm text-tidit-primary underline"
+                        onPress={() =>
+                          Linking.openURL('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/')
+                        }
+                      >
+                        Terms of Use
+                      </Text>{' '}
+                      and{' '}
+                      <Text
+                        className="text-sm text-tidit-primary underline"
+                        onPress={() => Linking.openURL('https://www.apple.com/legal/privacy/en-ww/')}
+                      >
+                        Privacy Policy
+                      </Text>
+                      .
+                    </Text>
+                  </View>
+                </VStack>
+              )}
+            </>
+          )}
+        </Box>
+
+        <Box className="">
+          <Text className="text-center text-sm text-gray-500">Cancel anytime • Secure payment • Instant access</Text>
+        </Box>
+
+        {errorMessage && (
+          <Box className="px-6">
+            <Box className="mt-5 rounded-xl border border-red-500/50 bg-red-500/10 p-6">
+              <HStack className="items-center justify-center gap-2">
+                <Ionicons name="alert-circle" size={24} color="#ef4444" />
+                <Text className="text-xl text-red-500">{errorMessage}</Text>
+              </HStack>
+            </Box>
+          </Box>
+        )}
       </ScrollView>
-    </LinearGradient>
+    </Box>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   header: {
     paddingTop: 60,
     paddingHorizontal: 20,
@@ -293,7 +325,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   benefitsContainer: {
     paddingHorizontal: 20,
