@@ -21,7 +21,7 @@ export default function Index() {
     if (redirectPage) {
       return <Redirect href={redirectPage} />
     }
-    return <Redirect href="/onboarding" />
+    return <Redirect href="/signin" />
   }
 
   // If user is authenticated, redirect to app (the app layout will handle onboarding check)
