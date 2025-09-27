@@ -1,4 +1,4 @@
-import { BoldTemplate, ClassicTemplate, ElegantTemplate, ModernTemplate } from './templates/base-templates'
+import { TemplateOne, TemplateThree, TemplateTwo } from './templates/base-templates'
 
 interface TemplateRendererProps {
   postType:
@@ -50,14 +50,19 @@ interface TemplateComponent {
 function getTemplates(): TemplateComponent[] {
   return [
     {
-      label: 'Classic',
-      value: 'classic',
-      component: ClassicTemplate,
+      label: 'Template 1',
+      value: 'templateOne',
+      component: TemplateOne,
     },
     {
-      label: 'Modern',
-      value: 'modern',
-      component: ModernTemplate,
+      label: 'Template 2',
+      value: 'templateTwo',
+      component: TemplateTwo,
+    },
+    {
+      label: 'Template 3',
+      value: 'templateThree',
+      component: TemplateThree,
     },
     // {
     //   label: 'Bold',

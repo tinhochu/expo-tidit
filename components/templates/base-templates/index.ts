@@ -1,4 +1,3 @@
-export { default as ModernTemplate } from './modern'
-export { default as ClassicTemplate } from './classic'
-export { default as BoldTemplate } from './bold'
-export { default as ElegantTemplate } from './elegant'
+export { default as TemplateTwo } from './template-two'
+export { default as TemplateOne } from './template-one'
+export { default as TemplateThree } from './template-three'
