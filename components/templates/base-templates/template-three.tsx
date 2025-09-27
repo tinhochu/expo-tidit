@@ -316,7 +316,7 @@ export default function TemplateThree({
         const backgroundColor = canvas.primaryColor || '#000000'
         const shadowColor = getContrastColor(backgroundColor) === '#ffffff' ? '#000000' : '#ffffff'
 
-        const shadowPara = Skia.ParagraphBuilder.Make({ textAlign: TextAlign.Center }, customFontMgr!)
+        const shadowPara = Skia.ParagraphBuilder.Make({ textAlign: TextAlign.Left }, customFontMgr!)
           .pushStyle({
             color: Skia.Color(shadowColor),
             fontFamilies: [getFontFamily(selectedFont)],
@@ -325,7 +325,7 @@ export default function TemplateThree({
           .addText(addressText)
           .build()
 
-        const mainPara = Skia.ParagraphBuilder.Make({ textAlign: TextAlign.Center }, customFontMgr!)
+        const mainPara = Skia.ParagraphBuilder.Make({ textAlign: TextAlign.Left }, customFontMgr!)
           .pushStyle({
             color: Skia.Color(canvas.textColor || canvas.primaryColor || '#000000'),
             fontFamilies: [getFontFamily(selectedFont)],
@@ -427,10 +427,11 @@ export default function TemplateThree({
         color={getContrastColor(primaryColor || '#fafafa')}
         screenWidth={screenWidth}
         text={mainHeading}
-        x={-screenWidth * 0.18}
+        x={screenWidth * 0.05}
         y={screenWidth * 0.9}
-        size={0.85}
+        size={0.65}
         fontFamily={getFontFamily(selectedFont)}
+        align={TextAlign.Left}
       />
 
       {subHeading && (
@@ -438,23 +439,24 @@ export default function TemplateThree({
           color={getContrastColor(primaryColor || '#fafafa')}
           screenWidth={screenWidth}
           text={subHeading}
-          x={-screenWidth * 0.19}
+          x={screenWidth * 0.05}
           y={screenWidth * 0.98}
           size={postType === 'OPEN_HOUSE' ? 1 : 0.8}
           fontFamily={getFontFamily(selectedFont)}
+          align={TextAlign.Left}
         />
       )}
 
       <Paragraph
         paragraph={paragraphs.address.shadow}
-        x={-screenWidth * 0.125}
+        x={screenWidth * 0.05}
         y={screenWidth * 1.125 + 2}
         width={screenWidth}
       />
 
       <Paragraph
         paragraph={paragraphs.address.main}
-        x={-screenWidth * 0.125}
+        x={screenWidth * 0.05}
         y={screenWidth * 1.125}
         width={screenWidth}
       />
@@ -484,7 +486,7 @@ export default function TemplateThree({
 
       {data.propInformation.description.baths &&
         (() => {
-          const posX = screenWidth * 0.05
+          const posX = screenWidth * 0.15
           const posY = screenWidth * 1.19
           return (
             <Group transform={[{ translateX: bedsBathsSqftOffset * 8 }, { translateY: -screenWidth * 0.01 }]}>
@@ -496,7 +498,7 @@ export default function TemplateThree({
 
       {data.propInformation.description.sqft &&
         (() => {
-          const posX = screenWidth * 0.05
+          const posX = screenWidth * 0.25
           const posY = screenWidth * 1.19
           return (
             <Group transform={[{ translateX: bedsBathsSqftOffset * 15 }, { translateY: -screenWidth * 0.01 }]}>

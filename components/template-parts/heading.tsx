@@ -10,6 +10,7 @@ export default function TemplateHeading({
   color = '#ffffff',
   fontFamily = 'PlayfairDisplay',
   fontWeight = 500,
+  align = TextAlign.Center,
 }: {
   screenWidth: number
   text: string
@@ -25,6 +26,7 @@ export default function TemplateHeading({
     | 'PoppinsSemiBold'
     | 'SpaceMono'
   fontWeight?: number
+  align?: TextAlign
 }) {
   const customFontMgr = useFonts({
     PlayfairDisplay: [require('@/assets/fonts/PlayfairDisplay-Regular.ttf')],
@@ -93,7 +95,7 @@ export default function TemplateHeading({
 
     const dynamicSize = getDynamicSize(size, text)
     const paragraphStyle = {
-      textAlign: TextAlign.Center,
+      textAlign: align,
     }
     const textStyle = {
       color: Skia.Color(color),
@@ -115,7 +117,7 @@ export default function TemplateHeading({
 
     const dynamicSize = getDynamicSize(size, text)
     const paragraphStyle = {
-      textAlign: TextAlign.Center,
+      textAlign: align,
     }
     const textStyle = {
       color: Skia.Color(color === '#ffffff' ? '#000000' : '#ffffff'),
