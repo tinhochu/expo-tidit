@@ -9,17 +9,15 @@ import { useSubscription } from '@/context/SubscriptionContext'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import { useLocalSearchParams } from 'expo-router'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, Linking, ScrollView, TouchableOpacity, View } from 'react-native'
 import Purchases, { PurchasesPackage } from 'react-native-purchases'
 
-interface SubscriptionPlanToggleProps {
-  pkg: PurchasesPackage
-  isSelected: boolean
-  onSelect: () => void
-}
-
-const SubscriptionPlanToggle: React.FC<SubscriptionPlanToggleProps> = ({ pkg, isSelected, onSelect }) => {
+const SubscriptionPlanToggle: React.FC<{ pkg: PurchasesPackage; isSelected: boolean; onSelect: () => void }> = ({
+  pkg,
+  isSelected,
+  onSelect,
+}) => {
   return (
     <TouchableOpacity onPress={onSelect} activeOpacity={0.8}>
       <VStack
@@ -52,6 +50,74 @@ const SubscriptionPlanToggle: React.FC<SubscriptionPlanToggleProps> = ({ pkg, is
     </TouchableOpacity>
   )
 }
+
+const SubscriptionPlan = ({
+  price,
+  period,
+  onPress,
+  isLoading = false,
+  isAlreadyPro = false,
+}: {
+  title: string
+  price: string
+  period: string
+  isPopular?: boolean
+  onPress: () => void
+  isLoading?: boolean
+  isAlreadyPro?: boolean
+}) => (
+  <Box className="my-4 px-8">
+    <VStack space="lg">
+      <Box className="rounded-2xl border-2 border-tidit-primary bg-tidit-primary/30 p-6">
+        <Text className="text-3xl font-bold text-tidit-primary">Pro</Text>
+
+        <Box className="flex-row items-start">
+          <Text className="text-3xl font-bold text-tidit-primary">{price}</Text>
+          <Text className="ml-1 font-semibold text-tidit-primary">/ {period}</Text>
+        </Box>
+      </Box>
+
+      <Button onPress={onPress} disabled={isLoading || isAlreadyPro} className="!h-20 rounded-full bg-tidit-primary">
+        {isLoading ? (
+          <HStack className="items-center gap-2">
+            <ActivityIndicator size="small" color="white" />
+            <ButtonText className="text-xl font-bold text-white">Processing...</ButtonText>
+          </HStack>
+        ) : isAlreadyPro ? (
+          <HStack className="items-center gap-2">
+            <Ionicons name="checkmark-circle" size={20} color="white" />
+            <ButtonText className="text-xl font-bold text-white">Already Subscribed</ButtonText>
+          </HStack>
+        ) : (
+          <ButtonText className="text-xl font-bold text-white">Start Free Trial</ButtonText>
+        )}
+      </Button>
+
+      {!isAlreadyPro && (
+        <VStack>
+          <Text className="text-xs text-gray-400">
+            1-week free trial, then {price}/{period}. Auto-renews until canceled. Cancel anytime in Settings {'>'} Apple
+            ID {'>'} Subscriptions. By subscribing, you agree to our{' '}
+            <Text
+              className="text-xs text-tidit-primary underline"
+              onPress={() => Linking.openURL('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/')}
+            >
+              Terms of Use
+            </Text>{' '}
+            and{' '}
+            <Text
+              className="text-xs text-tidit-primary underline"
+              onPress={() => Linking.openURL('https://www.apple.com/legal/privacy/en-ww/')}
+            >
+              Privacy Policy
+            </Text>
+            .
+          </Text>
+        </VStack>
+      )}
+    </VStack>
+  </Box>
+)
 
 export default function SubscriptionScreen() {
   const { returnRoute } = useLocalSearchParams<{ returnRoute?: string }>()
@@ -185,7 +251,7 @@ export default function SubscriptionScreen() {
             ].map((feature, index) => (
               <HStack className="items-center gap-2" key={index}>
                 <Ionicons name="checkmark" size={24} color="#3193EE" />
-                <Text className="text-xl font-medium">{feature}</Text>
+                <Text className="text-xl">{feature}</Text>
               </HStack>
             ))}
           </VStack>
@@ -203,110 +269,9 @@ export default function SubscriptionScreen() {
           </Box>
         )}
 
-        <Box className="p-6">
-          {offerings?.availablePackages && (
-            <>
-              {offerings.availablePackages.length === 1 ? (
-                // Single offering - just auto-select it
-                <VStack space="md">
-                  {offerings.availablePackages.map((pkg: any) => (
-                    <SubscriptionPlanToggle
-                      key={pkg.identifier}
-                      pkg={pkg}
-                      isSelected={selectedPackage?.identifier === pkg.identifier}
-                      onSelect={() => setSelectedPackage(pkg)}
-                    />
-                  ))}
-                </VStack>
-              ) : offerings.availablePackages.length === 2 ? (
-                // Two offerings - show side by side with selection
-                <HStack className="gap-4">
-                  {offerings.availablePackages.map((pkg: any) => (
-                    <Box key={pkg.identifier} className="flex-1">
-                      <SubscriptionPlanToggle
-                        pkg={pkg}
-                        isSelected={selectedPackage?.identifier === pkg.identifier}
-                        onSelect={() => setSelectedPackage(pkg)}
-                      />
-                    </Box>
-                  ))}
-                </HStack>
-              ) : (
-                // Fallback for other amounts of offerings
-                <VStack space="md">
-                  {offerings.availablePackages.map((pkg: any) => (
-                    <SubscriptionPlanToggle
-                      key={pkg.identifier}
-                      pkg={pkg}
-                      isSelected={selectedPackage?.identifier === pkg.identifier}
-                      onSelect={() => setSelectedPackage(pkg)}
-                    />
-                  ))}
-                </VStack>
-              )}
-
-              {/* Single CTA Button */}
-              {selectedPackage && (
-                <VStack className="mt-6" space="md">
-                  <TouchableOpacity
-                    onPress={() => handleSubscribe()}
-                    activeOpacity={0.8}
-                    disabled={isLoading || isSubscribed}
-                    className={isLoading || isSubscribed ? 'opacity-50' : ''}
-                  >
-                    <Button className="h-[65px] w-full bg-tidit-primary" size="xl">
-                      {isLoading ? (
-                        <HStack className="items-center gap-2">
-                          <ActivityIndicator size="small" color="white" />
-                          <ButtonText className="text-2xl font-bold text-white">Processing...</ButtonText>
-                        </HStack>
-                      ) : isSubscribed ? (
-                        <HStack className="items-center gap-2">
-                          <Ionicons name="checkmark-circle" size={20} color="white" />
-                          <ButtonText className="text-2xl font-bold text-white">Already Subscribed</ButtonText>
-                        </HStack>
-                      ) : (
-                        <ButtonText className="text-2xl font-bold text-white">Start 7-Day Trial</ButtonText>
-                      )}
-                    </Button>
-                  </TouchableOpacity>
-
-                  <View className="px-2">
-                    <Text className="text-center text-xs text-gray-500">
-                      1-week free trial, then {selectedPackage?.product?.priceString || 'pricing'}. Auto-renews until
-                      canceled. Cancel anytime in Settings {'>'} Apple ID {'>'} Subscriptions. By subscribing, you agree
-                      to our{' '}
-                      <Text
-                        className="text-sm text-tidit-primary underline"
-                        onPress={() =>
-                          Linking.openURL('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/')
-                        }
-                      >
-                        Terms of Use
-                      </Text>{' '}
-                      and{' '}
-                      <Text
-                        className="text-sm text-tidit-primary underline"
-                        onPress={() => Linking.openURL('https://www.apple.com/legal/privacy/en-ww/')}
-                      >
-                        Privacy Policy
-                      </Text>
-                      .
-                    </Text>
-                  </View>
-                </VStack>
-              )}
-            </>
-          )}
-        </Box>
-
-        <Box className="">
-          <Text className="text-center text-sm text-gray-500">Cancel anytime • Secure payment • Instant access</Text>
-        </Box>
-
         {errorMessage && (
-          <Box className="px-6">
-            <Box className="mt-5 rounded-xl border border-red-500/50 bg-red-500/10 p-6">
+          <Box className="px-8">
+            <Box className="mt-5 rounded-2xl border-2 border-red-500/50 bg-red-500/10 p-6">
               <HStack className="items-center justify-center gap-2">
                 <Ionicons name="alert-circle" size={24} color="#ef4444" />
                 <Text className="text-xl text-red-500">{errorMessage}</Text>
@@ -314,6 +279,24 @@ export default function SubscriptionScreen() {
             </Box>
           </Box>
         )}
+
+        {offerings?.availablePackages?.map((pkg: any) => (
+          <SubscriptionPlan
+            key={pkg.identifier}
+            title={pkg.product.title}
+            price={pkg.product.priceString}
+            period={pkg.packageType.toLowerCase()}
+            onPress={() => handleSubscribe(pkg)}
+            isLoading={isLoading}
+            isAlreadyPro={isSubscribed}
+          />
+        ))}
+
+        <Box className="">
+          <Text className="text-center text-sm text-tidit-primary">
+            Cancel anytime • Secure payment • Instant access
+          </Text>
+        </Box>
       </ScrollView>
     </Box>
   )
