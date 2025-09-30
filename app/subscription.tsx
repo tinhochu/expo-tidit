@@ -66,7 +66,7 @@ const SubscriptionPlan = ({
   isLoading?: boolean
   isAlreadyPro?: boolean
 }) => (
-  <Box className="my-4 px-8">
+  <Box className="my-4 bg-white px-8">
     <VStack space="lg">
       <Box className="rounded-2xl border-2 border-tidit-primary bg-tidit-primary/30 p-6">
         <Text className="text-3xl font-bold text-tidit-primary">Pro</Text>
@@ -95,7 +95,7 @@ const SubscriptionPlan = ({
 
       {!isAlreadyPro && (
         <VStack>
-          <Text className="text-xs text-gray-400">
+          <Text className="text-xs text-gray-600">
             1-week free trial, then {price}/{period}. Auto-renews until canceled. Cancel anytime in Settings {'>'} Apple
             ID {'>'} Subscriptions. By subscribing, you agree to our{' '}
             <Text

@@ -36,6 +36,7 @@ export const PaywallProvider = ({ children }: { children: React.ReactNode }) => 
         setHasClosedPaywall(hasBeenClosed)
 
         // If user has not closed the paywall and is not subscribed, show paywall
+        // Don't show paywall if user is subscribed (they already have access)
         if (!hasBeenClosed && !isSubscribed) {
           setShouldShowPaywall(true)
         }
@@ -55,29 +56,13 @@ export const PaywallProvider = ({ children }: { children: React.ReactNode }) => 
     try {
       setShouldShowPaywall(false)
 
-      // Don't mark as closed if user is subscribed, so paywall shows again on future launches if they become unsubscribed
-      if (!isSubscribed) {
-        setHasClosedPaywall(true)
-        await AsyncStorage.setItem(STORAGE_KEYS.PAYWALL_CLOSED, 'true')
-      } else {
-        // Reset the closed state since they now have subscription
-        setHasClosedPaywall(false)
-        await AsyncStorage.removeItem(STORAGE_KEYS.PAYWALL_CLOSED)
-      }
+      // Always mark as closed when user explicitly closes the paywall
+      setHasClosedPaywall(true)
+      await AsyncStorage.setItem(STORAGE_KEYS.PAYWALL_CLOSED, 'true')
     } catch (error) {
       console.error('Error setting paywall closed state:', error)
     }
-  }, [isSubscribed])
-
-  // Reset the closed state when user subscribes
-  useEffect(() => {
-    if (isSubscribed) {
-      setHasClosedPaywall(false)
-      AsyncStorage.removeItem(STORAGE_KEYS.PAYWALL_CLOSED).catch((error) => {
-        console.error('Error clearing paywall state:', error)
-      })
-    }
-  }, [isSubscribed])
+  }, [])
 
   const value = {
     shouldShowPaywall,
