@@ -4,7 +4,6 @@ import { HStack } from '@/components/ui/hstack'
 import { Image } from '@/components/ui/image'
 import { Text } from '@/components/ui/text'
 import { VStack } from '@/components/ui/vstack'
-import { usePaywall } from '@/context/PaywallContext'
 import { useSubscription } from '@/context/SubscriptionContext'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
@@ -122,7 +121,6 @@ const SubscriptionPlan = ({
 export default function SubscriptionScreen() {
   const { returnRoute } = useLocalSearchParams<{ returnRoute?: string }>()
   const { offerings, isSubscribed, checkSubscriptionStatus } = useSubscription()
-  const { markPaywallAsClosed } = usePaywall()
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null)
@@ -205,9 +203,6 @@ export default function SubscriptionScreen() {
 
   const handleBackNavigation = () => {
     try {
-      // Mark paywall as closed when user closes
-      markPaywallAsClosed()
-
       // If we have a return route, go back there, otherwise use router.back()
       if (returnRoute) {
         router.push(returnRoute as any)
@@ -220,7 +215,7 @@ export default function SubscriptionScreen() {
   }
 
   return (
-    <Box>
+    <Box className="h-full bg-white">
       <ScrollView showsVerticalScrollIndicator={false}>
         <View className="relative px-4 pb-14 pt-24">
           <View className="absolute -top-[190px] left-1/2 right-1/2 h-[1000px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-tidit-primary"></View>
